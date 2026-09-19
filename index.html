@@ -1667,7 +1667,9 @@ function renderProfile(){
           <div class="lbl">Баланс</div>
           <div class="points-val">${points} <span>SMOKEY-POINTS</span></div>
         </div>
-        <div class="points-ic">SP.png</div>
+        <div class="points-ic">
+          <img src="SP.png" alt="SP" class="points-icon-img" />
+        </div>
       </div>
       <div class="points-bar"><div class="points-bar-fill" style="width:${Math.min(100, points/POINTS_TO_REDEEM*100)}%;"></div></div>
       <div class="pd-note">Каждые потраченные 10€ на заказ — ${POINTS_PER_10_EUR} баллов. За каждого приглашённого друга, который сделал первый заказ, — ${REFERRAL_BONUS_POINTS} баллов. ${POINTS_TO_REDEEM} баллов = купон на скидку ${REDEEM_COUPON_PERCENT}%.</div>
