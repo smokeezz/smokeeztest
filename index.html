@@ -1542,22 +1542,21 @@ function buildOrderText(){
 }
 
 async function sendOrderToOwner(text){
-  const ready = CONFIG.BOT_TOKEN && CONFIG.BOT_TOKEN !== 'YOUR_BOT_TOKEN' && CONFIG.OWNER_CHAT_ID && CONFIG.OWNER_CHAT_ID !== 'YOUR_CHAT_ID';
-  if(!ready) return {ok:false, error:'Бот не настроен'};
-  let lastError = 'Нет связи с Telegram';
-  // две попытки — на случай мигнувшей сети
+  const ready = CONFIG.ORDER_ENDPOINT && CONFIG.ORDER_ENDPOINT !== 'YOUR_WORKER_URL';
+  if(!ready) return {ok:false, error:'Сервер не настроен'};
+  let lastError = 'Нет связи с сервером';
   for(let attempt = 0; attempt < 2; attempt++){
     try{
-      const resp = await fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
+      const resp = await fetch(CONFIG.ORDER_ENDPOINT, {
         method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({chat_id: CONFIG.OWNER_CHAT_ID, text, parse_mode:'HTML'})
+        headers:{'Content-Type':'application/json', 'X-App-Key': CONFIG.APP_KEY},
+        body: JSON.stringify({text})
       });
       const data = await resp.json();
       if(data.ok) return {ok:true};
-      lastError = data.description || 'Telegram отклонил запрос';
+      lastError = data.error || 'Сервер отклонил запрос';
     }catch(e){
-      lastError = 'Нет связи с Telegram';
+      lastError = 'Нет связи с сервером';
     }
     if(attempt === 0) await new Promise(r => setTimeout(r, 1200));
   }
