@@ -582,12 +582,11 @@
    НАСТРОЙКИ — заполни перед публикацией
    ====================================================================== */
 const CONFIG = {
-  // Токен бота из @BotFather (после /newbot). Пример: '123456789:AAExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-  BOT_TOKEN: '8663316271:AAE-p3F3fmz-IMBz0ZPrtOTvfuSWJvSvb1o',
-  // Chat ID, куда бот пришлёт заказы (твой личный chat_id или id канала/группы).
-  // Узнать свой chat_id: напиши боту @userinfobot — он покажет твой id.
-  OWNER_CHAT_ID: '7308516936',
-  // Запасной вариант связи, если бот ещё не настроен — юзернейм в Telegram (без @)
+  // Адрес твоего Cloudflare Worker (после деплоя)
+  ORDER_ENDPOINT: 'https://smokeez-orders.hchpfckj6h.workers.dev/',
+  // Тот же пароль, что ты задал в Cloudflare как секрет APP_KEY
+  APP_KEY: '13-11-2007Mar',
+  // Запасной вариант связи, если сервер ещё не настроен — юзернейм в Telegram (без @)
   OWNER_USERNAME: 'znllxs',
   SHOP_NAME: 'SMOKEEZ'
 };
