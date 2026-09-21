@@ -1790,6 +1790,34 @@ if(tg && tg.BackButton){
   });
   document.querySelectorAll('.view').forEach(v => nav.observe(v, {attributes:true, attributeFilter:['class']}));
 }
+async function syncStockFromSheet(){
+  const ready = CONFIG.ORDER_ENDPOINT && CONFIG.ORDER_ENDPOINT !== 'YOUR_WORKER_URL';
+  if(!ready) return;
+  try{
+    const resp = await fetch(CONFIG.ORDER_ENDPOINT, {
+      method:'GET',
+      headers:{'X-App-Key': CONFIG.APP_KEY}
+    });
+    const data = await resp.json();
+    if(!data.ok || !Array.isArray(data.rows)) return;
+    let updated = 0;
+    data.rows.forEach(row => {
+      const product = PRODUCTS.find(p => p.name.trim().toLowerCase() === String(row.product).trim().toLowerCase());
+      if(!product) return;
+      const item = product.items.find(i => i.n.trim().toLowerCase() === String(row.flavor).trim().toLowerCase());
+      if(!item) return;
+      item.stock = row.stock;
+      updated++;
+    });
+    if(updated){
+      if(typeof renderHome === 'function') renderHome();
+      if(typeof renderCatalog === 'function') renderCatalog();
+    }
+  }catch(e){
+    // тихо игнорируем — просто останутся текущие цифры, зашитые в коде
+  }
+}
+syncStockFromSheet();
 </script>
 </body>
 </html>
