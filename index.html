@@ -213,8 +213,8 @@
     margin-top:12px;
   }
   .product-card{
-    background:var(--panel);
-    border:1px solid var(--line-soft);
+    background:transparent;
+    border:1px solid transparent;
     border-radius:var(--radius);
     overflow:hidden;
     cursor:pointer;
@@ -227,7 +227,7 @@
     position:relative;
     width:100%;
     aspect-ratio:1/1;
-    background:linear-gradient(150deg, var(--panel2), var(--panel3));
+    background:transparent;
     display:flex;align-items:center;justify-content:center;
     overflow:hidden;
   }
@@ -238,6 +238,7 @@
     color:var(--muted-dim);
     text-align:center;
     padding:10px;
+    background:linear-gradient(150deg, var(--panel2), var(--panel3));
   }
   .thumb .placeholder svg{width:30px;height:30px;opacity:0.5;}
   .thumb .placeholder span{font-size:0.62rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;line-height:1.3;}
