@@ -1067,6 +1067,11 @@ function renderCatalog(){
     if(p.name.toLowerCase().includes(t)) return true;
     return p.items.some(i => i.n.toLowerCase().includes(t));
   });
+  list.sort((a, b) => {
+    const aHas = a.items.some(i => isAvailable(a.id, i)) ? 0 : 1;
+    const bHas = b.items.some(i => isAvailable(b.id, i)) ? 0 : 1;
+    return aHas - bHas;
+  });
   if(list.length === 0){
     const catMsg = (!t && activeCat !== 'all' && EMPTY_CATEGORY_MSG[activeCat]) ? EMPTY_CATEGORY_MSG[activeCat] : 'Ничего не найдено';
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
