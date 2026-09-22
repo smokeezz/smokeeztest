@@ -1807,10 +1807,11 @@ async function syncStockFromSheet(){
       if(!product) return;
       const item = product.items.find(i => i.n.trim().toLowerCase() === row.flavor.trim().toLowerCase());
       if(!item) return;
-      item.stock = row.stock;
+      STOCK[stockKey(product.id, item.n)] = row.stock;
       updated++;
     });
     if(updated){
+      storeSet('smokeez_stock_v1', STOCK);
       if(typeof renderHome === 'function') renderHome();
       if(typeof renderCatalog === 'function') renderCatalog();
     }
