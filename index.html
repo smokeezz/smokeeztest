@@ -1794,17 +1794,18 @@ async function syncStockFromSheet(){
   const ready = CONFIG.ORDER_ENDPOINT && CONFIG.ORDER_ENDPOINT !== 'YOUR_WORKER_URL';
   if(!ready) return;
   try{
-    const resp = await fetch(CONFIG.ORDER_ENDPOINT, {
+    const resp = await fetch(CONFIG.ORDER_ENDPOINT + '?stock=1', {
       method:'GET',
       headers:{'X-App-Key': CONFIG.APP_KEY}
     });
-    const data = await resp.json();
-    if(!data.ok || !Array.isArray(data.rows)) return;
+    if(!resp.ok) return;
+    const csv = await resp.text();
+    const rows = parseStockCsv(csv);
     let updated = 0;
-    data.rows.forEach(row => {
-      const product = PRODUCTS.find(p => p.name.trim().toLowerCase() === String(row.product).trim().toLowerCase());
+    rows.forEach(row => {
+      const product = PRODUCTS.find(p => p.name.trim().toLowerCase() === row.product.trim().toLowerCase());
       if(!product) return;
-      const item = product.items.find(i => i.n.trim().toLowerCase() === String(row.flavor).trim().toLowerCase());
+      const item = product.items.find(i => i.n.trim().toLowerCase() === row.flavor.trim().toLowerCase());
       if(!item) return;
       item.stock = row.stock;
       updated++;
@@ -1816,6 +1817,18 @@ async function syncStockFromSheet(){
   }catch(e){
     // тихо игнорируем — просто останутся текущие цифры, зашитые в коде
   }
+}
+function parseStockCsv(text){
+  const lines = text.trim().split(/\r?\n/).map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g,'')));
+  if(lines.length < 2) return [];
+  const header = lines.shift().map(h => h.toLowerCase());
+  const pI = header.indexOf('product');
+  const fI = header.indexOf('flavor');
+  const sI = header.indexOf('stock');
+  if(pI === -1 || fI === -1 || sI === -1) return [];
+  return lines.filter(r => r.length > sI).map(r => ({
+    product: r[pI], flavor: r[fI], stock: parseInt(r[sI], 10)
+  })).filter(r => r.product && r.flavor && !isNaN(r.stock));
 }
 syncStockFromSheet();
 </script>
