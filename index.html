@@ -1463,7 +1463,7 @@ function renderCheckout(){
       <div class="co-title"><span class="n">5</span>Промокод</div>
       ${checkout.promo ? `
         <div class="pay-opt active" style="cursor:default;">
-          <span class="ic">🏷</span><span>${checkout.promo.code} — скидка ${checkout.promo.percent}%</span>
+          <span class="ic">🏷</span><span>${checkout.promo.code} — скидка ${checkout.promo.amount ? checkout.promo.amount + ' €' : checkout.promo.percent + '%'}</span>
         </div>
         <button type="button" class="btn btn-ghost copy-mini" id="promoRemoveBtn" style="margin-top:10px;">Убрать промокод</button>
       ` : `
