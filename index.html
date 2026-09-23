@@ -1489,7 +1489,7 @@ function renderCheckout(){
       <div class="co-title"><span class="n">7</span>Ваш заказ</div>
       ${cart.map(ci => { const p = productById(ci.productId); if(!p) return ''; const lt = p.price ? (p.price*ci.qty).toFixed(2).replace('.',',')+' €' : 'по запросу';
         return `<div class="order-review-row"><span>${p.name} · ${ci.flavor} × ${ci.qty}</span><span>${lt}</span></div>`; }).join('')}
-      ${checkout.promo ? `<div class="order-review-row"><span>Скидка по промокоду ${checkout.promo.code}</span><span style="color:var(--ok);">−${checkout.promo.percent}%</span></div>` : ''}
+      ${checkout.promo ? `<div class="order-review-row"><span>Скидка по промокоду ${checkout.promo.code}</span><span style="color:var(--ok);">−${checkout.promo.amount ? checkout.promo.amount + ' €' : checkout.promo.percent + '%'}</span></div>` : ''}
       <div class="order-review-row" style="border:none;font-weight:800;color:var(--text);padding-top:10px;"><span>Итого</span><span style="color:var(--magenta);">${cartDiscountedTotal().toFixed(2).replace('.',',')} €</span></div>
     </div>
 
@@ -1522,7 +1522,7 @@ function renderCheckout(){
       haptic('error');
       return;
     }
-    checkout.promo = {code: res.code, percent: res.percent, kind: res.kind};
+    checkout.promo = {code: res.code, percent: res.percent, amount: res.amount, kind: res.kind};
     haptic('success');
     showToast('Промокод применён');
     renderCheckout();
@@ -1567,7 +1567,7 @@ function buildOrderText(){
     const lt = p.price ? (p.price*ci.qty).toFixed(2).replace('.',',')+' €' : 'цена по запросу';
     text += `• ${p.name} — ${ci.flavor} × ${ci.qty} (${lt})\n`;
   });
-  if(checkout.promo) text += `\n🏷 Применён промокод: ${checkout.promo.code} (−${checkout.promo.percent}%)\n💰 Сумма без скидки: ${cartTotal().toFixed(2).replace('.',',')} €\n💰 Итого к оплате: ${cartDiscountedTotal().toFixed(2).replace('.',',')} €\n`;
+  if(checkout.promo) text += `\n🏷 Применён промокод: ${checkout.promo.code} (−${checkout.promo.amount ? checkout.promo.amount + ' €' : checkout.promo.percent + '%'})\n💰 Сумма без скидки: ${cartTotal().toFixed(2).replace('.',',')} €\n💰 Итого к оплате: ${cartDiscountedTotal().toFixed(2).replace('.',',')} €\n`;
   else text += `\n💰 Итого: ${cartTotal().toFixed(2).replace('.',',')} €\n`;
   text += `\n📦 Способ: ${checkout.method === 'delivery' ? 'Доставка' : 'Самовывоз'}\n`;
   text += `👤 Имя: ${checkout.name}\n`;
