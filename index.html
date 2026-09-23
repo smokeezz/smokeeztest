@@ -949,8 +949,12 @@ function cartTotal(){
 function cartCount(){ return cart.reduce((s, ci) => s + ci.qty, 0); }
 function cartDiscountedTotal(){
   const total = cartTotal();
-  if(checkout.promo) return total * (1 - checkout.promo.percent/100);
+  if(checkout.promo){
+    if(checkout.promo.amount) return Math.max(0, total - checkout.promo.amount);
+    if(checkout.promo.percent) return total * (1 - checkout.promo.percent/100);
+  }
   return total;
+}
 }
 function isFavorite(id){ return favorites.has(id); }
 function toggleFavorite(id){
