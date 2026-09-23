@@ -862,7 +862,7 @@ function redeemPointsForCoupon(){
   spendPoints(POINTS_TO_REDEEM);
   const code = 'SMKZ-BONUS-' + Math.random().toString(36).slice(2,7).toUpperCase();
   const list = getRewardCoupons();
-  list.push({code, percent:REDEEM_COUPON_PERCENT, used:false});
+  list.push({code, amount:REDEEM_COUPON_AMOUNT, used:false});
   saveRewardCoupons(list);
   return code;
 }
