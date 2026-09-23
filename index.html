@@ -1714,12 +1714,12 @@ function renderProfile(){
         </div>
       </div>
       <div class="points-bar"><div class="points-bar-fill" style="width:${Math.min(100, points/POINTS_TO_REDEEM*100)}%;"></div></div>
-      <div class="pd-note">Каждые потраченные 10€ на заказ — ${POINTS_PER_10_EUR} баллов. За каждого приглашённого друга, который сделал первый заказ, — ${REFERRAL_BONUS_POINTS} баллов. ${POINTS_TO_REDEEM} баллов = купон на скидку ${REDEEM_COUPON_PERCENT}%.</div>
-      ${points >= POINTS_TO_REDEEM ? `<button class="btn btn-primary btn-wide btn-block" id="redeemPointsBtn" style="margin-top:12px;">Обменять ${POINTS_TO_REDEEM} баллов на купон ${REDEEM_COUPON_PERCENT}%</button>` : ''}
+      <div class="pd-note">Каждые потраченные 10€ на заказ — ${POINTS_PER_10_EUR} баллов. За каждого приглашённого друга, который сделал первый заказ, — ${REFERRAL_BONUS_POINTS} баллов. ${POINTS_TO_REDEEM} баллов = купон на скидку ${REDEEM_COUPON_AMOUNT} €.</div>
+      ${points >= POINTS_TO_REDEEM ? `<button class="btn btn-primary btn-wide btn-block" id="redeemPointsBtn" style="margin-top:12px;">Обменять ${POINTS_TO_REDEEM} баллов на купон ${REDEEM_COUPON_AMOUNT} €</button>` : ''}
       ${refStats.invited > 0 ? `<div class="pd-note" style="margin-top:10px;">Приглашено друзей: ${refStats.invited}</div>` : ''}
       ${rewards.length ? `<div class="pd-block" style="margin-top:14px;">
           <div class="lbl">Твои купоны</div>
-          <div class="flavor-grid">${rewards.map(r => `<div class="flavor-chip coupon-chip" data-coupon="${r.code}"><span class="dot" style="background:var(--gold);"></span>${r.code} · −${r.percent}%</div>`).join('')}</div>
+          <div class="flavor-grid">${rewards.map(r => `<div class="flavor-chip coupon-chip" data-coupon="${r.code}"><span class="dot" style="background:var(--gold);"></span>${r.code} · −${r.amount ? r.amount + ' €' : r.percent + '%'}</div>`).join('')}</div>
           <div class="pd-note" style="margin-top:8px;">Нажми на купон, чтобы скопировать код.</div>
         </div>` : ''}
     </div>`;
