@@ -906,7 +906,7 @@ function findPromo(raw){
     return {ok:true, code, percent:promo.percent, kind:'global'};
   }
   const reward = getRewardCoupons().find(r => r.code === code && !r.used);
-  if(reward) return {ok:true, code, percent:reward.percent, kind:'reward'};
+  if(reward) return {ok:true, code, amount:reward.amount, kind:'reward'};
   if(/^SMKZ-\d{5}$/.test(code)){
     if(code === getPromoCode()) return {ok:false, error:'Нельзя применить свой собственный промокод'};
     if(orders.length > 0) return {ok:false, error:'Промокод друга действует только на первый заказ'};
