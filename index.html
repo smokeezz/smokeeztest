@@ -904,6 +904,7 @@ function findPromo(raw){
     const promo = PROMO_CODES[code];
     if(promo.expires && new Date() > new Date(promo.expires + 'T23:59:59')) return {ok:false, error:'Срок действия промокода истёк'};
     if(promo.oneTimePerUser && storeGet('smokeez_used_promo_' + code + '_' + UID, false)) return {ok:false, error:'Этот промокод уже был использован'};
+    if(promo.minTotal && cartTotal() < promo.minTotal) return {ok:false, error:`Минимальная сумма заказа для этого промокода — ${promo.minTotal} €`};
     return {ok:true, code, percent:promo.percent, amount:promo.amount, kind:'global'};
   }
   const reward = getRewardCoupons().find(r => r.code === code && !r.used);
