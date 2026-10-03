@@ -25,6 +25,9 @@
     --gold:#fbbf24;
     --radius:16px;
     --nav-h:80px;
+    /* полупрозрачная панель тёмно-фиолетовый → розовый, для карточек корзины и профиля */
+    --card-grad:linear-gradient(160deg, rgba(58,15,92,0.5) 0%, rgba(18,6,30,0.55) 45%, rgba(227,79,239,0.16) 100%);
+    --card-border:rgba(190,110,230,0.35);
     --safe-b:env(safe-area-inset-bottom, 0px);
   }
   *{box-sizing:border-box;}
@@ -112,22 +115,38 @@
     padding:12px 16px;
     background:rgba(11,7,18,0.78);
     backdrop-filter:blur(14px);
-    border-bottom:1px solid var(--line-soft);
+    border-bottom:none;
+  }
+  /* неоновая градиентная полоска между шапкой и телом сайта */
+  header.topbar::after{
+    content:'';
+    position:absolute;left:0;right:0;bottom:-1px;height:2px;
+    background:linear-gradient(90deg, #000 0%, rgba(20,8,28,0.9) 18%, rgba(139,92,246,0.85) 58%, rgba(227,79,239,0.95) 100%);
+    box-shadow:0 0 10px rgba(227,79,239,0.55), 0 0 5px rgba(139,92,246,0.45);
   }
   .brand{display:flex;align-items:center;gap:8px;}
   .brand img{height:26px;display:block;}
   .topbar-actions{display:flex;align-items:center;gap:8px;}
+  /* Liquid Glass кнопка корзины в шапке */
   .icon-btn{
     position:relative;
-    width:38px;height:38px;
+    width:40px;height:40px;
     border-radius:50%;
-    border:1px solid var(--line);
-    background:var(--panel);
+    border:1px solid rgba(255,255,255,0.2);
+    background:linear-gradient(145deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.04) 55%, rgba(227,79,239,0.08) 100%);
+    box-shadow:
+      inset 0 1.5px 0 rgba(255,255,255,0.4),
+      inset 0 -1px 0 rgba(255,255,255,0.06),
+      0 6px 16px -6px rgba(0,0,0,0.55);
+    -webkit-backdrop-filter:blur(14px) saturate(180%);
+    backdrop-filter:blur(14px) saturate(180%);
     color:var(--text);
     display:flex;align-items:center;justify-content:center;
     cursor:pointer;
     font-size:1rem;
+    transition:transform .3s cubic-bezier(.34,1.56,.64,1);
   }
+  .icon-btn:active{transform:scale(0.86);}
   .icon-btn .badge{
     position:absolute;top:-4px;right:-4px;
     min-width:17px;height:17px;padding:0 4px;
@@ -245,39 +264,25 @@
     background:
       radial-gradient(120% 70% at 50% 0%, rgba(255,255,255,0.14), transparent 60%),
       linear-gradient(160deg, rgba(255,255,255,0.09), rgba(255,255,255,0.02) 55%, rgba(227,79,239,0.06));
-    border:1px solid rgba(227,79,239,0.55);
+    border:1px solid rgba(190,110,230,0.55);
     border-radius:var(--radius);
     overflow:hidden;
     cursor:pointer;
-    transition:transform .3s cubic-bezier(.34,1.56,.64,1), border-color .25s ease, box-shadow .25s ease;
+    transition:transform .25s cubic-bezier(.34,1.56,.64,1), border-color .2s ease;
     display:flex;flex-direction:column;
-    animation:neonPulse 3.6s ease-in-out infinite;
+    /* статичное (без анимации) неоновое свечение — тёмно-фиолетовый сверху-слева → розовый снизу-справа */
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.3),
+      -3px -3px 11px -6px rgba(99,20,160,0.55),
+      4px 5px 14px -6px rgba(255,79,224,0.5);
   }
   .product-card::after{
     content:'';position:absolute;left:10%;right:10%;top:0;height:1.5px;
     background:linear-gradient(90deg, transparent, rgba(255,255,255,0.75), transparent);
     pointer-events:none;
   }
-  .product-card:nth-child(3n+2){ animation-delay:-1.2s; }
-  .product-card:nth-child(3n+3){ animation-delay:-2.4s; }
   .product-card:hover, .product-card:active{
-    border-color:rgba(255,90,220,0.85);
-  }
-  @keyframes neonPulse{
-    0%, 100% {
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.3),
-        inset 0 0 16px rgba(255,255,255,0.03),
-        0 0 4px 0px rgba(255,90,220,0.4),
-        0 0 8px 1px rgba(227,79,239,0.25);
-    }
-    50% {
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.4),
-        inset 0 0 16px rgba(255,255,255,0.05),
-        0 0 6px 1px rgba(255,90,220,0.6),
-        0 0 12px 2px rgba(227,79,239,0.35);
-    }
+    border-color:rgba(255,120,235,0.8);
   }
   .product-card:active{transform:scale(0.96);}
   .thumb{
@@ -308,19 +313,17 @@
     font-family:'JetBrains Mono',monospace;
     text-transform:uppercase;
     letter-spacing:0.03em;
-    -webkit-backdrop-filter:blur(8px);
-    backdrop-filter:blur(8px);
+    /* без backdrop-filter — тег повторяется на каждой карточке, блюр на них тормозит скролл */
   }
   .tag.promo{background:linear-gradient(135deg,#ffe07a,#ffb938);color:#1a1305;box-shadow:inset 0 1px 0 rgba(255,255,255,0.6);}
-  .tag.out{background:rgba(251,113,133,0.22);color:var(--no);border:1px solid rgba(251,113,133,0.4);}
+  .tag.out{background:rgba(30,10,20,0.75);color:var(--no);border:1px solid rgba(251,113,133,0.4);}
   .fav-btn{
     position:absolute;top:8px;right:8px;z-index:2;
     width:31px;height:31px;border-radius:50%;
-    background:linear-gradient(145deg, rgba(255,255,255,0.22), rgba(255,255,255,0.06));
-    -webkit-backdrop-filter:blur(10px) saturate(160%);
-    backdrop-filter:blur(10px) saturate(160%);
+    /* без backdrop-filter по той же причине — кнопка есть на каждой карточке грида */
+    background:rgba(30,16,42,0.55);
     border:1px solid rgba(255,255,255,0.28);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.3);
     display:flex;align-items:center;justify-content:center;
     font-size:0.95rem;cursor:pointer;
     color:#fff;
@@ -332,7 +335,7 @@
   .card-body{padding:10px 11px 12px;display:flex;flex-direction:column;gap:4px;flex:1;}
   .card-body .name{font-size:0.84rem;font-weight:700;line-height:1.25;color:var(--text);}
   .card-body .meta{font-size:0.68rem;color:var(--muted-dim);font-family:'JetBrains Mono',monospace;}
-  .card-body .price{margin-top:auto;font-family:'Oswald',sans-serif;font-style:italic;font-size:1.05rem;color:var(--magenta);padding-top:4px;}
+  .card-body .price{margin-top:auto;font-family:'Oswald',sans-serif;font-style:italic;font-size:calc(1.05rem + 3px);color:var(--magenta);padding-top:4px;}
   .card-body .price.ask{font-size:0.74rem;color:var(--muted);font-style:normal;font-family:'Manrope',sans-serif;font-weight:700;}
 
   .empty-state{text-align:center;padding:60px 20px;color:var(--muted-dim);}
@@ -378,26 +381,25 @@
   .qty-stepper .val{min-width:34px;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:600;}
   /* .pd-actions теперь закреплены внизу экрана — чтобы кнопки "В корзину"
      и "Купить сейчас" были видны всегда, даже если не долистать до конца. */
-  #productDetailBody{padding-bottom:98px;}
+  #productDetailBody{padding-bottom:80px;}
   .pd-actions{
-    display:flex;gap:10px;
+    display:flex;gap:8px;
     position:fixed;
-    left:14px;right:14px;
-    max-width:612px;margin:0 auto;
-    bottom:calc(var(--nav-h) + var(--safe-b) + 14px);
+    left:16px;right:16px;
+    max-width:580px;margin:0 auto;
+    bottom:calc(var(--nav-h) + var(--safe-b) + 10px);
     z-index:45;
-    padding:12px;
-    border-radius:24px;
-    background:linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.05) 45%, rgba(255,255,255,0.09) 100%);
-    border:1px solid rgba(255,255,255,0.2);
+    padding:7px;
+    border-radius:18px;
+    background:linear-gradient(135deg, rgba(30,8,46,0.58) 0%, rgba(10,4,16,0.6) 48%, rgba(227,79,239,0.24) 100%);
+    border:1px solid rgba(255,255,255,0.12);
     box-shadow:
-      inset 0 1.5px 0 rgba(255,255,255,0.4),
-      inset 0 -1px 0 rgba(255,255,255,0.06),
-      inset 0 0 20px rgba(255,255,255,0.04),
-      0 14px 34px -10px rgba(0,0,0,0.6);
-    -webkit-backdrop-filter:blur(24px) saturate(190%);
-    backdrop-filter:blur(24px) saturate(190%);
+      inset 0 1px 0 rgba(255,255,255,0.14),
+      0 10px 26px -10px rgba(0,0,0,0.65);
+    -webkit-backdrop-filter:blur(18px) saturate(160%);
+    backdrop-filter:blur(18px) saturate(160%);
   }
+  .pd-actions .btn{padding:11px 16px;font-size:0.82rem;}
   .pd-note{margin-top:14px;font-size:0.76rem;color:var(--muted-dim);}
 
   .btn{
@@ -417,7 +419,7 @@
 
   /* ---------- cart ---------- */
   .cart-item{
-    display:flex;gap:12px;padding:12px;background:var(--panel);border:1px solid var(--line-soft);border-radius:14px;margin-bottom:10px;
+    display:flex;gap:12px;padding:12px;background:var(--card-grad);border:1px solid var(--card-border);border-radius:14px;margin-bottom:10px;
   }
   .cart-item .thumb-sm{width:56px;height:56px;flex:0 0 auto;border-radius:10px;overflow:hidden;background:var(--panel2);display:flex;align-items:center;justify-content:center;}
   .cart-item .thumb-sm img{width:100%;height:100%;object-fit:contain;padding:6px;}
@@ -430,7 +432,7 @@
   .cart-item .qty-stepper button{width:30px;height:30px;font-size:0.95rem;}
   .cart-item .rm{background:none;border:none;color:var(--muted-dim);cursor:pointer;font-size:1rem;padding:4px;}
   .cart-summary{
-    background:var(--panel);border:1px solid var(--line-soft);border-radius:14px;padding:16px;margin-top:16px;
+    background:var(--card-grad);border:1px solid var(--card-border);border-radius:14px;padding:16px;margin-top:16px;
   }
   .cart-summary .row{display:flex;justify-content:space-between;font-size:0.86rem;color:var(--muted);margin-bottom:6px;}
   .cart-summary .row.total{color:var(--text);font-weight:800;font-size:1.05rem;margin-top:10px;padding-top:10px;border-top:1px solid var(--line-soft);}
@@ -481,12 +483,14 @@
   .success-box p{color:var(--muted);font-size:0.88rem;line-height:1.6;max-width:340px;margin:0 auto;}
 
   /* ---------- profile ---------- */
-  .profile-card{background:var(--panel);border:1px solid var(--line-soft);border-radius:16px;padding:20px;text-align:center;}
+  .profile-card{background:var(--card-grad);border:1px solid var(--card-border);border-radius:16px;padding:20px;text-align:center;}
+  /* блок «Баланс» SMOKEY-POINTS — градиент розовый → светло-розовый */
+  .profile-card.points-card{background:linear-gradient(145deg, rgba(227,79,239,0.32) 0%, rgba(255,160,235,0.16) 100%);border-color:rgba(255,160,235,0.4);}
   .profile-avatar{width:76px;height:76px;border-radius:50%;margin:0 auto 12px;background:linear-gradient(135deg, var(--magenta), var(--violet));display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:800;color:#fff;overflow:hidden;}
   .profile-avatar img{width:100%;height:100%;object-fit:cover;}
   .profile-name{font-size:1.15rem;font-weight:800;}
   .profile-username{color:var(--muted-dim);font-size:0.82rem;font-family:'JetBrains Mono',monospace;margin-top:2px;}
-  .promo-box{margin-top:18px;padding:14px;border-radius:14px;background:var(--panel2);border:1px dashed var(--magenta);}
+  .promo-box{margin-top:18px;padding:14px;border-radius:14px;background:var(--card-grad);border:1px dashed var(--magenta);}
   .promo-box .lbl{font-size:0.7rem;text-transform:uppercase;color:var(--muted-dim);letter-spacing:0.06em;margin-bottom:6px;}
   .promo-box .code{font-family:'JetBrains Mono',monospace;font-size:1.25rem;font-weight:700;color:var(--gold);letter-spacing:0.05em;}
   .promo-box .hint{font-size:0.74rem;color:var(--muted);margin-top:6px;}
@@ -500,7 +504,7 @@
   .points-bar{margin-top:12px;height:8px;border-radius:999px;background:var(--panel2);overflow:hidden;}
   .points-bar-fill{height:100%;background:linear-gradient(90deg, var(--magenta), var(--gold));border-radius:999px;transition:width .3s ease;}
   .orders-list{margin-top:10px;}
-  .order-card{background:var(--panel);border:1px solid var(--line-soft);border-radius:12px;padding:12px 14px;margin-bottom:10px;}
+  .order-card{background:var(--card-grad);border:1px solid var(--card-border);border-radius:12px;padding:12px 14px;margin-bottom:10px;}
   .order-card .oc-top{display:flex;justify-content:space-between;font-size:0.8rem;color:var(--muted);margin-bottom:6px;}
   .order-card .oc-items{font-size:0.8rem;color:var(--text);line-height:1.5;}
   .order-card .oc-total{margin-top:6px;font-weight:800;color:var(--magenta);font-family:'JetBrains Mono',monospace;font-size:0.88rem;}
@@ -553,8 +557,8 @@
   }
   nav.bottom-nav button{
     flex:1;background:none;border:none;color:var(--muted-dim);
-    display:flex;flex-direction:column;align-items:center;gap:3px;
-    padding:8px 4px 7px;cursor:pointer;font-size:0.64rem;font-weight:700;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
+    padding:10px 4px;cursor:pointer;font-size:0.64rem;font-weight:700;
     position:relative;isolation:isolate;text-transform:uppercase;letter-spacing:0.03em;
     transition:color .25s ease, transform .3s cubic-bezier(.34,1.56,.64,1);
   }
@@ -568,17 +572,17 @@
       inset 0 -8px 14px rgba(227,79,239,0.14),
       0 6px 16px -6px rgba(227,79,239,0.5);
     opacity:0;transform:scale(0.7);
-    transition:opacity .25s ease, transform .35s cubic-bezier(.34,1.56,.64,1);
+    transition:opacity .3s ease, transform .4s cubic-bezier(.34,1.56,.64,1);
   }
   nav.bottom-nav button.active::before{opacity:1;transform:scale(1);}
   nav.bottom-nav button .ic{
   display:inline-block;
-  width:24px;height:24px;
+  width:25px;height:25px;
   background-color:currentColor;
   -webkit-mask-size:contain; mask-size:contain;
   -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
   -webkit-mask-position:center; mask-position:center;
-  transition:background-color .2s ease, transform .3s cubic-bezier(.34,1.56,.64,1);
+  transition:background-color .2s ease, transform .35s cubic-bezier(.34,1.56,.64,1), width .35s cubic-bezier(.34,1.56,.64,1), height .35s cubic-bezier(.34,1.56,.64,1), margin .35s cubic-bezier(.34,1.56,.64,1);
   }
   nav.bottom-nav button[data-view="home"] .ic{ -webkit-mask-image:url('home.png'); mask-image:url('home.png'); }
   nav.bottom-nav button[data-view="catalog"] .ic{ -webkit-mask-image:url('catalog.png'); mask-image:url('catalog.png'); }
@@ -586,7 +590,14 @@
   nav.bottom-nav button[data-view="cart"] .ic{ -webkit-mask-image:url('cart.png'); mask-image:url('cart.png'); }
   nav.bottom-nav button[data-view="profile"] .ic{ -webkit-mask-image:url('profile.png'); mask-image:url('profile.png'); }
   nav.bottom-nav button.active{color:var(--text);}
-  nav.bottom-nav button.active .ic{transform:translateY(-1px) scale(1.08);filter:drop-shadow(0 0 8px rgba(227,79,239,0.6));}
+  nav.bottom-nav button.active .ic{transform:translateY(0) scale(0.92);margin-bottom:2px;filter:drop-shadow(0 0 8px rgba(227,79,239,0.6));}
+  /* подпись — скрыта, пока вкладка неактивна; плавно раскрывается при выборе */
+  nav.bottom-nav button .lbl{
+    display:block;max-height:0;opacity:0;transform:translateY(-3px);
+    overflow:hidden;line-height:1.4;
+    transition:max-height .35s cubic-bezier(.34,1.56,.64,1), opacity .25s ease, transform .35s cubic-bezier(.34,1.56,.64,1);
+  }
+  nav.bottom-nav button.active .lbl{max-height:14px;opacity:1;transform:translateY(0);}
   nav.bottom-nav button .nav-badge{
     position:absolute;top:2px;right:20%;
     min-width:15px;height:15px;padding:0 3px;border-radius:99px;
@@ -690,11 +701,11 @@
 </main>
 
 <nav class="bottom-nav">
-  <button data-view="home" class="active"><span class="ic"></span>Главная</button>
-  <button data-view="catalog"><span class="ic"></span>Каталог</button>
-  <button data-view="favorites"><span class="ic"></span>Фавориты</button>
-  <button data-view="cart"><span class="ic"></span>Корзина<span class="nav-badge" id="navCartBadge" style="display:none;">0</span></button>
-  <button data-view="profile"><span class="ic"></span>Профиль</button>
+  <button data-view="home" class="active"><span class="ic"></span><span class="lbl">Главная</span></button>
+  <button data-view="catalog"><span class="ic"></span><span class="lbl">Каталог</span></button>
+  <button data-view="favorites"><span class="ic"></span><span class="lbl">Фавориты</span></button>
+  <button data-view="cart"><span class="ic"></span><span class="lbl">Корзина</span><span class="nav-badge" id="navCartBadge" style="display:none;">0</span></button>
+  <button data-view="profile"><span class="ic"></span><span class="lbl">Профиль</span></button>
 </nav>
 
 <div class="toast" id="toast"></div>
@@ -1138,7 +1149,7 @@ function productCardHtml(p){
     : (allOut ? `<span class="tag out">Нет в наличии</span>` : '');
   const fav = isFavorite(p.id);
   return `<div class="product-card" data-id="${p.id}">
-      <div class="thumb">${tag}<button type="button" class="fav-btn ${fav?'active':''}" data-fav="${p.id}">${fav ? '♥' : '♡'}</button>${thumbHtml(p)}</div>
+      <div class="thumb">${tag}<button type="button" class="fav-btn ${fav?'active':''}" data-fav="${p.id}">${fav ? '♥\uFE0E' : '♡'}</button>${thumbHtml(p)}</div>
       <div class="card-body">
         <div class="name">${p.name}</div>
         <div class="meta">${availCount}/${p.items.length} вкусов в наличии</div>
@@ -1154,7 +1165,7 @@ function bindProductGrid(grid){
       toggleFavorite(btn.dataset.fav);
       haptic('light');
       btn.classList.toggle('active');
-      btn.textContent = btn.classList.contains('active') ? '♥' : '♡';
+      btn.textContent = btn.classList.contains('active') ? '♥\uFE0E' : '♡';
       if(document.getElementById('view-favorites').classList.contains('active')) renderFavorites();
     });
   });
@@ -1326,7 +1337,7 @@ function renderProductDetail(){
   const canBuy = !!pendingFlavor;
   const favActive = isFavorite(p.id);
   body.innerHTML = `
-    <div class="pd-hero">${thumbHtml(p, 'lg').replace('фото скоро будет', 'фото скоро появится')}<button type="button" class="fav-btn ${favActive?'active':''}" id="pdFavBtn">${favActive ? '♥' : '♡'}</button></div>
+    <div class="pd-hero">${thumbHtml(p, 'lg').replace('фото скоро будет', 'фото скоро появится')}<button type="button" class="fav-btn ${favActive?'active':''}" id="pdFavBtn">${favActive ? '♥\uFE0E' : '♡'}</button></div>
     <h1 class="pd-title">${p.name}</h1>
     ${priceHtml}
     ${p.desc ? `<p class="pd-desc">${p.desc}</p>` : ''}
