@@ -190,8 +190,8 @@
       inset 0 -1px 0 rgba(255,255,255,0.06),
       inset 0 0 16px rgba(255,255,255,0.04),
       0 8px 20px -10px rgba(0,0,0,0.5);
-    -webkit-backdrop-filter:blur(18px) saturate(180%);
-    backdrop-filter:blur(18px) saturate(180%);
+    -webkit-backdrop-filter:blur(10px) saturate(160%);
+    backdrop-filter:blur(10px) saturate(160%);
     color:var(--text);
     font-family:'Manrope',sans-serif;
     font-size:0.9rem;
@@ -230,10 +230,9 @@
     padding:9px 16px;
     border-radius:999px;
     border:1px solid rgba(255,255,255,0.16);
-    background:linear-gradient(145deg, rgba(255,255,255,0.11) 0%, rgba(255,255,255,0.03) 60%);
-    box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.3), inset 0 0 10px rgba(255,255,255,0.03);
-    -webkit-backdrop-filter:blur(14px) saturate(160%);
-    backdrop-filter:blur(14px) saturate(160%);
+    /* без backdrop-filter — несколько чипов скроллятся вместе со страницей, блюр на них тормозит */
+    background:linear-gradient(145deg, rgba(60,30,80,0.5) 0%, rgba(30,14,44,0.4) 60%);
+    box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.22), inset 0 0 10px rgba(255,255,255,0.03);
     color:var(--muted);
     font-size:0.8rem;
     font-weight:600;
@@ -400,6 +399,9 @@
     backdrop-filter:blur(18px) saturate(160%);
   }
   .pd-actions .btn{padding:11px 16px;font-size:0.82rem;}
+  .pd-actions .qty-stepper{flex:0 0 auto;background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.16);}
+  .pd-actions .qty-stepper button{width:32px;height:32px;font-size:0.95rem;}
+  .pd-actions .qty-stepper .val{min-width:22px;font-size:0.82rem;}
   .pd-note{margin-top:14px;font-size:0.76rem;color:var(--muted-dim);}
 
   .btn{
@@ -442,6 +444,31 @@
   .co-step{background:var(--panel);border:1px solid var(--line-soft);border-radius:16px;padding:16px;margin-bottom:14px;}
   .co-step .co-title{font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted-dim);font-family:'JetBrains Mono',monospace;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
   .co-step .co-title .n{width:19px;height:19px;border-radius:50%;background:var(--panel2);color:var(--text);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;}
+  /* ---------- шкала прохождения этапов оформления ---------- */
+  .co-progress{display:flex;align-items:flex-start;margin:4px 2px 18px;}
+  .co-progress-step{display:flex;flex-direction:column;align-items:center;gap:6px;flex:0 0 auto;}
+  .co-progress-step .dot{
+    width:26px;height:26px;border-radius:50%;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;
+    font-size:0.72rem;font-weight:800;font-family:'JetBrains Mono',monospace;
+    background:var(--panel2);border:1px solid var(--line);color:var(--muted-dim);
+    transition:background .25s ease, border-color .25s ease, color .25s ease, transform .3s cubic-bezier(.34,1.56,.64,1);
+  }
+  .co-progress-step .lbl{font-size:0.62rem;color:var(--muted-dim);text-align:center;white-space:nowrap;}
+  .co-progress-step.active .dot{
+    background:linear-gradient(135deg, var(--magenta), var(--violet));border-color:transparent;color:#fff;
+    transform:scale(1.1);box-shadow:0 4px 14px -4px rgba(227,79,239,0.7);
+  }
+  .co-progress-step.active .lbl{color:var(--text);font-weight:700;}
+  .co-progress-step.done .dot{background:rgba(52,211,153,0.2);border-color:var(--ok);color:var(--ok);}
+  .co-progress-line{flex:1 1 auto;height:2px;background:var(--line);margin:13px 4px 0;border-radius:2px;transition:background .25s ease;}
+  .co-progress-line.done{background:var(--ok);}
+  /* ---------- блок "Ваш заказ" под каждым этапом ---------- */
+  .co-order-summary{border-style:dashed;border-color:var(--line);background:var(--panel2);}
+  /* ---------- кнопки "Назад" / "Далее" / "Подтвердить заказ" ---------- */
+  .co-nav-buttons{display:flex;gap:10px;margin-top:6px;}
+  .co-nav-buttons .btn-primary{flex:1;}
+  .co-nav-buttons .btn-ghost{flex:0 0 auto;min-width:110px;}
   .method-toggle{display:flex;gap:8px;}
   .method-toggle button{
     flex:1;padding:14px 10px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);
@@ -552,8 +579,9 @@
       inset 0 -1px 0 rgba(255,255,255,0.08),
       inset 0 0 24px rgba(255,255,255,0.04),
       0 16px 40px -10px rgba(0,0,0,0.65);
-    -webkit-backdrop-filter:blur(28px) saturate(190%);
-    backdrop-filter:blur(28px) saturate(190%);
+    -webkit-backdrop-filter:blur(18px) saturate(170%);
+    backdrop-filter:blur(18px) saturate(170%);
+    touch-action:none; /* позволяет вести пальцем по меню без скролла страницы */
   }
   nav.bottom-nav button{
     flex:1;background:none;border:none;color:var(--muted-dim);
@@ -577,7 +605,7 @@
   nav.bottom-nav button.active::before{opacity:1;transform:scale(1);}
   nav.bottom-nav button .ic{
   display:inline-block;
-  width:25px;height:25px;
+  width:38px;height:38px; /* в 1.5 раза крупнее в неактивном состоянии */
   background-color:currentColor;
   -webkit-mask-size:contain; mask-size:contain;
   -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
@@ -590,7 +618,7 @@
   nav.bottom-nav button[data-view="cart"] .ic{ -webkit-mask-image:url('cart.png'); mask-image:url('cart.png'); }
   nav.bottom-nav button[data-view="profile"] .ic{ -webkit-mask-image:url('profile.png'); mask-image:url('profile.png'); }
   nav.bottom-nav button.active{color:var(--text);}
-  nav.bottom-nav button.active .ic{transform:translateY(0) scale(0.92);margin-bottom:2px;filter:drop-shadow(0 0 8px rgba(227,79,239,0.6));}
+  nav.bottom-nav button.active .ic{width:25px;height:25px;margin-bottom:2px;filter:drop-shadow(0 0 8px rgba(227,79,239,0.6));}
   /* подпись — скрыта, пока вкладка неактивна; плавно раскрывается при выборе */
   nav.bottom-nav button .lbl{
     display:block;max-height:0;opacity:0;transform:translateY(-3px);
@@ -1082,6 +1110,35 @@ function goto(view){
 document.querySelectorAll('nav.bottom-nav button[data-view]').forEach(btn => {
   btn.addEventListener('click', () => { haptic('light'); goto(btn.dataset.view); });
 });
+/* Водим пальцем по нижнему меню — выбор едет за пальцем, как скрабер */
+(function(){
+  const navEl = document.querySelector('nav.bottom-nav');
+  if(!navEl) return;
+  let dragging = false;
+  let lastView = null;
+  function viewAt(x, y){
+    const el = document.elementFromPoint(x, y);
+    const btn = el && el.closest && el.closest('nav.bottom-nav button[data-view]');
+    return btn ? btn.dataset.view : null;
+  }
+  navEl.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    lastView = null;
+    try{ navEl.setPointerCapture(e.pointerId); }catch(err){}
+  });
+  navEl.addEventListener('pointermove', (e) => {
+    if(!dragging) return;
+    const v = viewAt(e.clientX, e.clientY);
+    if(v && v !== lastView){
+      lastView = v;
+      haptic('light');
+      goto(v);
+    }
+  });
+  function stopDrag(){ dragging = false; lastView = null; }
+  navEl.addEventListener('pointerup', stopDrag);
+  navEl.addEventListener('pointercancel', stopDrag);
+})();
 document.getElementById('topCartBtn').addEventListener('click', () => { haptic('light'); goto('cart'); });
 document.querySelectorAll('[data-back]').forEach(btn => {
   btn.addEventListener('click', () => goto(btn.dataset.back));
@@ -1345,15 +1402,12 @@ function renderProductDetail(){
       <div class="lbl">${p.variantLabel} · выбери один</div>
       <div class="flavor-grid" id="pdFlavorGrid">${flavorChips}</div>
     </div>
-    <div class="pd-block">
-      <div class="lbl">Количество</div>
+    <div class="pd-actions">
       <div class="qty-stepper" id="pdQtyStepper">
         <button type="button" data-d="-1">−</button>
         <span class="val" id="pdQtyVal">${pdQty}</span>
         <button type="button" data-d="1">+</button>
       </div>
-    </div>
-    <div class="pd-actions">
       <button class="btn btn-ghost" id="pdAddCart" ${canBuy ? '' : 'disabled'}>В корзину</button>
       <button class="btn btn-primary" id="pdBuyNow" ${canBuy ? '' : 'disabled'}>Купить сейчас</button>
     </div>
@@ -1456,11 +1510,32 @@ function renderCart(){
       </div>`;
   }).join('');
   const total = cartTotal();
+  const discTotal = cartDiscountedTotal();
   const hasAsk = cart.some(ci => { const p = productById(ci.productId); return p && p.price===null; });
-  body.innerHTML = rows + `
+  const promoBlock = checkout.promo ? `
+    <div class="co-step" style="margin-top:14px;">
+      <div class="co-title"><span class="n">%</span>Промокод</div>
+      <div class="pay-opt active" style="cursor:default;">
+        <span class="ic">🏷</span><span>${checkout.promo.code} — скидка ${checkout.promo.amount ? checkout.promo.amount + ' €' : checkout.promo.percent + '%'}</span>
+      </div>
+      <button type="button" class="btn btn-ghost copy-mini" id="promoRemoveBtn" style="margin-top:10px;">Убрать промокод</button>
+    </div>
+  ` : `
+    <div class="co-step" style="margin-top:14px;">
+      <div class="co-title"><span class="n">%</span>Промокод</div>
+      <div class="field-row" style="align-items:flex-start;">
+        <div class="field" style="margin-bottom:0;"><input type="text" id="fPromo" placeholder="Введи промокод" style="text-transform:uppercase;"></div>
+        <button type="button" class="btn btn-ghost" style="flex:0 0 auto;" id="promoApplyBtn">Применить</button>
+      </div>
+      <div id="promoError" style="display:none;" class="co-error"></div>
+    </div>
+  `;
+  body.innerHTML = rows + promoBlock + `
     <div class="cart-summary">
       <div class="row"><span>Товаров</span><span>${cartCount()} шт</span></div>
-      <div class="row total"><span>Итого</span><span>${total.toFixed(2).replace('.',',')} €${hasAsk ? ' +' : ''}</span></div>
+      <div class="row"><span>Сумма</span><span>${total.toFixed(2).replace('.',',')} €${hasAsk ? ' +' : ''}</span></div>
+      ${checkout.promo ? `<div class="row" style="color:var(--ok);"><span>Скидка по промокоду ${checkout.promo.code}</span><span>−${checkout.promo.amount ? checkout.promo.amount + ' €' : checkout.promo.percent + '%'}</span></div>` : ''}
+      <div class="row total"><span>Итого</span><span>${discTotal.toFixed(2).replace('.',',')} €${hasAsk ? ' +' : ''}</span></div>
       ${hasAsk ? '<div class="row" style="font-size:0.72rem;">+ позиции с ценой по запросу — сумма уточняется в переписке</div>' : ''}
     </div>
     <button class="btn btn-primary btn-wide btn-block" id="cartCheckoutBtn" style="margin-top:16px;">Оформить заказ</button>
@@ -1473,6 +1548,24 @@ function renderCart(){
   body.querySelectorAll('.rm').forEach(btn => {
     btn.addEventListener('click', () => removeCartItem(parseInt(btn.dataset.idx,10)));
   });
+  const promoApplyBtn = document.getElementById('promoApplyBtn');
+  if(promoApplyBtn) promoApplyBtn.addEventListener('click', () => {
+    const val = document.getElementById('fPromo').value;
+    const res = findPromo(val);
+    const errBox = document.getElementById('promoError');
+    if(!res.ok){
+      errBox.style.display = 'block';
+      errBox.textContent = res.error;
+      haptic('error');
+      return;
+    }
+    checkout.promo = {code: res.code, percent: res.percent, amount: res.amount, kind: res.kind};
+    haptic('success');
+    showToast('Промокод применён');
+    renderCart();
+  });
+  const promoRemoveBtn = document.getElementById('promoRemoveBtn');
+  if(promoRemoveBtn) promoRemoveBtn.addEventListener('click', () => { checkout.promo = null; renderCart(); });
   const coBtn = document.getElementById('cartCheckoutBtn');
   if(coBtn) coBtn.addEventListener('click', () => { goto('checkout'); startCheckout(); });
 }
@@ -1482,11 +1575,12 @@ function renderCart(){
    ====================================================================== */
 function startCheckout(){
   if(cart.length === 0){ goto('cart'); return; }
+  const keepPromo = checkout.promo; // промокод уже выбран в корзине — не сбрасываем его здесь
   checkout = {
     method:'delivery', payment:'card', contactType:'telegram',
     name:'', street:'', house:'', city:'', postal:'', phone:'', email:'',
     contactValue: tgUser && tgUser.username ? '@'+tgUser.username : '',
-    age21:false, promo:null
+    age21:false, promo:keepPromo, step:1
   };
   renderCheckout();
 }
@@ -1497,105 +1591,122 @@ function paymentOptionsFor(method){
     : [['card','💳','Оплата картой'],['crypto','₿','Оплата криптовалютой'],['cash','💵','Наличными при получении']];
 }
 
+const CHECKOUT_STEPS = [
+  {n:1, label:'Получение'},
+  {n:2, label:'Данные'},
+  {n:3, label:'Связь'},
+  {n:4, label:'Оплата'}
+];
+
 function renderCheckout(){
+  if(!checkout.step) checkout.step = 1;
   if(!paymentOptionsFor(checkout.method).find(o=>o[0]===checkout.payment)){
     checkout.payment = paymentOptionsFor(checkout.method)[0][0];
   }
   const body = document.getElementById('checkoutBody');
   const isDelivery = checkout.method === 'delivery';
-  body.innerHTML = `
-    <div class="co-step">
-      <div class="co-title"><span class="n">1</span>Способ получения</div>
-      <div class="method-toggle">
-        <button type="button" data-method="delivery" class="${isDelivery?'active':''}"><span class="ic">🚚</span>Доставка</button>
-        <button type="button" data-method="pickup" class="${!isDelivery?'active':''}"><span class="ic">🏪</span>Самовывоз</button>
-      </div>
-    </div>
+  const step = checkout.step;
 
-    <div class="co-step">
-      <div class="co-title"><span class="n">2</span>Ваши данные</div>
-      <div class="field">
-        <label>Имя</label>
-        <input type="text" id="fName" value="${checkout.name||''}" placeholder="Как к вам обращаться">
-      </div>
-      ${isDelivery ? `
-        <div class="field-row">
-          <div class="field"><label>Улица</label><input type="text" id="fStreet" value="${checkout.street||''}" placeholder="Улица"></div>
-          <div class="field" style="flex:0 0 90px;"><label>Дом</label><input type="text" id="fHouse" value="${checkout.house||''}" placeholder="№"></div>
+  const progressHtml = `
+    <div class="co-progress">
+      ${CHECKOUT_STEPS.map((s, i) => `
+        <div class="co-progress-step ${step===s.n?'active':''} ${step>s.n?'done':''}">
+          <span class="dot">${step>s.n ? '✓' : s.n}</span>
+          <span class="lbl">${s.label}</span>
         </div>
-        <div class="field-row">
-          <div class="field"><label>Город</label><input type="text" id="fCity" value="${checkout.city||''}" placeholder="Город"></div>
-          <div class="field" style="flex:0 0 120px;"><label>Индекс</label><input type="text" id="fPostal" value="${checkout.postal||''}" placeholder="ZIP"></div>
+        ${i < CHECKOUT_STEPS.length-1 ? `<span class="co-progress-line ${step>s.n?'done':''}"></span>` : ''}
+      `).join('')}
+    </div>`;
+
+  let stepHtml = '';
+  if(step === 1){
+    stepHtml = `
+      <div class="co-step">
+        <div class="co-title">Способ получения</div>
+        <div class="method-toggle">
+          <button type="button" data-method="delivery" class="${isDelivery?'active':''}"><span class="ic">🚚</span>Доставка</button>
+          <button type="button" data-method="pickup" class="${!isDelivery?'active':''}"><span class="ic">🏪</span>Самовывоз</button>
         </div>
+      </div>`;
+  }else if(step === 2){
+    stepHtml = `
+      <div class="co-step">
+        <div class="co-title">Ваши данные</div>
         <div class="field">
-          <label>Телефон</label>
-          <input type="tel" id="fPhone" value="${checkout.phone||''}" placeholder="+49 151 1234567">
+          <label>Имя</label>
+          <input type="text" id="fName" value="${checkout.name||''}" placeholder="Как к вам обращаться">
         </div>
-        <div class="field">
-          <label>E-mail</label>
-          <input type="email" id="fEmail" value="${checkout.email||''}" placeholder="mail@example.com">
+        ${isDelivery ? `
+          <div class="field-row">
+            <div class="field"><label>Улица</label><input type="text" id="fStreet" value="${checkout.street||''}" placeholder="Улица"></div>
+            <div class="field" style="flex:0 0 90px;"><label>Дом</label><input type="text" id="fHouse" value="${checkout.house||''}" placeholder="№"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Город</label><input type="text" id="fCity" value="${checkout.city||''}" placeholder="Город"></div>
+            <div class="field" style="flex:0 0 120px;"><label>Индекс</label><input type="text" id="fPostal" value="${checkout.postal||''}" placeholder="ZIP"></div>
+          </div>
+          <div class="field">
+            <label>Телефон</label>
+            <input type="tel" id="fPhone" value="${checkout.phone||''}" placeholder="+49 151 1234567">
+          </div>
+          <div class="field">
+            <label>E-mail</label>
+            <input type="email" id="fEmail" value="${checkout.email||''}" placeholder="mail@example.com">
+          </div>
+        ` : ''}
+      </div>`;
+  }else if(step === 3){
+    stepHtml = `
+      <div class="co-step">
+        <div class="co-title">Связь для оформления</div>
+        <div class="contact-toggle">
+          <button type="button" data-ctype="telegram" class="${checkout.contactType==='telegram'?'active':''}">Telegram @username</button>
+          <button type="button" data-ctype="phone" class="${checkout.contactType==='phone'?'active':''}">Номер телефона</button>
         </div>
-      ` : ''}
-    </div>
-
-    <div class="co-step">
-      <div class="co-title"><span class="n">3</span>Связь для оформления</div>
-      <div class="contact-toggle">
-        <button type="button" data-ctype="telegram" class="${checkout.contactType==='telegram'?'active':''}">Telegram @username</button>
-        <button type="button" data-ctype="phone" class="${checkout.contactType==='phone'?'active':''}">Номер телефона</button>
+        <div class="field" style="margin-bottom:0;">
+          <input type="text" id="fContact" value="${checkout.contactValue||''}" placeholder="${checkout.contactType==='telegram' ? '@username' : '+49...'}">
+        </div>
+      </div>`;
+  }else if(step === 4){
+    stepHtml = `
+      <div class="co-step">
+        <div class="co-title">Способ оплаты</div>
+        <div class="pay-options" id="payOptions">
+          ${paymentOptionsFor(checkout.method).map(([key,ic,label]) => `
+            <div class="pay-opt ${checkout.payment===key?'active':''}" data-pay="${key}">
+              <span class="radio"></span><span class="ic">${ic}</span><span>${label}</span>
+            </div>`).join('')}
+        </div>
+        <div class="pd-note">Реквизиты для оплаты пришлём тебе в Telegram лично после подтверждения заказа.</div>
       </div>
-      <div class="field" style="margin-bottom:0;">
-        <input type="text" id="fContact" value="${checkout.contactValue||''}" placeholder="${checkout.contactType==='telegram' ? '@username' : '+49...'}">
-      </div>
-    </div>
+      <div class="co-step">
+        <label class="pay-opt ${checkout.age21 ? 'active' : ''}" style="cursor:pointer;">
+          <input type="checkbox" id="fAge21" ${checkout.age21 ? 'checked' : ''} style="display:none;">
+          <span class="radio" id="age21Radio"></span>
+          <span>Подтверждаю, что мне есть 21 год</span>
+        </label>
+      </div>`;
+  }
 
-    <div class="co-step">
-      <div class="co-title"><span class="n">4</span>Способ оплаты</div>
-      <div class="pay-options" id="payOptions">
-        ${paymentOptionsFor(checkout.method).map(([key,ic,label]) => `
-          <div class="pay-opt ${checkout.payment===key?'active':''}" data-pay="${key}">
-            <span class="radio"></span><span class="ic">${ic}</span><span>${label}</span>
-          </div>`).join('')}
-      </div>
-      <div class="pd-note">Реквизиты для оплаты пришлём тебе в Telegram лично после подтверждения заказа.</div>
-    </div>
-
-    <div class="co-step">
-      <div class="co-title"><span class="n">5</span>Промокод</div>
-      ${checkout.promo ? `
-        <div class="pay-opt active" style="cursor:default;">
-          <span class="ic">🏷</span><span>${checkout.promo.code} — скидка ${checkout.promo.amount ? checkout.promo.amount + ' €' : checkout.promo.percent + '%'}</span>
-        </div>
-        <button type="button" class="btn btn-ghost copy-mini" id="promoRemoveBtn" style="margin-top:10px;">Убрать промокод</button>
-      ` : `
-        <div class="field-row" style="align-items:flex-start;">
-          <div class="field" style="margin-bottom:0;"><input type="text" id="fPromo" placeholder="Введи промокод" style="text-transform:uppercase;"></div>
-          <button type="button" class="btn btn-ghost" style="flex:0 0 auto;" id="promoApplyBtn">Применить</button>
-        </div>
-        <div id="promoError" style="display:none;" class="co-error"></div>
-        <div class="pd-note">Один промокод на заказ. Личный промокод друга даёт скидку ${REFERRAL_DISCOUNT_PERCENT}% на первый заказ.</div>
-      `}
-    </div>
-
-    <div class="co-step">
-      <div class="co-title"><span class="n">6</span>Подтверждение возраста</div>
-      <label class="pay-opt ${checkout.age21 ? 'active' : ''}" style="cursor:pointer;">
-        <input type="checkbox" id="fAge21" ${checkout.age21 ? 'checked' : ''} style="display:none;">
-        <span class="radio" id="age21Radio"></span>
-        <span>Подтверждаю, что мне есть 21 год</span>
-      </label>
-    </div>
-
-    <div class="co-step">
-      <div class="co-title"><span class="n">7</span>Ваш заказ</div>
+  const orderSummaryHtml = `
+    <div class="co-step co-order-summary">
+      <div class="co-title">Ваш заказ</div>
       ${cart.map(ci => { const p = productById(ci.productId); if(!p) return ''; const lt = p.price ? (p.price*ci.qty).toFixed(2).replace('.',',')+' €' : 'по запросу';
         return `<div class="order-review-row"><span>${p.name} · ${ci.flavor} × ${ci.qty}</span><span>${lt}</span></div>`; }).join('')}
       ${checkout.promo ? `<div class="order-review-row"><span>Скидка по промокоду ${checkout.promo.code}</span><span style="color:var(--ok);">−${checkout.promo.amount ? checkout.promo.amount + ' €' : checkout.promo.percent + '%'}</span></div>` : ''}
       <div class="order-review-row" style="border:none;font-weight:800;color:var(--text);padding-top:10px;"><span>Итого</span><span style="color:var(--magenta);">${cartDiscountedTotal().toFixed(2).replace('.',',')} €</span></div>
-    </div>
+    </div>`;
 
+  const isLast = step === CHECKOUT_STEPS.length;
+  body.innerHTML = `
+    ${progressHtml}
+    ${stepHtml}
+    ${orderSummaryHtml}
     <div id="coError" class="co-error" style="display:none;"></div>
-    <button class="btn btn-primary btn-wide btn-block" id="submitOrderBtn" style="margin-top:6px;">Подтвердить заказ</button>
+    <div class="co-nav-buttons">
+      ${step > 1 ? `<button type="button" class="btn btn-ghost" id="coBackBtn">Назад</button>` : ''}
+      <button type="button" class="btn btn-primary" id="${isLast ? 'submitOrderBtn' : 'coNextBtn'}">${isLast ? 'Подтвердить заказ' : 'Далее'}</button>
+    </div>
   `;
 
   body.querySelectorAll('[data-method]').forEach(btn => {
@@ -1612,25 +1723,6 @@ function renderCheckout(){
   bind('fName','name'); bind('fStreet','street'); bind('fHouse','house'); bind('fCity','city');
   bind('fPostal','postal'); bind('fPhone','phone'); bind('fEmail','email'); bind('fContact','contactValue');
 
-  const promoApplyBtn = document.getElementById('promoApplyBtn');
-  if(promoApplyBtn) promoApplyBtn.addEventListener('click', () => {
-    const val = document.getElementById('fPromo').value;
-    const res = findPromo(val);
-    const errBox = document.getElementById('promoError');
-    if(!res.ok){
-      errBox.style.display = 'block';
-      errBox.textContent = res.error;
-      haptic('error');
-      return;
-    }
-    checkout.promo = {code: res.code, percent: res.percent, amount: res.amount, kind: res.kind};
-    haptic('success');
-    showToast('Промокод применён');
-    renderCheckout();
-  });
-  const promoRemoveBtn = document.getElementById('promoRemoveBtn');
-  if(promoRemoveBtn) promoRemoveBtn.addEventListener('click', () => { checkout.promo = null; renderCheckout(); });
-
   const age21Box = document.getElementById('fAge21');
   if(age21Box) age21Box.closest('label').addEventListener('click', (e) => {
     e.preventDefault();
@@ -1638,35 +1730,91 @@ function renderCheckout(){
     renderCheckout();
   });
 
-  document.getElementById('submitOrderBtn').addEventListener('click', submitOrder);
+  const backBtn = document.getElementById('coBackBtn');
+  if(backBtn) backBtn.addEventListener('click', () => { checkout.step -= 1; renderCheckout(); window.scrollTo(0,0); });
+
+  const nextBtn = document.getElementById('coNextBtn');
+  if(nextBtn) nextBtn.addEventListener('click', () => {
+    const errs = validateStep(checkout.step);
+    const errBox = document.getElementById('coError');
+    if(errs.length){
+      errBox.style.display = 'block';
+      errBox.innerHTML = errs.map(e => '• '+e).join('<br>');
+      haptic('error');
+      return;
+    }
+    errBox.style.display = 'none';
+    checkout.step += 1;
+    haptic('light');
+    renderCheckout();
+    window.scrollTo(0,0);
+  });
+
+  const submitBtn = document.getElementById('submitOrderBtn');
+  if(submitBtn) submitBtn.addEventListener('click', submitOrder);
 }
 
-function validateCheckout(){
+function validateStep(step){
   const errs = [];
-  if(!checkout.name || checkout.name.trim().length < 2) errs.push('Укажи своё имя');
-  if(checkout.method === 'delivery'){
-    if(!checkout.street) errs.push('Укажи улицу');
-    if(!checkout.house) errs.push('Укажи номер дома');
-    if(!checkout.city) errs.push('Укажи город');
-    if(!checkout.postal) errs.push('Укажи индекс');
-    if(!checkout.phone || !/^\+?[0-9\s()-]{6,}$/.test(checkout.phone)) errs.push('Укажи корректный номер телефона');
-    if(!checkout.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(checkout.email)) errs.push('Укажи корректный e-mail');
+  if(step === 2){
+    if(!checkout.name || checkout.name.trim().length < 2) errs.push('Укажи своё имя');
+    if(checkout.method === 'delivery'){
+      if(!checkout.street) errs.push('Укажи улицу');
+      if(!checkout.house) errs.push('Укажи номер дома');
+      if(!checkout.city) errs.push('Укажи город');
+      if(!checkout.postal) errs.push('Укажи индекс');
+      if(!checkout.phone || !/^\+?[0-9\s()-]{6,}$/.test(checkout.phone)) errs.push('Укажи корректный номер телефона');
+      if(!checkout.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(checkout.email)) errs.push('Укажи корректный e-mail');
+    }
   }
-  if(!checkout.contactValue) errs.push('Укажи контакт для связи');
-  else if(checkout.contactType === 'telegram' && !checkout.contactValue.trim().startsWith('@')) errs.push('Telegram-юзернейм должен начинаться с @');
-  else if(checkout.contactType === 'phone' && !checkout.contactValue.trim().startsWith('+')) errs.push('Номер телефона должен начинаться с +');
-  if(!checkout.age21) errs.push('Подтверди, что тебе есть 21 год');
+  if(step === 3){
+    if(!checkout.contactValue) errs.push('Укажи контакт для связи');
+    else if(checkout.contactType === 'telegram' && !checkout.contactValue.trim().startsWith('@')) errs.push('Telegram-юзернейм должен начинаться с @');
+    else if(checkout.contactType === 'phone' && !checkout.contactValue.trim().startsWith('+')) errs.push('Номер телефона должен начинаться с +');
+  }
+  if(step === 4){
+    if(!checkout.age21) errs.push('Подтверди, что тебе есть 21 год');
+  }
   return errs;
+}
+function validateCheckout(){
+  return [1,2,3,4].reduce((acc, s) => acc.concat(validateStep(s)), []);
+}
+
+/* Короткие кодовые обозначения товаров для отчёта админу — полное название
+   наружу (в боте) не попадает. Логика такая же, как в priceFor(), чтобы
+   не перепутать "Mini" и обычные версии. */
+function adminProductCode(p){
+  const n = p.name;
+  if(/^Vozol Prime/i.test(n)) return 'VozPr';
+  if(/^ElfLiq/i.test(n)) return 'EL';
+  if(/^Puffy/i.test(n)) return 'Puf';
+  if(/^Chaser Black/i.test(n)) return 'ChB';
+  if(/^Chaser Lux/i.test(n)) return 'ChLux';
+  if(/^Chaser Limitini Editini/i.test(n)) return 'ChLE';
+  if(/^Chaser for Pods/i.test(n)) return 'ChPod';
+  if(/^Chaser Special/i.test(n)) return 'ChSp';
+  if(/^Chaser Mix/i.test(n)) return 'ChMix';
+  if(/^Vaporesso Xros 4 Mini/i.test(n)) return 'X4M';
+  if(/^Vaporesso Xros 5 Mini/i.test(n)) return 'X5M';
+  if(/^Vaporesso Xros 5(?!\s*Mini)/i.test(n)) return 'X5';
+  if(/^Vaporesso Xros Pro 2/i.test(n)) return 'XP2';
+  if(/^Vaporesso Xros 6 Mini/i.test(n)) return 'X6M';
+  if(/^Vaporesso Xros 6(?!\s*Mini)/i.test(n)) return 'X6';
+  if(/^Картриджи Xros/i.test(n)) return 'CartX';
+  if(/^Снюс Cuba/i.test(n)) return 'Cuba';
+  if(/^Снюс Baron/i.test(n)) return 'Baron';
+  return n.replace(/[^A-Za-zА-Яа-я0-9]/g,'').slice(0,5);
 }
 
 function buildOrderText(){
   const payLabels = {card:'Карта', crypto:'Криптовалюта', cash:'Наличные'};
-  let text = `🛒 <b>Новый заказ ${CONFIG.SHOP_NAME}</b>\n\n`;
+  let text = `🛒 <b>Новый заказ</b>\n\n`;
   cart.forEach(ci => {
     const p = productById(ci.productId);
     if(!p) return;
     const lt = p.price ? (p.price*ci.qty).toFixed(2).replace('.',',')+' €' : 'цена по запросу';
-    text += `• ${p.name} — ${ci.flavor} × ${ci.qty} (${lt})\n`;
+    text += `• ${adminProductCode(p)} — ${ci.flavor} × ${ci.qty} (${lt})\n`;
   });
   if(checkout.promo) text += `\n🏷 Применён промокод: ${checkout.promo.code} (−${checkout.promo.amount ? checkout.promo.amount + ' €' : checkout.promo.percent + '%'})\n💰 Сумма без скидки: ${cartTotal().toFixed(2).replace('.',',')} €\n💰 Итого к оплате: ${cartDiscountedTotal().toFixed(2).replace('.',',')} €\n`;
   else text += `\n💰 Итого: ${cartTotal().toFixed(2).replace('.',',')} €\n`;
