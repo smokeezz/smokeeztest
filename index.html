@@ -24,7 +24,7 @@
     --no:#fb7185;
     --gold:#fbbf24;
     --radius:16px;
-    --nav-h:80px;
+    --nav-h:66px;
     /* полупрозрачная панель тёмно-фиолетовый → розовый, для карточек корзины и профиля */
     --card-grad:linear-gradient(160deg, rgba(58,15,92,0.5) 0%, rgba(18,6,30,0.55) 45%, rgba(227,79,239,0.16) 100%);
     --card-border:rgba(190,110,230,0.35);
@@ -441,7 +441,9 @@
   .cart-summary .row.total span:last-child{color:var(--magenta);font-family:'JetBrains Mono',monospace;}
 
   /* ---------- checkout ---------- */
-  .co-step{background:var(--panel);border:1px solid var(--line-soft);border-radius:16px;padding:16px;margin-bottom:14px;}
+  .co-step{background:var(--card-grad);border:1px solid var(--card-border);border-radius:16px;padding:16px;margin-bottom:14px;}
+  /* блок промокода — чуть более розовый вариант общего градиента */
+  .co-step.promo-step{background:linear-gradient(150deg, rgba(227,79,239,0.28) 0%, rgba(150,35,170,0.26) 45%, rgba(30,8,46,0.5) 100%);border-color:rgba(255,140,235,0.4);}
   .co-step .co-title{font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted-dim);font-family:'JetBrains Mono',monospace;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
   .co-step .co-title .n{width:19px;height:19px;border-radius:50%;background:var(--panel2);color:var(--text);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;}
   /* ---------- шкала прохождения этапов оформления ---------- */
@@ -464,7 +466,7 @@
   .co-progress-line{flex:1 1 auto;height:2px;background:var(--line);margin:13px 4px 0;border-radius:2px;transition:background .25s ease;}
   .co-progress-line.done{background:var(--ok);}
   /* ---------- блок "Ваш заказ" под каждым этапом ---------- */
-  .co-order-summary{border-style:dashed;border-color:var(--line);background:var(--panel2);}
+  .co-order-summary{border-style:dashed;border-color:var(--card-border);background:var(--card-grad);}
   /* ---------- кнопки "Назад" / "Далее" / "Подтвердить заказ" ---------- */
   .co-nav-buttons{display:flex;gap:10px;margin-top:6px;}
   .co-nav-buttons .btn-primary{flex:1;}
@@ -570,42 +572,45 @@
     max-width:520px;margin:0 auto;
     z-index:50;
     display:flex;gap:2px;
-    padding:6px;
-    border-radius:32px;
-    background:linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.05) 45%, rgba(255,255,255,0.09) 100%);
-    border:1px solid rgba(255,255,255,0.22);
+    padding:5px;
+    border-radius:30px;
+    background:linear-gradient(135deg, rgba(139,92,246,0.22) 0%, rgba(227,79,239,0.16) 50%, rgba(255,255,255,0.06) 100%);
+    border:1px solid rgba(255,160,245,0.28);
     box-shadow:
-      inset 0 1.5px 0 rgba(255,255,255,0.45),
+      inset 0 1.5px 0 rgba(255,255,255,0.4),
       inset 0 -1px 0 rgba(255,255,255,0.08),
-      inset 0 0 24px rgba(255,255,255,0.04),
+      inset 0 0 24px rgba(227,79,239,0.06),
       0 16px 40px -10px rgba(0,0,0,0.65);
     -webkit-backdrop-filter:blur(18px) saturate(170%);
     backdrop-filter:blur(18px) saturate(170%);
     touch-action:none; /* позволяет вести пальцем по меню без скролла страницы */
   }
-  nav.bottom-nav button{
-    flex:1;background:none;border:none;color:var(--muted-dim);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
-    padding:10px 4px;cursor:pointer;font-size:0.64rem;font-weight:700;
-    position:relative;isolation:isolate;text-transform:uppercase;letter-spacing:0.03em;
-    transition:color .25s ease, transform .3s cubic-bezier(.34,1.56,.64,1);
-  }
-  nav.bottom-nav button:active{transform:scale(0.9);}
-  nav.bottom-nav button::before{
-    content:'';position:absolute;inset:0;z-index:-1;border-radius:26px;
+  /* ползунок-«линза», который плавно едет за пальцем */
+  .nav-lens{
+    position:absolute;top:5px;bottom:5px;left:0;
+    border-radius:24px;
     background:linear-gradient(180deg, rgba(255,255,255,0.26), rgba(255,255,255,0.08));
     border:1px solid rgba(255,255,255,0.3);
     box-shadow:
       inset 0 1.5px 0 rgba(255,255,255,0.55),
       inset 0 -8px 14px rgba(227,79,239,0.14),
       0 6px 16px -6px rgba(227,79,239,0.5);
-    opacity:0;transform:scale(0.7);
-    transition:opacity .3s ease, transform .4s cubic-bezier(.34,1.56,.64,1);
+    transition:transform .32s cubic-bezier(.34,1.56,.64,1), width .32s cubic-bezier(.34,1.56,.64,1);
+    will-change:transform;
+    pointer-events:none;
+    z-index:0;
   }
-  nav.bottom-nav button.active::before{opacity:1;transform:scale(1);}
+  nav.bottom-nav button{
+    flex:1;background:none;border:none;color:var(--muted-dim);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
+    padding:7px 4px;cursor:pointer;font-size:0.62rem;font-weight:700;
+    position:relative;isolation:isolate;z-index:1;text-transform:uppercase;letter-spacing:0.03em;
+    transition:color .25s ease, transform .3s cubic-bezier(.34,1.56,.64,1);
+  }
+  nav.bottom-nav button:active{transform:scale(0.9);}
   nav.bottom-nav button .ic{
   display:inline-block;
-  width:27px;height:27px; /* в 1.5 раза крупнее в неактивном состоянии */
+  width:27px;height:27px; /* неактивная иконка */
   background-color:currentColor;
   -webkit-mask-size:contain; mask-size:contain;
   -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
@@ -618,14 +623,14 @@
   nav.bottom-nav button[data-view="cart"] .ic{ -webkit-mask-image:url('cart.png'); mask-image:url('cart.png'); }
   nav.bottom-nav button[data-view="profile"] .ic{ -webkit-mask-image:url('profile.png'); mask-image:url('profile.png'); }
   nav.bottom-nav button.active{color:var(--text);}
-  nav.bottom-nav button.active .ic{width:25px;height:25px;margin-bottom:2px;filter:drop-shadow(0 0 8px rgba(227,79,239,0.6));}
+  nav.bottom-nav button.active .ic{width:20px;height:20px;margin-bottom:2px;filter:drop-shadow(0 0 8px rgba(227,79,239,0.6));}
   /* подпись — скрыта, пока вкладка неактивна; плавно раскрывается при выборе */
   nav.bottom-nav button .lbl{
     display:block;max-height:0;opacity:0;transform:translateY(-3px);
     overflow:hidden;line-height:1.4;
     transition:max-height .35s cubic-bezier(.34,1.56,.64,1), opacity .25s ease, transform .35s cubic-bezier(.34,1.56,.64,1);
   }
-  nav.bottom-nav button.active .lbl{max-height:14px;opacity:1;transform:translateY(0);}
+  nav.bottom-nav button.active .lbl{max-height:13px;opacity:1;transform:translateY(0);}
   nav.bottom-nav button .nav-badge{
     position:absolute;top:2px;right:20%;
     min-width:15px;height:15px;padding:0 3px;border-radius:99px;
@@ -729,6 +734,7 @@
 </main>
 
 <nav class="bottom-nav">
+  <div class="nav-lens" id="navLens"></div>
   <button data-view="home" class="active"><span class="ic"></span><span class="lbl">Главная</span></button>
   <button data-view="catalog"><span class="ic"></span><span class="lbl">Каталог</span></button>
   <button data-view="favorites"><span class="ic"></span><span class="lbl">Фавориты</span></button>
@@ -1106,39 +1112,106 @@ function goto(view){
   if(view === 'catalog') renderCatalog();
   if(view === 'favorites') renderFavorites();
   if(view === 'home') renderHome();
+  syncLensToActive();
 }
 document.querySelectorAll('nav.bottom-nav button[data-view]').forEach(btn => {
   btn.addEventListener('click', () => { haptic('light'); goto(btn.dataset.view); });
 });
-/* Водим пальцем по нижнему меню — выбор едет за пальцем, как скрабер */
+
+/* ======================================================================
+   НИЖНЕЕ МЕНЮ — ползунок-«линза», едущий за пальцем
+   Во время движения пальца ползунок двигается плавно и непрерывно,
+   а подсветка вкладки меняется дискретно под пальцем — но сама страница
+   не переключается, чтобы не дёргать рендер на каждый пиксель движения.
+   Переключение происходит только когда палец отрывается от экрана. */
+let navLensWidth = 0, navTrackLeft = 0, navTrackWidth = 0;
+let navDragging = false, navPreviewView = null, navDidMove = false;
+
+function navButtons(){ return Array.from(document.querySelectorAll('nav.bottom-nav button[data-view]')); }
+function navCurrentActiveView(){
+  const active = navButtons().find(b => b.classList.contains('active'));
+  return active ? active.dataset.view : 'home';
+}
+function navSetPreviewActive(view){
+  navButtons().forEach(b => b.classList.toggle('active', b.dataset.view === view));
+}
+function navRecalcTrack(){
+  const navEl = document.querySelector('nav.bottom-nav');
+  const btns = navButtons();
+  if(!navEl || !btns.length) return;
+  const navRect = navEl.getBoundingClientRect();
+  const btnRect = btns[0].getBoundingClientRect();
+  navLensWidth = btnRect.width;
+  navTrackLeft = btnRect.left - navRect.left;
+  navTrackWidth = navLensWidth * btns.length;
+  const lens = document.getElementById('navLens');
+  if(lens) lens.style.width = navLensWidth + 'px';
+}
+function navMoveLens(xPx, animate){
+  const lens = document.getElementById('navLens');
+  if(!lens) return;
+  lens.style.transition = animate ? '' : 'none';
+  lens.style.transform = `translateX(${xPx}px)`;
+}
+function navClampLensX(x){
+  return Math.max(navTrackLeft, Math.min(navTrackLeft + navTrackWidth - navLensWidth, x));
+}
+function syncLensToActive(){
+  navRecalcTrack();
+  const btns = navButtons();
+  const idx = btns.findIndex(b => b.dataset.view === navCurrentActiveView());
+  navMoveLens(navTrackLeft + Math.max(0, idx) * navLensWidth, true);
+}
+window.addEventListener('load', syncLensToActive);
+window.addEventListener('resize', syncLensToActive);
+
 (function(){
   const navEl = document.querySelector('nav.bottom-nav');
   if(!navEl) return;
-  let dragging = false;
-  let lastView = null;
+
   function viewAt(x, y){
     const el = document.elementFromPoint(x, y);
     const btn = el && el.closest && el.closest('nav.bottom-nav button[data-view]');
     return btn ? btn.dataset.view : null;
   }
+
   navEl.addEventListener('pointerdown', (e) => {
-    dragging = true;
-    lastView = null;
+    navDragging = true;
+    navDidMove = false;
+    navRecalcTrack();
+    navPreviewView = navCurrentActiveView();
     try{ navEl.setPointerCapture(e.pointerId); }catch(err){}
+    const navRect = navEl.getBoundingClientRect();
+    navMoveLens(navClampLensX(e.clientX - navRect.left - navLensWidth/2), false);
   });
+
   navEl.addEventListener('pointermove', (e) => {
-    if(!dragging) return;
+    if(!navDragging) return;
+    navDidMove = true;
+    const navRect = navEl.getBoundingClientRect();
+    // ползунок плывёт плавно и непрерывно за пальцем — без доводки к центру кнопки
+    navMoveLens(navClampLensX(e.clientX - navRect.left - navLensWidth/2), false);
     const v = viewAt(e.clientX, e.clientY);
-    if(v && v !== lastView){
-      lastView = v;
+    if(v && v !== navPreviewView){
+      navPreviewView = v;
+      navSetPreviewActive(v); // подсветка вкладки — без переключения самой страницы
       haptic('light');
-      goto(v);
     }
   });
-  function stopDrag(){ dragging = false; lastView = null; }
-  navEl.addEventListener('pointerup', stopDrag);
-  navEl.addEventListener('pointercancel', stopDrag);
+
+  function endDrag(){
+    if(!navDragging) return;
+    navDragging = false;
+    if(navDidMove && navPreviewView){
+      goto(navPreviewView); // страница переключается только здесь — в момент отрыва пальца
+    }else{
+      syncLensToActive();
+    }
+  }
+  navEl.addEventListener('pointerup', endDrag);
+  navEl.addEventListener('pointercancel', endDrag);
 })();
+syncLensToActive();
 document.getElementById('topCartBtn').addEventListener('click', () => { haptic('light'); goto('cart'); });
 document.querySelectorAll('[data-back]').forEach(btn => {
   btn.addEventListener('click', () => goto(btn.dataset.back));
@@ -1513,7 +1586,7 @@ function renderCart(){
   const discTotal = cartDiscountedTotal();
   const hasAsk = cart.some(ci => { const p = productById(ci.productId); return p && p.price===null; });
   const promoBlock = checkout.promo ? `
-    <div class="co-step" style="margin-top:14px;">
+    <div class="co-step promo-step" style="margin-top:14px;">
       <div class="co-title"><span class="n">%</span>Промокод</div>
       <div class="pay-opt active" style="cursor:default;">
         <span class="ic">🏷</span><span>${checkout.promo.code} — скидка ${checkout.promo.amount ? checkout.promo.amount + ' €' : checkout.promo.percent + '%'}</span>
@@ -1521,7 +1594,7 @@ function renderCart(){
       <button type="button" class="btn btn-ghost copy-mini" id="promoRemoveBtn" style="margin-top:10px;">Убрать промокод</button>
     </div>
   ` : `
-    <div class="co-step" style="margin-top:14px;">
+    <div class="co-step promo-step" style="margin-top:14px;">
       <div class="co-title"><span class="n">%</span>Промокод</div>
       <div class="field-row" style="align-items:flex-start;">
         <div class="field" style="margin-bottom:0;"><input type="text" id="fPromo" placeholder="Введи промокод" style="text-transform:uppercase;"></div>
