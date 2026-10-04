@@ -26,7 +26,7 @@
     --radius:16px;
     --nav-h:58px;
     /* полупрозрачная панель тёмно-фиолетовый → розовый, для карточек корзины и профиля */
-    --card-grad:linear-gradient(160deg, rgba(58,15,92,0.40) 0%, rgba(18,6,30,0.43) 45%, rgba(227,79,239,0.13) 100%);
+    --card-grad:linear-gradient(160deg, rgba(58,15,92,0.5) 0%, rgba(18,6,30,0.55) 45%, rgba(227,79,239,0.16) 100%);
     --card-border:rgba(190,110,230,0.35);
     --safe-b:env(safe-area-inset-bottom, 0px);
   }
@@ -443,7 +443,7 @@
   /* ---------- checkout ---------- */
   .co-step{background:var(--card-grad);border:1px solid var(--card-border);border-radius:16px;padding:16px;margin-bottom:14px;}
   /* блок промокода — чуть более розовый вариант общего градиента */
-  .co-step.promo-step{background:linear-gradient(150deg, rgba(227,79,239,0.22) 0%, rgba(150,35,170,0.20) 45%, rgba(30,8,46,0.38) 100%);border-color:rgba(255,140,235,0.4);}
+  .co-step.promo-step{background:linear-gradient(150deg, rgba(227,79,239,0.28) 0%, rgba(150,35,170,0.26) 45%, rgba(30,8,46,0.5) 100%);border-color:rgba(255,140,235,0.4);}
   .co-step .co-title{font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted-dim);font-family:'JetBrains Mono',monospace;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
   .co-step .co-title .n{width:19px;height:19px;border-radius:50%;background:var(--panel2);color:var(--text);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;}
   /* ---------- шкала прохождения этапов оформления ---------- */
@@ -482,7 +482,7 @@
   .field label{display:block;font-size:0.76rem;color:var(--muted);margin-bottom:6px;font-weight:600;}
   .field input, .field select{
     width:100%;padding:11px 13px;border-radius:11px;border:1px solid var(--line);
-    background:rgba(29,21,48,0.48);color:var(--text);font-family:inherit;font-size:0.88rem;outline:none;
+    background:var(--panel2);color:var(--text);font-family:inherit;font-size:0.88rem;outline:none;
   }
   .field input:focus{border-color:var(--magenta);}
   .field-row{display:flex;gap:10px;}
@@ -496,7 +496,7 @@
   .pay-options{display:flex;flex-direction:column;gap:8px;}
   .pay-opt{
     display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);
-    background:rgba(29,21,48,0.48);cursor:pointer;font-size:0.86rem;font-weight:600;
+    background:var(--panel2);cursor:pointer;font-size:0.86rem;font-weight:600;
   }
   .pay-opt .radio{width:17px;height:17px;border-radius:50%;border:2px solid var(--muted-dim);flex:0 0 auto;position:relative;}
   .pay-opt.active{border-color:var(--magenta);background:rgba(227,79,239,0.1);}
@@ -573,8 +573,8 @@
     z-index:50;
     display:flex;gap:2px;
     padding:4px;
-    border-radius:28px;
-    background:linear-gradient(135deg, rgba(139,92,246,0.28) 0%, rgba(227,79,239,0.22) 50%, rgba(255,255,255,0.07) 100%);
+    border-radius:30px;
+    background:linear-gradient(135deg, rgba(139,92,246,0.22) 0%, rgba(227,79,239,0.16) 50%, rgba(255,255,255,0.06) 100%);
     border:1px solid rgba(255,160,245,0.28);
     box-shadow:
       inset 0 1.5px 0 rgba(255,255,255,0.4),
@@ -588,14 +588,14 @@
   /* ползунок-«линза», который плавно едет за пальцем */
   .nav-lens{
     position:absolute;top:4px;bottom:4px;left:0;
-    border-radius:22px;
+    border-radius:24px;
     background:linear-gradient(180deg, rgba(255,255,255,0.26), rgba(255,255,255,0.08));
     border:1px solid rgba(255,255,255,0.3);
     box-shadow:
       inset 0 1.5px 0 rgba(255,255,255,0.55),
       inset 0 -8px 14px rgba(227,79,239,0.14),
       0 6px 16px -6px rgba(227,79,239,0.5);
-    transition:transform .32s cubic-bezier(.34,1.56,.64,1), width .32s cubic-bezier(.34,1.56,.64,1);
+    transition:transform .22s ease-out;
     will-change:transform;
     pointer-events:none;
     z-index:0;
@@ -603,9 +603,9 @@
   nav.bottom-nav button{
     flex:1;background:none;border:none;color:var(--muted-dim);
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
-    padding:5px 4px;cursor:pointer;font-size:0.62rem;font-weight:700;
+    padding:7px 4px;cursor:pointer;font-size:0.62rem;font-weight:700;
     position:relative;isolation:isolate;z-index:1;text-transform:uppercase;letter-spacing:0.03em;
-    transition:color .25s ease, transform .3s cubic-bezier(.34,1.56,.64,1);
+    transition:color .18s ease, transform .18s ease;
   }
   nav.bottom-nav button:active{transform:scale(0.9);}
   nav.bottom-nav button .ic{
@@ -615,7 +615,7 @@
   -webkit-mask-size:contain; mask-size:contain;
   -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
   -webkit-mask-position:center; mask-position:center;
-  transition:background-color .2s ease, transform .35s cubic-bezier(.34,1.56,.64,1), width .35s cubic-bezier(.34,1.56,.64,1), height .35s cubic-bezier(.34,1.56,.64,1), margin .35s cubic-bezier(.34,1.56,.64,1);
+  transition:background-color .15s ease, transform .2s ease, filter .2s ease;
   }
   nav.bottom-nav button[data-view="home"] .ic{ -webkit-mask-image:url('home.png'); mask-image:url('home.png'); }
   nav.bottom-nav button[data-view="catalog"] .ic{ -webkit-mask-image:url('catalog.png'); mask-image:url('catalog.png'); }
@@ -653,6 +653,12 @@
   @media (min-width:640px){
     .product-grid{grid-template-columns:repeat(3, 1fr);}
   }
+
+  /* ---------- performance ---------- */
+  .particle{will-change:transform;}
+  .bottom-nav{contain:layout paint;transform:translateZ(0);}
+  .nav-lens{contain:layout paint;transform-origin:center;}
+  .product-grid{contain:layout style;}
 </style>
 </head>
 <body>
@@ -1072,6 +1078,13 @@ let activeCat = 'all';
 let searchTerm = '';
 let stockOnly = false;
 let currentProductId = null;
+
+// Рендерим тяжёлые разделы только когда их данные действительно изменились.
+// Это убирает повторную генерацию всех карточек при каждом возврате в раздел.
+let catalogDirty = true;
+let favoritesDirty = true;
+let catalogRenderedKey = '';
+let favoritesRenderedKey = '';
 let cart = storeGet('smokeez_cart_' + UID, []); // [{productId, flavor, qty}]
 let orders = storeGet('smokeez_orders_' + UID, []);
 let favorites = new Set(storeGet('smokeez_favs_' + UID, []));
@@ -1095,73 +1108,122 @@ function isFavorite(id){ return favorites.has(id); }
 function toggleFavorite(id){
   if(favorites.has(id)) favorites.delete(id); else favorites.add(id);
   storeSet('smokeez_favs_' + UID, [...favorites]);
+  favoritesDirty = true;
 }
 
 /* ======================================================================
    НАВИГАЦИЯ
    ====================================================================== */
 function goto(view){
+  const current = document.querySelector('.view.active');
+  const currentView = current ? current.id.replace('view-','') : null;
+
+  // Если пользователь уже на этой вкладке — не делаем повторный тяжёлый render.
+  if(currentView === view){
+    syncLensToActive(true);
+    return;
+  }
+
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.getElementById('view-' + view).classList.add('active');
+  const target = document.getElementById('view-' + view);
+  if(target) target.classList.add('active');
+
   document.querySelectorAll('nav.bottom-nav button[data-view]').forEach(b => {
     b.classList.toggle('active', b.dataset.view === view);
   });
+
   window.scrollTo(0,0);
+
   if(view === 'cart') renderCart();
   if(view === 'profile') renderProfile();
-  if(view === 'catalog') renderCatalog();
-  if(view === 'favorites') renderFavorites();
+
+  // Каталог/избранное кэшируются между переключениями.
+  if(view === 'catalog' && catalogDirty) renderCatalog();
+  if(view === 'favorites' && favoritesDirty) renderFavorites();
+
   if(view === 'home') renderHome();
-  syncLensToActive();
+
+  syncLensToActive(true);
 }
 
-
 /* ======================================================================
-   НИЖНЕЕ МЕНЮ — ползунок-«линза», едущий за пальцем
-   Во время движения пальца ползунок двигается плавно и непрерывно,
-   а подсветка вкладки меняется дискретно под пальцем — но сама страница
-   не переключается, чтобы не дёргать рендер на каждый пиксель движения.
-   Переключение происходит только когда палец отрывается от экрана. */
-let navLensWidth = 0, navTrackLeft = 0, navTrackWidth = 0;
-let navDragging = false, navPreviewView = null, navDidMove = false;
+   НИЖНЕЕ МЕНЮ — стабильный ползунок-«линза»
+   ------------------------------------------------------------------
+   ВАЖНО:
+   - обычный тап обрабатывается только здесь, без отдельного click;
+   - во время drag меняется только положение линзы;
+   - страница переключается ровно один раз, только на pointerup;
+   - линза позиционируется по реальным координатам кнопок, поэтому
+     она не уезжает влево на «Корзина» / «Профиль».
+   ====================================================================== */
+let navLensWidth = 0;
+let navDragging = false;
+let navMoved = false;
+let navPointerId = null;
+let navStartX = 0;
+let navPreviewView = null;
 
-function navButtons(){ return Array.from(document.querySelectorAll('nav.bottom-nav button[data-view]')); }
+function navButtons(){
+  return Array.from(document.querySelectorAll('nav.bottom-nav button[data-view]'));
+}
+
 function navCurrentActiveView(){
   const active = navButtons().find(b => b.classList.contains('active'));
   return active ? active.dataset.view : 'home';
 }
+
 function navSetPreviewActive(view){
   navButtons().forEach(b => b.classList.toggle('active', b.dataset.view === view));
 }
+
 function navRecalcTrack(){
   const navEl = document.querySelector('nav.bottom-nav');
   const btns = navButtons();
-  if(!navEl || !btns.length) return;
-  const navRect = navEl.getBoundingClientRect();
+  const lens = document.getElementById('navLens');
+  if(!navEl || !btns.length || !lens) return;
+
   const btnRect = btns[0].getBoundingClientRect();
   navLensWidth = btnRect.width;
-  navTrackLeft = btnRect.left - navRect.left;
-  navTrackWidth = navLensWidth * btns.length;
-  const lens = document.getElementById('navLens');
-  if(lens) lens.style.width = navLensWidth + 'px';
+  lens.style.width = navLensWidth + 'px';
 }
+
+function navButtonX(btn){
+  const navEl = document.querySelector('nav.bottom-nav');
+  if(!navEl || !btn) return 0;
+  return btn.getBoundingClientRect().left - navEl.getBoundingClientRect().left;
+}
+
 function navMoveLens(xPx, animate){
   const lens = document.getElementById('navLens');
   if(!lens) return;
-  lens.style.transition = animate ? '' : 'none';
-  lens.style.transform = `translateX(${xPx}px)`;
+
+  lens.style.transition = animate ? 'transform .22s ease-out' : 'none';
+  lens.style.transform = `translate3d(${xPx}px,0,0)`;
 }
+
 function navClampLensX(x){
-  return Math.max(navTrackLeft, Math.min(navTrackLeft + navTrackWidth - navLensWidth, x));
+  const navEl = document.querySelector('nav.bottom-nav');
+  if(!navEl) return x;
+
+  const rect = navEl.getBoundingClientRect();
+  const maxX = Math.max(0, rect.width - navLensWidth);
+  return Math.max(0, Math.min(maxX, x));
 }
-function syncLensToActive(){
+
+function navMoveLensToButton(btn, animate){
+  if(!btn) return;
   navRecalcTrack();
-  const btns = navButtons();
-  const idx = btns.findIndex(b => b.dataset.view === navCurrentActiveView());
-  navMoveLens(navTrackLeft + Math.max(0, idx) * navLensWidth, true);
+  navMoveLens(navButtonX(btn), animate);
 }
-window.addEventListener('load', syncLensToActive);
-window.addEventListener('resize', syncLensToActive);
+
+function syncLensToActive(animate = true){
+  const btns = navButtons();
+  const active = btns.find(b => b.dataset.view === navCurrentActiveView()) || btns[0];
+  navMoveLensToButton(active, animate);
+}
+
+window.addEventListener('load', () => syncLensToActive(false));
+window.addEventListener('resize', () => syncLensToActive(false));
 
 (function(){
   const navEl = document.querySelector('nav.bottom-nav');
@@ -1173,26 +1235,52 @@ window.addEventListener('resize', syncLensToActive);
     return btn ? btn.dataset.view : null;
   }
 
+  function finishNavigation(view){
+    if(!view) return;
+
+    const current = navCurrentActiveView();
+    if(view === current){
+      syncLensToActive(true);
+      return;
+    }
+
+    haptic('light');
+    goto(view);
+  }
+
   navEl.addEventListener('pointerdown', (e) => {
+    if(e.pointerType === 'mouse' && e.button !== 0) return;
+
     navDragging = true;
-    navDidMove = false;
+    navMoved = false;
+    navPointerId = e.pointerId;
+    navStartX = e.clientX;
     navPreviewView = navCurrentActiveView();
+
     navRecalcTrack();
+
     try{ navEl.setPointerCapture(e.pointerId); }catch(err){}
-    const navRect = navEl.getBoundingClientRect();
-    navMoveLens(navClampLensX(e.clientX - navRect.left - navLensWidth/2), false);
+
+    // На обычном тапе НЕ рухаємо лінзу під пальцем.
+    // Це прибирає різкий стрибок перед перемиканням.
   });
 
   navEl.addEventListener('pointermove', (e) => {
-    if(!navDragging) return;
+    if(!navDragging || e.pointerId !== navPointerId) return;
+
+    const dx = e.clientX - navStartX;
+
+    // Невеликі мікрорухи пальця не вважаємо drag.
+    if(!navMoved){
+      if(Math.abs(dx) < 6) return;
+      navMoved = true;
+    }
+
     const navRect = navEl.getBoundingClientRect();
-    const nextX = navClampLensX(e.clientX - navRect.left - navLensWidth/2);
+    const x = navClampLensX(e.clientX - navRect.left - navLensWidth / 2);
 
-    // Считаем это drag только после заметного движения.
-    if(Math.abs(e.movementX) > 0.5) navDidMove = true;
-
-    // Во время drag страница НИКОГДА не переключается — двигается только линза.
-    navMoveLens(nextX, false);
+    // Під час drag лінза рухається без transition — один в один за пальцем.
+    navMoveLens(x, false);
 
     const v = viewAt(e.clientX, e.clientY);
     if(v && v !== navPreviewView){
@@ -1203,40 +1291,31 @@ window.addEventListener('resize', syncLensToActive);
   });
 
   function endDrag(e){
-    if(!navDragging) return;
-    const wasDrag = navDidMove;
-    const target = navPreviewView;
-    navDragging = false;
+    if(!navDragging || (e && e.pointerId !== navPointerId)) return;
 
-    if(wasDrag && target && target !== navCurrentActiveView()){
-      // Для drag переключаем страницу только после отпускания пальца.
-      goto(target);
+    const wasDrag = navMoved;
+    const target = navPreviewView || viewAt(e.clientX, e.clientY);
+
+    navDragging = false;
+    navMoved = false;
+    navPointerId = null;
+
+    try{ navEl.releasePointerCapture(e.pointerId); }catch(err){}
+
+    if(wasDrag){
+      // ЄДИНЕ перемикання після drag.
+      finishNavigation(target);
     }else{
-      // Обычный tap обрабатывается click-событием ниже.
-      syncLensToActive();
+      // Звичайний тап: теж лише один виклик goto.
+      finishNavigation(viewAt(e.clientX, e.clientY));
     }
   }
 
   navEl.addEventListener('pointerup', endDrag);
   navEl.addEventListener('pointercancel', endDrag);
-
-  // После drag подавляем click, который браузер может сгенерировать
-  // на кнопке под пальцем, чтобы не было второго переключения/рендера.
-  navEl.addEventListener('click', (e) => {
-    if(navDragging) return;
-    const btn = e.target.closest && e.target.closest('button[data-view]');
-    if(!btn) return;
-    if(navDidMove){
-      e.preventDefault();
-      e.stopPropagation();
-      navDidMove = false;
-      return;
-    }
-    haptic('light');
-    goto(btn.dataset.view);
-  }, true);
 })();
-syncLensToActive();
+
+syncLensToActive(false);
 document.getElementById('topCartBtn').addEventListener('click', () => { haptic('light'); goto('cart'); });
 document.querySelectorAll('[data-back]').forEach(btn => {
   btn.addEventListener('click', () => goto(btn.dataset.back));
@@ -1272,7 +1351,7 @@ function thumbHtml(product, size){
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 11h18"/></svg>
       <span>${size==='sm' ? '' : 'фото скоро будет'}</span>
     </div>`;
-  return `<img src="${product.img}" alt="${product.name}" loading="lazy"
+  return `<img src="${product.img}" alt="${product.name}" loading="lazy" decoding="async" fetchpriority="low"
       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">${ph}`;
 }
 
@@ -1282,13 +1361,13 @@ function buildCatFilters(){
   const all = document.createElement('div');
   all.className = 'cat-chip' + (activeCat==='all' ? ' active' : '');
   all.textContent = 'Всё';
-  all.addEventListener('click', () => { activeCat = 'all'; renderCatalog(); });
+  all.addEventListener('click', () => { activeCat = 'all'; catalogDirty = true; renderCatalog(); });
   el.appendChild(all);
   CATEGORIES.forEach(c => {
     const chip = document.createElement('div');
     chip.className = 'cat-chip' + (activeCat===c.key ? ' active' : '');
     chip.textContent = c.label;
-    chip.addEventListener('click', () => { activeCat = c.key; renderCatalog(); });
+    chip.addEventListener('click', () => { activeCat = c.key; catalogDirty = true; renderCatalog(); });
     el.appendChild(chip);
   });
 }
@@ -1314,18 +1393,33 @@ function productCardHtml(p){
 }
 
 function bindProductGrid(grid){
-  grid.querySelectorAll('.fav-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+  // Один обработчик на grid вместо отдельного listener для каждой карточки.
+  // Особенно заметно на каталоге с большим количеством товаров.
+  if(grid.dataset.bound === '1') return;
+  grid.dataset.bound = '1';
+
+  grid.addEventListener('click', (e) => {
+    const favBtn = e.target.closest && e.target.closest('.fav-btn');
+    if(favBtn && grid.contains(favBtn)){
       e.stopPropagation();
-      toggleFavorite(btn.dataset.fav);
+      toggleFavorite(favBtn.dataset.fav);
       haptic('light');
-      btn.classList.toggle('active');
-      btn.textContent = btn.classList.contains('active') ? '♥\uFE0E' : '♡';
-      if(document.getElementById('view-favorites').classList.contains('active')) renderFavorites();
-    });
-  });
-  grid.querySelectorAll('.product-card').forEach(card => {
-    card.addEventListener('click', () => openProduct(card.dataset.id));
+
+      const active = favorites.has(favBtn.dataset.fav);
+      favBtn.classList.toggle('active', active);
+      favBtn.textContent = active ? '♥\\uFE0E' : '♡';
+
+      if(grid.id === 'favoritesGrid'){
+        // В избранном карточка должна исчезнуть сразу.
+        renderFavorites();
+      }
+      return;
+    }
+
+    const card = e.target.closest && e.target.closest('.product-card');
+    if(card && grid.contains(card)){
+      openProduct(card.dataset.id);
+    }
   });
 }
 
@@ -1345,28 +1439,40 @@ function renderCatalog(){
     const bHas = b.items.some(i => isAvailable(b.id, i)) ? 0 : 1;
     return aHas - bHas;
   });
+
+  const renderKey = activeCat + '|' + stockOnly + '|' + t + '|' + list.map(p => p.id).join(',');
+  if(!catalogDirty && catalogRenderedKey === renderKey) return;
+  catalogRenderedKey = renderKey;
+
   if(list.length === 0){
     const catMsg = (!t && activeCat !== 'all' && EMPTY_CATEGORY_MSG[activeCat]) ? EMPTY_CATEGORY_MSG[activeCat] : 'Ничего не найдено';
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
       <div>${catMsg}</div></div>`;
+    catalogDirty = false;
     return;
   }
   grid.innerHTML = list.map(productCardHtml).join('');
   bindProductGrid(grid);
+  catalogDirty = false;
 }
 
 function renderFavorites(){
   const grid = document.getElementById('favoritesGrid');
   const list = PRODUCTS.filter(p => favorites.has(p.id));
+  const renderKey = [...favorites].sort().join(',');
+  if(!favoritesDirty && favoritesRenderedKey === renderKey) return;
+  favoritesRenderedKey = renderKey;
   if(list.length === 0){
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
       <div>Список избранного пуст<br><span style="font-size:0.8rem;">Нажимай на ♡ на товаре, чтобы сохранить его сюда</span></div></div>`;
+    favoritesDirty = false;
     return;
   }
   grid.innerHTML = list.map(productCardHtml).join('');
   bindProductGrid(grid);
+  favoritesDirty = false;
 }
 
 /* ======================================================================
@@ -1440,12 +1546,22 @@ function renderHome(){
   startBannerAutoplay();
 }
 
+let catalogSearchFrame = 0;
 document.getElementById('searchInput').addEventListener('input', (e) => {
   searchTerm = e.target.value;
-  renderCatalog();
+  catalogDirty = true;
+
+  // Не строим весь каталог на каждый отдельный input event.
+  cancelAnimationFrame(catalogSearchFrame);
+  catalogSearchFrame = requestAnimationFrame(() => {
+    if(document.getElementById('view-catalog').classList.contains('active')){
+      renderCatalog();
+    }
+  });
 });
 document.getElementById('stockOnlyToggle').addEventListener('change', (e) => {
   stockOnly = e.target.checked;
+  catalogDirty = true;
   renderCatalog();
 });
 
@@ -2176,8 +2292,11 @@ async function syncStockFromSheet(){
     });
     if(updated){
       storeSet('smokeez_stock_v1', STOCK);
+      catalogDirty = true;
       if(typeof renderHome === 'function') renderHome();
-      if(typeof renderCatalog === 'function') renderCatalog();
+      if(typeof renderCatalog === 'function' && document.getElementById('view-catalog')?.classList.contains('active')){
+        renderCatalog();
+      }
     }
   }catch(e){
     // тихо игнорируем — просто останутся текущие цифры, зашитые в коде
