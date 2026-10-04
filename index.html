@@ -1125,6 +1125,7 @@ document.querySelectorAll('nav.bottom-nav button[data-view]').forEach(btn => {
    не переключается, чтобы не дёргать рендер на каждый пиксель движения.
    Переключение происходит только когда палец отрывается от экрана. */
 let navLensWidth = 0, navTrackLeft = 0, navTrackWidth = 0;
+let navBtnRects = []; // реальные позиции/ширины каждой кнопки относительно nav (учитывают gap)
 let navDragging = false, navPreviewView = null, navDidMove = false;
 
 function navButtons(){ return Array.from(document.querySelectorAll('nav.bottom-nav button[data-view]')); }
@@ -1140,10 +1141,16 @@ function navRecalcTrack(){
   const btns = navButtons();
   if(!navEl || !btns.length) return;
   const navRect = navEl.getBoundingClientRect();
-  const btnRect = btns[0].getBoundingClientRect();
-  navLensWidth = btnRect.width;
-  navTrackLeft = btnRect.left - navRect.left;
-  navTrackWidth = navLensWidth * btns.length;
+  // измеряем каждую кнопку реально, а не умножаем ширину первой — иначе gap между
+  // кнопками накапливается смещением и «линза» уезжает левее на дальних вкладках
+  navBtnRects = btns.map(b => {
+    const r = b.getBoundingClientRect();
+    return { left: r.left - navRect.left, width: r.width };
+  });
+  navLensWidth = navBtnRects[0].width;
+  navTrackLeft = navBtnRects[0].left;
+  const last = navBtnRects[navBtnRects.length - 1];
+  navTrackWidth = (last.left + last.width) - navTrackLeft;
   const lens = document.getElementById('navLens');
   if(lens) lens.style.width = navLensWidth + 'px';
 }
@@ -1159,8 +1166,9 @@ function navClampLensX(x){
 function syncLensToActive(){
   navRecalcTrack();
   const btns = navButtons();
-  const idx = btns.findIndex(b => b.dataset.view === navCurrentActiveView());
-  navMoveLens(navTrackLeft + Math.max(0, idx) * navLensWidth, true);
+  const idx = Math.max(0, btns.findIndex(b => b.dataset.view === navCurrentActiveView()));
+  const target = navBtnRects[idx] ? navBtnRects[idx].left : navTrackLeft;
+  navMoveLens(target, true);
 }
 window.addEventListener('load', syncLensToActive);
 window.addEventListener('resize', syncLensToActive);
@@ -1181,8 +1189,11 @@ window.addEventListener('resize', syncLensToActive);
     navRecalcTrack();
     navPreviewView = navCurrentActiveView();
     try{ navEl.setPointerCapture(e.pointerId); }catch(err){}
-    const navRect = navEl.getBoundingClientRect();
-    navMoveLens(navClampLensX(e.clientX - navRect.left - navLensWidth/2), false);
+    // лишь готовим трек — не двигаем линзу здесь: обычный тап не должен
+    // телепортировать её под палец, иначе при отпускании она «дёргается»
+    // (прыжок без анимации + отдельная анимация к центру кнопки). Линза
+    // начинает следовать за пальцем только когда реально начался драг —
+    // см. pointermove.
   });
 
   navEl.addEventListener('pointermove', (e) => {
