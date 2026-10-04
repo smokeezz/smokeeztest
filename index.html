@@ -339,9 +339,9 @@
 
   .empty-state{text-align:center;padding:60px 20px;color:var(--muted-dim);}
   .empty-state svg{width:40px;height:40px;opacity:0.4;margin-bottom:12px;}
-  .empty-state .empty-cart-img{display:block;width:min(220px,60vw);height:auto;margin:0 auto 14px;opacity:1;filter:drop-shadow(0 10px 24px rgba(227,79,239,0.35));animation:emptyCartFloat 3.2s ease-in-out infinite;}
+  .empty-state .empty-cart-img, .empty-state .empty-fav-img{display:block;width:min(220px,60vw);height:auto;margin:0 auto 14px;opacity:1;filter:drop-shadow(0 10px 24px rgba(227,79,239,0.35));animation:emptyCartFloat 3.2s ease-in-out infinite;}
   @keyframes emptyCartFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
-  @media (prefers-reduced-motion: reduce){ .empty-state .empty-cart-img{animation:none;} }
+  @media (prefers-reduced-motion: reduce){ .empty-state .empty-cart-img, .empty-state .empty-fav-img{animation:none;} }
 
   /* ---------- product detail ---------- */
   .back-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
@@ -1350,7 +1350,7 @@ function renderFavorites(){
   const list = PRODUCTS.filter(p => favorites.has(p.id));
   if(list.length === 0){
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+      <img class="empty-fav-img" src="favorites-empty.png" alt="Избранное пусто" draggable="false">
       <div>Список избранного пуст<br><span style="font-size:0.8rem;">Нажимай на ♡ на товаре, чтобы сохранить его сюда</span></div></div>`;
     return;
   }
