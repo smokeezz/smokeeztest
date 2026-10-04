@@ -895,16 +895,16 @@ function slugify(str){
 }
 function priceFor(line){
   if(line.category === 'liquid'){
-    if(/^Vozol Prime/i.test(line.name)) return 9.50;
-    if(/^ElfLiq/i.test(line.name)) return 9.50;
-    if(/^Puffy/i.test(line.name)) return 9.50;
+    if(/^Vozol Prime/i.test(line.name)) return 11.00;
+    if(/^ElfLiq/i.test(line.name)) return 11.00;
+    if(/^Puffy/i.test(line.name)) return 11.00;
     if(/^Chaser/i.test(line.name)) return 10.50;
   }
   if(line.category === 'pod'){
-    if(/^Vaporesso Xros 4 Mini/i.test(line.name)) return 16.50;
-    if(/^Vaporesso Xros 5 Mini/i.test(line.name)) return 18.50;
-    if(/^Vaporesso Xros 5(?!\s*Mini)/i.test(line.name)) return 20.50;
-    if(/^Vaporesso Xros Pro 2/i.test(line.name)) return 32.50;
+    if(/^Vaporesso Xros 4 Mini/i.test(line.name)) return 16.90;
+    if(/^Vaporesso Xros 5 Mini/i.test(line.name)) return 20.90;
+    if(/^Vaporesso Xros 5(?!\s*Mini)/i.test(line.name)) return 25.90;
+    if(/^Vaporesso Xros Pro 2/i.test(line.name)) return 32.90;
     if(/^Vaporesso Xros 6 Mini/i.test(line.name)) return 19.50;
     if(/^Vaporesso Xros 6(?!\s*Mini)/i.test(line.name)) return 22.50;
   }
@@ -978,13 +978,18 @@ RAW.forEach(line => {
     else { it.qty = null; it.ok = true; }
   });
 });
-// Предзаказ действует, пока не прошла дата и товара «живьём» нет в наличии
+// Предзаказ действует, пока не прошла дата.
+// «Живая» позиция (есть на руках): пока остаток > 0 — обычная; на нуле — предзаказ.
+// Остальные: число в таблице = лимит предзаказа; когда оно дошло до 0 (всё забронировали
+// или ты поставил 0) — предзаказа больше нет, позиция «Нет в наличии».
+// Нет числа вообще — предзаказ без лимита (до 50 шт. за раз).
 function isPreorderItem(item, productId){
   if(!item || !item.pre || !preorderActive()) return false;
-  if(item.live){
-    const v = STOCK[stockKey(productId, item.n)];
-    if(v > 0) return false;
-  }
+  const k = stockKey(productId, item.n);
+  const has = STOCK.hasOwnProperty(k);
+  const v = STOCK[k];
+  if(item.live) return !(v > 0);
+  if(has && v <= 0) return false;
   return true;
 }
 
@@ -1034,10 +1039,10 @@ function remainingQty(productId, flavorName){
   const k = stockKey(productId, flavorName);
   const v = STOCK.hasOwnProperty(k) ? STOCK[k] : null; // null = количество не отслеживается (неограниченно)
   if(v !== null && v <= 0){
-    // предзаказ не упирается в нулевой остаток: предел — как у неотслеживаемого товара
+    // «живая» позиция, которая закончилась, переходит в предзаказ без жёсткого лимита
     const pr = productById(productId);
     const it = pr && pr.items.find(i => i.n === flavorName);
-    if(it && isPreorderItem(it, productId)) return null;
+    if(it && it.live && isPreorderItem(it, productId)) return null;
   }
   return v;
 }
