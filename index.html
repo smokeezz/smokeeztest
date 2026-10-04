@@ -30,6 +30,39 @@
     --card-border:rgba(190,110,230,0.35);
     --safe-b:env(safe-area-inset-bottom, 0px);
   }
+  /* ---------- экран запуска: только название, показывается при каждом открытии мини-аппа ---------- */
+  #splash{
+    position:fixed;inset:0;z-index:20000;
+    display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at 50% 45%, #2a0f45 0%, var(--bg) 62%);
+    /* сам скрывается через CSS — даже если скрипт не загрузится, экран не зависнет */
+    animation:splashOut .55s ease 2.1s forwards;
+  }
+  #splash .sp-word{
+    display:flex;font-family:'Oswald',sans-serif;font-style:italic;font-weight:700;
+    font-size:clamp(2.2rem,12vw,3.4rem);letter-spacing:0.1em;color:var(--text);gap:0.06em;
+  }
+  #splash .sp-word span{
+    display:inline-block;padding:0 0.1em 0 0.04em;margin:0 -0.04em 0 0; /* запас под наклон курсива, чтобы буквы не слипались и не обрезались */
+    opacity:0;transform:translateY(18px) scale(0.9);
+    animation:splashLetter .6s cubic-bezier(.2,.8,.2,1) forwards;
+    animation-delay:calc(var(--i) * 0.09s + 0.15s);
+  }
+  #splash .sp-word span:nth-child(n+6){background:linear-gradient(135deg,var(--magenta),var(--violet));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+  #splash .sp-glow{
+    position:absolute;width:260px;height:260px;border-radius:50%;
+    background:radial-gradient(circle,rgba(227,79,239,0.35),transparent 70%);
+    filter:blur(10px);opacity:0;animation:splashGlow 1.8s ease .2s forwards;
+  }
+  #splash .sp-word{position:relative;}
+  @keyframes splashLetter{to{opacity:1;transform:none;}}
+  @keyframes splashGlow{0%{opacity:0;transform:scale(.6);}60%{opacity:1;}100%{opacity:.7;transform:scale(1.15);}}
+  @keyframes splashOut{to{opacity:0;visibility:hidden;pointer-events:none;}}
+  @media (prefers-reduced-motion: reduce){
+    #splash .sp-word span{animation-duration:.01s;animation-delay:0s;}
+    #splash .sp-glow{animation:none;opacity:.5;}
+    #splash{animation-delay:1s;}
+  }
   *{box-sizing:border-box;}
   html{scroll-behavior:smooth;}
   body{
@@ -315,6 +348,18 @@
   }
   .tag.promo{background:linear-gradient(135deg,#ffe07a,#ffb938);color:#1a1305;box-shadow:inset 0 1px 0 rgba(255,255,255,0.6);}
   .tag.out{background:rgba(30,10,20,0.75);color:var(--no);border:1px solid rgba(251,113,133,0.4);}
+  .tag.pre{background:linear-gradient(135deg,var(--magenta),var(--violet));color:#fff;border:1px solid rgba(255,255,255,0.28);box-shadow:inset 0 1px 0 rgba(255,255,255,0.35);}
+  .pre-meta{color:var(--magenta);font-weight:700;}
+  .pre-pill{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:99px;font-size:0.68rem;font-weight:800;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.03em;background:linear-gradient(135deg,var(--magenta),var(--violet));color:#fff;border:1px solid rgba(255,255,255,0.28);box-shadow:inset 0 1px 0 rgba(255,255,255,0.35);}
+  .pre-pill.sm{padding:3px 9px;font-size:0.58rem;}
+  .pre-banner,.ci-pre{display:flex;align-items:center;gap:8px;margin-top:10px;}
+  .ci-pre{margin-top:6px;}
+  .pre-info{flex:0 0 auto;width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,140,235,0.6);background:rgba(227,79,239,0.15);color:#fff;font-family:'Manrope',sans-serif;font-style:italic;font-weight:800;font-size:0.8rem;line-height:1;cursor:pointer;padding:0;}
+  .pre-modal-bg{position:fixed;inset:0;z-index:10000;background:rgba(5,2,10,0.72);display:flex;align-items:center;justify-content:center;padding:24px;}
+  .pre-modal{width:100%;max-width:340px;padding:22px 20px;border-radius:20px;text-align:center;background:linear-gradient(150deg,rgba(227,79,239,0.28) 0%,rgba(150,35,170,0.26) 45%,rgba(30,8,46,0.95) 100%);border:1px solid rgba(255,140,235,0.4);}
+  .pre-modal-ic{font-size:2rem;}
+  .pre-modal h3{margin:8px 0 10px;font-size:1.05rem;}
+  .pre-modal p{font-size:0.86rem;line-height:1.5;color:var(--muted);margin:0 0 16px;}
   .fav-btn{
     position:absolute;top:8px;right:8px;z-index:2;
     width:31px;height:31px;border-radius:50%;
@@ -376,6 +421,8 @@
   .flavor-chip .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;}
   .flavor-chip.selected{background:linear-gradient(135deg, var(--magenta), var(--violet));border-color:transparent;color:#fff;}
   .flavor-chip.out{opacity:0.4;cursor:not-allowed;color:var(--muted-dim);text-decoration:line-through;}
+  .flavor-chip.pre:not(.selected){border-style:dashed;border-color:rgba(255,140,235,0.55);}
+  .flavor-chip .pre-badge{margin-left:6px;padding:1px 6px;border-radius:99px;font-size:0.56rem;font-weight:800;font-family:'JetBrains Mono',monospace;text-transform:uppercase;background:linear-gradient(135deg,var(--magenta),var(--violet));color:#fff;}
   .qty-stepper{display:inline-flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--panel);}
   .qty-stepper button{width:40px;height:40px;border:none;background:transparent;color:var(--text);font-size:1.1rem;cursor:pointer;}
   .qty-stepper button:active{background:var(--panel2);}
@@ -658,6 +705,7 @@
 </style>
 </head>
 <body>
+<div id="splash" aria-hidden="true"><div class="sp-glow"></div><div class="sp-word"><span style="--i:0">S</span><span style="--i:1">M</span><span style="--i:2">O</span><span style="--i:3">K</span><span style="--i:4">E</span><span style="--i:5">E</span><span style="--i:6">Z</span></div></div>
 
 <div class="smoke-field" id="smokeField">
   <div class="sf-facet sf-f1"></div><div class="sf-facet sf-f2"></div>
@@ -763,6 +811,10 @@
 <div class="toast" id="toast"></div>
 
 <script>
+(function(){
+  const sp = document.getElementById('splash');
+  if(sp) sp.addEventListener('animationend', e => { if(e.animationName === 'splashOut') sp.remove(); });
+})();
 /* ======================================================================
    НАСТРОЙКИ — заполни перед публикацией
    ====================================================================== */
@@ -875,6 +927,67 @@ function variantLabelFor(line){
   return 'Цвет';
 }
 
+/* ======================================================================
+   ПРЕДЗАКАЗ
+   ------------------------------------------------------------------
+   PREORDER_ARRIVALS — всё, что приходит в новой поставке. До даты PREORDER_UNTIL
+   (включительно) эти позиции показываются с плашкой «Предзаказ».
+   LIVE_NOW — то, что реально есть на руках прямо сейчас (с количеством): эти
+   вкусы/цвета продаются как обычные, пока остаток > 0. Как только таблица
+   присылает 0 (остаток закончился), а вкус есть в PREORDER_ARRIVALS —
+   он автоматически переключается на «Предзаказ».
+   Всё остальное с отслеживаемым остатком, чего нет ни в LIVE_NOW, ни в
+   PREORDER_ARRIVALS, считается закончившимся (qty 0), пока таблица не скажет иное.
+   После PREORDER_UNTIL плашки пропадают, позиции продаются как обычные.
+   ====================================================================== */
+const PREORDER_UNTIL = '2026-10-08';
+const PREORDER_UNTIL_LABEL = '08.10.2026';
+function preorderActive(){ return new Date() <= new Date(PREORDER_UNTIL + 'T23:59:59'); }
+const PREORDER_ARRIVALS = {
+  'Vozol Prime 30ml 5%': ['Berry','Berry Peach','Blue Raspberry','Cherry Cola','Lemon Lime','LavaFire','Mixed Berries','Peach Ice','Pineapple Passion Fruit Lime','Pomegranate Lemonade','Watermelon Bubblegum'],
+  'ElfLiq 30ml 5%': ['Blackberry Lemon','Blueberry Sour Raspberry','Cherry','Cool Mint','Grape Cherry','Elf Jack','Pineapple Colada','Pineapple Ice','Pink Lemonade','Pink Grapefruit','Sour Watermelon Gummy'],
+  'Puffy 30ml 5%': ['Cherry Ice','Energy Drink','Grape','Turbo Mint'],
+  'Vaporesso Xros 6': ['Scorching Cloud','Carbon Fiber Gray'],
+  'Vaporesso Xros 6 Mini': ['Titanium Black','Jelly Pink'],
+  'Снюс Baron 77мг': ['Classic'],
+  'Картриджи Xros': ['Corex 3.0 XROS 3мл 0.4 Ω','Corex 3.0 XROS 3мл 0.6 Ω']
+};
+const LIVE_NOW = {
+  'Vozol Prime 30ml 5%': {'Berry':1,'Lemon Lime':2,'Mixed Berries':1,'Peach Ice':2},
+  'Картриджи Xros': {'Corex 3.0 XROS 3мл 0.4 Ω':1,'Corex 3.0 XROS 3мл 0.8 Ω':3}
+};
+RAW.forEach(line => {
+  const live = LIVE_NOW[line.name] || {};
+  const list = PREORDER_ARRIVALS[line.name] || [];
+  const norm = x => x.trim().toLowerCase();
+  const liveKeys = Object.keys(live);
+  // отслеживаемые позиции, которых нет в «есть сейчас» — закончились
+  line.items.forEach(it => {
+    if(it.qty === null || it.qty === undefined) return;
+    const k = liveKeys.find(x => norm(x) === norm(it.n));
+    it.qty = k ? live[k] : 0;
+    it.ok = it.qty > 0;
+    if(k) it.live = true;
+  });
+  list.forEach(name => {
+    let it = line.items.find(i => norm(i.n) === norm(name));
+    if(!it){ it = {n:name, ok:true, qty:null}; line.items.push(it); }
+    it.pre = true;
+    const k = liveKeys.find(x => norm(x) === norm(name));
+    if(k){ it.live = true; it.qty = live[k]; it.ok = it.qty > 0; }
+    else { it.qty = null; it.ok = true; }
+  });
+});
+// Предзаказ действует, пока не прошла дата и товара «живьём» нет в наличии
+function isPreorderItem(item, productId){
+  if(!item || !item.pre || !preorderActive()) return false;
+  if(item.live){
+    const v = STOCK[stockKey(productId, item.n)];
+    if(v > 0) return false;
+  }
+  return true;
+}
+
 const PRODUCTS = RAW.map((line, idx) => {
   const id = 'p' + idx + '-' + slugify(line.name);
   return {
@@ -909,17 +1022,24 @@ const PRODUCTS = RAW.map((line, idx) => {
    запросы к нему вместо localStorage.
    ====================================================================== */
 function stockKey(productId, flavorName){ return productId + '::' + flavorName; }
-let STOCK = storeGet('smokeez_stock_v1', null);
+let STOCK = storeGet('smokeez_stock_v2', null);
 if(!STOCK){
   STOCK = {};
   PRODUCTS.forEach(p => p.items.forEach(it => {
     if(it.qty !== null && it.qty !== undefined) STOCK[stockKey(p.id, it.n)] = it.qty;
   }));
-  storeSet('smokeez_stock_v1', STOCK);
+  storeSet('smokeez_stock_v2', STOCK);
 }
 function remainingQty(productId, flavorName){
   const k = stockKey(productId, flavorName);
-  return STOCK.hasOwnProperty(k) ? STOCK[k] : null; // null = количество не отслеживается (неограниченно)
+  const v = STOCK.hasOwnProperty(k) ? STOCK[k] : null; // null = количество не отслеживается (неограниченно)
+  if(v !== null && v <= 0){
+    // предзаказ не упирается в нулевой остаток: предел — как у неотслеживаемого товара
+    const pr = productById(productId);
+    const it = pr && pr.items.find(i => i.n === flavorName);
+    if(it && isPreorderItem(it, productId)) return null;
+  }
+  return v;
 }
 function isAvailable(productId, item){
   const r = remainingQty(productId, item.n);
@@ -930,7 +1050,7 @@ function decrementStock(productId, flavorName, qty){
   const k = stockKey(productId, flavorName);
   if(!STOCK.hasOwnProperty(k)) return;
   STOCK[k] = Math.max(0, STOCK[k] - qty);
-  storeSet('smokeez_stock_v1', STOCK);
+  storeSet('smokeez_stock_v2', STOCK);
 }
 
 /* Список ожидаемых файлов изображений — положи их РЯДОМ с index.html (в ту же папку,
@@ -1303,15 +1423,18 @@ function productCardHtml(p){
   const priceHtml = p.price
     ? `<div class="price">${p.price.toFixed(2).replace('.',',')} €</div>`
     : `<div class="price ask">Цена по запросу</div>`;
+  const preCount = p.items.filter(i => isPreorderItem(i, p.id) && isAvailable(p.id, i)).length;
+  const inStockCount = availCount - preCount;
   const tag = p.promo
     ? `<span class="tag promo">${p.promo}</span>`
-    : (allOut ? `<span class="tag out">Нет в наличии</span>` : '');
+    : (preCount && inStockCount === 0 ? `<span class="tag pre">Предзаказ</span>`
+    : (allOut ? `<span class="tag out">Нет в наличии</span>` : ''));
   const fav = isFavorite(p.id);
   return `<div class="product-card" data-id="${p.id}">
       <div class="thumb">${tag}<button type="button" class="fav-btn ${fav?'active':''}" data-fav="${p.id}">${fav ? '♥\uFE0E' : '♡'}</button>${thumbHtml(p)}</div>
       <div class="card-body">
         <div class="name">${p.name}</div>
-        <div class="meta">${availCount}/${p.items.length} вкусов в наличии</div>
+        <div class="meta">${inStockCount}/${p.items.length} вкусов в наличии${preCount ? ` · <span class="pre-meta">+${preCount} предзаказ</span>` : ''}</div>
         ${priceHtml}
       </div>
     </div>`;
@@ -1462,7 +1585,7 @@ function openProduct(id){
   currentProductId = id;
   const p = productById(id);
   if(!p) return;
-  const firstAvail = p.items.find(i => isAvailable(p.id, i));
+  const firstAvail = p.items.find(i => isAvailable(p.id, i) && !isPreorderItem(i, p.id)) || p.items.find(i => isAvailable(p.id, i));
   pendingFlavor = firstAvail ? firstAvail.n : null;
   pdQty = 1;
   renderProductDetail();
@@ -1489,11 +1612,15 @@ function renderProductDetail(){
     const isSel = pendingFlavor === item.n;
     const hue = hueFor(item.n);
     const dotColor = ok ? `hsl(${hue}, 78%, 62%)` : 'var(--muted-dim)';
-    return `<div class="flavor-chip ${ok ? '' : 'out'} ${isSel ? 'selected' : ''}" data-flavor="${encodeURIComponent(item.n)}" data-ok="${ok}">
-        <span class="dot" style="background:${isSel ? '#fff' : dotColor}"></span>${item.n}${ok ? '' : ' · нет'}
+    const pre = ok && isPreorderItem(item, p.id);
+    return `<div class="flavor-chip ${ok ? '' : 'out'} ${pre ? 'pre' : ''} ${isSel ? 'selected' : ''}" data-flavor="${encodeURIComponent(item.n)}" data-ok="${ok}">
+        <span class="dot" style="background:${isSel ? '#fff' : dotColor}"></span>${item.n}${ok ? (pre ? '<span class="pre-badge">Предзаказ</span>' : '') : ' · нет'}
       </div>`;
   }).join('');
   const canBuy = !!pendingFlavor;
+  const selItem = pendingFlavor ? p.items.find(i => i.n === pendingFlavor) : null;
+  const selPre = isPreorderItem(selItem, p.id);
+  const preBanner = selPre ? `<div class="pre-banner"><span class="pre-pill">⏳ Предзаказ до ${PREORDER_UNTIL_LABEL}</span><button type="button" class="pre-info" aria-label="Информация о предзаказе">i</button></div>` : '';
   const favActive = isFavorite(p.id);
   body.innerHTML = `
     <div class="pd-hero">${thumbHtml(p, 'lg').replace('фото скоро будет', 'фото скоро появится')}<button type="button" class="fav-btn ${favActive?'active':''}" id="pdFavBtn">${favActive ? '♥\uFE0E' : '♡'}</button></div>
@@ -1503,6 +1630,7 @@ function renderProductDetail(){
     <div class="pd-block">
       <div class="lbl">${p.variantLabel} · выбери один</div>
       <div class="flavor-grid" id="pdFlavorGrid">${flavorChips}</div>
+      ${preBanner}
     </div>
     <div class="pd-actions">
       <div class="qty-stepper" id="pdQtyStepper">
@@ -1511,7 +1639,7 @@ function renderProductDetail(){
         <button type="button" data-d="1">+</button>
       </div>
       <button class="btn btn-ghost" id="pdAddCart" ${canBuy ? '' : 'disabled'}>В корзину</button>
-      <button class="btn btn-primary" id="pdBuyNow" ${canBuy ? '' : 'disabled'}>Купить сейчас</button>
+      <button class="btn btn-primary" id="pdBuyNow" ${canBuy ? '' : 'disabled'}>${selPre ? 'Оформить предзаказ' : 'Купить сейчас'}</button>
     </div>
     ${p.note ? `<div class="pd-note">${p.note}</div>` : ''}
   `;
@@ -1525,6 +1653,7 @@ function renderProductDetail(){
       renderProductDetail();
     });
   });
+  body.querySelectorAll('.pre-info').forEach(b => b.addEventListener('click', showPreorderInfo));
   const favBtn = document.getElementById('pdFavBtn');
   if(favBtn) favBtn.addEventListener('click', () => {
     toggleFavorite(p.id);
@@ -1551,6 +1680,23 @@ function renderProductDetail(){
 /* ======================================================================
    КОРЗИНА
    ====================================================================== */
+function showPreorderInfo(){
+  haptic('light');
+  const old = document.getElementById('preModal');
+  if(old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'preModal';
+  el.className = 'pre-modal-bg';
+  el.innerHTML = `<div class="pre-modal" role="dialog" aria-modal="true">
+      <div class="pre-modal-ic">⏳</div>
+      <h3>Предзаказ до ${PREORDER_UNTIL_LABEL}</h3>
+      <p>Этого товара пока нет в наличии, но он появится в ближайшие дни. Оформляя предзаказ сейчас, вы бронируете его за собой.</p>
+      <button type="button" class="btn btn-primary" id="preModalOk">Понятно</button>
+    </div>`;
+  document.body.appendChild(el);
+  el.addEventListener('click', e => { if(e.target === el) el.remove(); });
+  el.querySelector('#preModalOk').addEventListener('click', () => el.remove());
+}
 function persistCart(){ storeSet('smokeez_cart_' + UID, cart); refreshCartBadges(); }
 
 function addToCart(productId, flavor, qty){
@@ -1594,11 +1740,14 @@ function renderCart(){
     const p = productById(ci.productId);
     if(!p) return '';
     const lineTotal = p.price ? (p.price * ci.qty) : null;
+    const isPre = isPreorderItem(p.items.find(i => i.n === ci.flavor), p.id);
+    const preHtml = isPre ? `<div class="ci-pre"><span class="pre-pill sm">⏳ Предзаказ до ${PREORDER_UNTIL_LABEL}</span><button type="button" class="pre-info" aria-label="Информация о предзаказе">i</button></div>` : '';
     return `<div class="cart-item">
         <div class="thumb-sm">${thumbHtml(p, 'sm')}</div>
         <div class="ci-info">
           <div class="ci-name">${p.name}</div>
           <div class="ci-flavor">${ci.flavor}</div>
+          ${preHtml}
           <div class="ci-row">
             <div class="qty-stepper" data-idx="${idx}">
               <button type="button" data-d="-1">−</button>
@@ -1647,6 +1796,7 @@ function renderCart(){
       btn.addEventListener('click', () => changeCartQty(parseInt(st.dataset.idx,10), parseInt(btn.dataset.d,10)));
     });
   });
+  body.querySelectorAll('.pre-info').forEach(b => b.addEventListener('click', showPreorderInfo));
   body.querySelectorAll('.rm').forEach(btn => {
     btn.addEventListener('click', () => removeCartItem(parseInt(btn.dataset.idx,10)));
   });
@@ -1916,7 +2066,8 @@ function buildOrderText(){
     const p = productById(ci.productId);
     if(!p) return;
     const lt = p.price ? (p.price*ci.qty).toFixed(2).replace('.',',')+' €' : 'цена по запросу';
-    text += `• ${adminProductCode(p)} — ${ci.flavor} × ${ci.qty} (${lt})\n`;
+    const preMark = isPreorderItem(p.items.find(i => i.n === ci.flavor), p.id) ? ` ⏳ ПРЕДЗАКАЗ до ${PREORDER_UNTIL_LABEL}` : '';
+    text += `• ${adminProductCode(p)} — ${ci.flavor} × ${ci.qty} (${lt})${preMark}\n`;
   });
   if(checkout.promo) text += `\n🏷 Применён промокод: ${checkout.promo.code} (−${checkout.promo.amount ? checkout.promo.amount + ' €' : checkout.promo.percent + '%'})\n💰 Сумма без скидки: ${cartTotal().toFixed(2).replace('.',',')} €\n💰 Итого к оплате: ${cartDiscountedTotal().toFixed(2).replace('.',',')} €\n`;
   else text += `\n💰 Итого: ${cartTotal().toFixed(2).replace('.',',')} €\n`;
@@ -2001,6 +2152,8 @@ async function submitOrder(){
   storeSet('smokeez_orders_' + UID, orders.slice(0,30));
   cart = [];
   persistCart();
+  // промокод одноразовый для этого заказа — сбрасываем, чтобы он не перешёл на следующий
+  checkout.promo = null;
   haptic('success');
 
   document.getElementById('checkoutBody').innerHTML = `
@@ -2158,7 +2311,7 @@ async function syncStockFromSheet(){
       updated++;
     });
     if(updated){
-      storeSet('smokeez_stock_v1', STOCK);
+      storeSet('smokeez_stock_v2', STOCK);
       if(typeof renderHome === 'function') renderHome();
       if(typeof renderCatalog === 'function') renderCatalog();
     }
