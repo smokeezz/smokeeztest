@@ -895,16 +895,16 @@ function slugify(str){
 }
 function priceFor(line){
   if(line.category === 'liquid'){
-    if(/^Vozol Prime/i.test(line.name)) return 11.00;
-    if(/^ElfLiq/i.test(line.name)) return 11.00;
-    if(/^Puffy/i.test(line.name)) return 11.00;
+    if(/^Vozol Prime/i.test(line.name)) return 9.50;
+    if(/^ElfLiq/i.test(line.name)) return 9.50;
+    if(/^Puffy/i.test(line.name)) return 9.50;
     if(/^Chaser/i.test(line.name)) return 10.50;
   }
   if(line.category === 'pod'){
-    if(/^Vaporesso Xros 4 Mini/i.test(line.name)) return 16.90;
-    if(/^Vaporesso Xros 5 Mini/i.test(line.name)) return 20.90;
-    if(/^Vaporesso Xros 5(?!\s*Mini)/i.test(line.name)) return 25.90;
-    if(/^Vaporesso Xros Pro 2/i.test(line.name)) return 32.90;
+    if(/^Vaporesso Xros 4 Mini/i.test(line.name)) return 16.50;
+    if(/^Vaporesso Xros 5 Mini/i.test(line.name)) return 18.50;
+    if(/^Vaporesso Xros 5(?!\s*Mini)/i.test(line.name)) return 20,50;
+    if(/^Vaporesso Xros Pro 2/i.test(line.name)) return 32.50;
     if(/^Vaporesso Xros 6 Mini/i.test(line.name)) return 19.50;
     if(/^Vaporesso Xros 6(?!\s*Mini)/i.test(line.name)) return 22.50;
   }
