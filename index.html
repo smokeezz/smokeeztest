@@ -730,7 +730,7 @@
 </div>
 
 <header class="topbar">
-  <div class="brand"><img src="smokeez-logo.png" alt="SMOKEEZ"></div>
+  <div class="brand"><img src="smokeez-logo.webp" alt="SMOKEEZ"></div>
   <div class="topbar-actions">
     <button class="icon-btn" id="topCartBtn" aria-label="Корзина">
       🛒<span class="badge" id="topCartBadge" style="display:none;">0</span>
@@ -1007,7 +1007,7 @@ const PRODUCTS = RAW.map((line, idx) => {
     desc: line.desc || '',
     note: line.note || '',
     promo: line.promo || '',
-    img: slugify(line.name) + '.png'
+    img: slugify(line.name) + '.webp'
   };
 });
 /* ======================================================================
@@ -1493,7 +1493,7 @@ function renderFavorites(){
   const list = PRODUCTS.filter(p => favorites.has(p.id));
   if(list.length === 0){
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
-      <img class="empty-fav-img" src="favorites-empty.png" alt="Избранное пусто" draggable="false">
+      <img class="empty-fav-img" src="favorites-empty.webp" alt="Избранное пусто" draggable="false">
       <div>Список избранного пуст<br><span style="font-size:0.8rem;">Нажимай на ♡ на товаре, чтобы сохранить его сюда</span></div></div>`;
     return;
   }
@@ -1612,7 +1612,7 @@ function renderProductDetail(){
   const priceHtml = p.price
     ? `<div class="pd-price">${p.price.toFixed(2).replace('.',',')} € <span style="font-size:0.65em;color:var(--muted-dim);font-family:'Manrope',sans-serif;font-style:normal;">/ ${p.unit}</span></div>`
     : `<div class="pd-price ask">Цена по запросу — уточним в переписке</div>`;
-  const flavorChips = p.items.map(item => {
+  const flavorChips = [...p.items].sort((a, b) => (isAvailable(p.id, b) ? 1 : 0) - (isAvailable(p.id, a) ? 1 : 0)).map(item => {
     const ok = isAvailable(p.id, item);
     const isSel = pendingFlavor === item.n;
     const hue = hueFor(item.n);
@@ -1736,7 +1736,7 @@ function renderCart(){
   const body = document.getElementById('cartBody');
   if(cart.length === 0){
     body.innerHTML = `<div class="empty-state">
-      <img class="empty-cart-img" src="cart-empty.png" alt="Корзина пуста" draggable="false">
+      <img class="empty-cart-img" src="cart-empty.webp" alt="Корзина пуста" draggable="false">
       <div>Корзина пуста<br><span style="font-size:0.8rem;">Загляни в каталог и выбери что-нибудь вкусное</span></div>
     </div>`;
     return;
@@ -1830,13 +1830,33 @@ function renderCart(){
 /* ======================================================================
    ОФОРМЛЕНИЕ ЗАКАЗА
    ====================================================================== */
+/* Данные клиента, которые запоминаются после оформления заказа
+   (имя, адрес доставки, телефон, e-mail, контакт для связи) — хранятся на устройстве. */
+const PROFILE_KEY = 'smokeez_profile_' + UID;
+function loadProfile(){ return storeGet(PROFILE_KEY, {}) || {}; }
+function saveProfile(){
+  const next = Object.assign({}, loadProfile(), {
+    name: (checkout.name || '').trim(),
+    contactType: checkout.contactType,
+    contactValue: (checkout.contactValue || '').trim()
+  });
+  if(checkout.method === 'delivery'){ // при самовывозе прежний адрес не затираем
+    ['street','house','city','postal','phone','email'].forEach(k => { next[k] = (checkout[k] || '').trim(); });
+  }
+  storeSet(PROFILE_KEY, next);
+}
+
 function startCheckout(){
   if(cart.length === 0){ goto('cart'); return; }
   const keepPromo = checkout.promo; // промокод уже выбран в корзине — не сбрасываем его здесь
+  const prof = loadProfile();
   checkout = {
-    method:'delivery', payment:'card', contactType:'telegram',
-    name:'', street:'', house:'', city:'', postal:'', phone:'', email:'',
-    contactValue: tgUser && tgUser.username ? '@'+tgUser.username : '',
+    method:'delivery', payment:'card',
+    contactType: prof.contactType || 'telegram',
+    name: prof.name || (tgUser && tgUser.first_name) || '', // имя: сохранённое, иначе из Telegram
+    street: prof.street || '', house: prof.house || '', city: prof.city || '',
+    postal: prof.postal || '', phone: prof.phone || '', email: prof.email || '',
+    contactValue: prof.contactValue || (tgUser && tgUser.username ? '@'+tgUser.username : ''),
     age21:false, promo:keepPromo, step:1
   };
   renderCheckout();
@@ -2124,6 +2144,7 @@ async function submitOrder(){
     return;
   }
   errBox.style.display = 'none';
+  saveProfile(); // запоминаем данные для следующего заказа
   const btn = document.getElementById('submitOrderBtn');
   btn.disabled = true; btn.textContent = 'Отправляем...';
 
