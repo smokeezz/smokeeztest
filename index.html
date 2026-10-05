@@ -534,6 +534,12 @@
     background:var(--panel2);color:var(--text);font-family:inherit;font-size:0.88rem;outline:none;
   }
   .field input:focus{border-color:var(--magenta);}
+  .field textarea{
+    width:100%;padding:11px 13px;border-radius:11px;border:1px solid var(--line);resize:none;
+    background:var(--panel2);color:var(--text);font-family:inherit;font-size:0.88rem;line-height:1.4;outline:none;
+  }
+  .field textarea:focus{border-color:var(--magenta);}
+  .field .opt{font-weight:500;color:var(--muted-dim);}
   .field-row{display:flex;gap:10px;}
   .field-row .field{flex:1;}
   .contact-toggle{display:flex;gap:8px;margin-bottom:10px;}
@@ -811,6 +817,29 @@
 <div class="toast" id="toast"></div>
 
 <script>
+/* Клавиатура: закрывается по Enter («Готово») и по тапу на пустое место */
+(function(){
+  const isField = el => !!el && el.matches && el.matches('input, textarea, select');
+  const keep = 'input, textarea, select, label, button, a, [role="button"]';
+  const maybeBlur = t => {
+    const a = document.activeElement;
+    if(isField(a) && !(t && t.closest && t.closest(keep))) a.blur();
+  };
+  let sx = 0, sy = 0;
+  document.addEventListener('touchstart', e => { const t = e.touches[0]; if(t){ sx = t.clientX; sy = t.clientY; } }, {passive:true});
+  document.addEventListener('touchend', e => {
+    const t = e.changedTouches[0];
+    if(t && Math.abs(t.clientX - sx) < 10 && Math.abs(t.clientY - sy) < 10) maybeBlur(e.target); // тап, а не прокрутка
+  }, {passive:true});
+  document.addEventListener('click', e => maybeBlur(e.target));
+  document.addEventListener('keydown', e => {
+    const t = e.target;
+    if(e.key === 'Enter' && t && t.tagName === 'INPUT' && !['checkbox','radio','button','submit'].includes(t.type)){
+      e.preventDefault();
+      t.blur();
+    }
+  });
+})();
 (function(){
   const sp = document.getElementById('splash');
   if(sp) sp.addEventListener('animationend', e => { if(e.animationName === 'splashOut') sp.remove(); });
@@ -1218,7 +1247,7 @@ let currentProductId = null;
 let cart = storeGet('smokeez_cart_' + UID, []); // [{productId, flavor, qty}]
 let orders = storeGet('smokeez_orders_' + UID, []);
 let favorites = new Set(storeGet('smokeez_favs_' + UID, []));
-let checkout = { method:'delivery', payment:'card', contactType:'telegram', age21:false, promo:null };
+let checkout = { method:'delivery', payment:'card', contactType:'telegram', age21:false, comment:'', promo:null };
 let pendingFlavor = null;
 
 function productById(id){ return PRODUCTS.find(p => p.id === id); }
@@ -1857,7 +1886,7 @@ function startCheckout(){
     street: prof.street || '', house: prof.house || '', city: prof.city || '',
     postal: prof.postal || '', phone: prof.phone || '', email: prof.email || '',
     contactValue: prof.contactValue || (tgUser && tgUser.username ? '@'+tgUser.username : ''),
-    age21:false, promo:keepPromo, step:1
+    age21:false, comment:'', promo:keepPromo, step:1
   };
   renderCheckout();
 }
@@ -1872,7 +1901,8 @@ const CHECKOUT_STEPS = [
   {n:1, label:'Получение'},
   {n:2, label:'Данные'},
   {n:3, label:'Связь'},
-  {n:4, label:'Оплата'}
+  {n:4, label:'Оплата'},
+  {n:5, label:'Итог'}
 ];
 
 function renderCheckout(){
@@ -1955,13 +1985,22 @@ function renderCheckout(){
             </div>`).join('')}
         </div>
         <div class="pd-note">Реквизиты для оплаты пришлём тебе в Telegram лично после подтверждения заказа.</div>
-      </div>
+      </div>`;
+  }else if(step === 5){
+    stepHtml = `
       <div class="co-step">
+        <div class="co-title">Подтверждение</div>
         <label class="pay-opt ${checkout.age21 ? 'active' : ''}" style="cursor:pointer;">
           <input type="checkbox" id="fAge21" ${checkout.age21 ? 'checked' : ''} style="display:none;">
           <span class="radio" id="age21Radio"></span>
           <span>Подтверждаю, что мне есть 21 год</span>
         </label>
+      </div>
+      <div class="co-step">
+        <div class="field" style="margin-bottom:0;">
+          <label for="fComment">Комментарий к заказу <span class="opt">(необязательно)</span></label>
+          <textarea id="fComment" rows="3" maxlength="500" placeholder="Например: удобное время связи, пожелания по доставке">${escHtml(checkout.comment || '')}</textarea>
+        </div>
       </div>`;
   }
 
@@ -1996,9 +2035,10 @@ function renderCheckout(){
     el.addEventListener('click', () => { checkout.payment = el.dataset.pay; renderCheckout(); });
   });
 
+  body.querySelectorAll('input[type="text"], input[type="tel"], input[type="email"]').forEach(i => i.setAttribute('enterkeyhint','done'));
   const bind = (id, key) => { const el = document.getElementById(id); if(el) el.addEventListener('input', () => { checkout[key] = el.value; }); };
   bind('fName','name'); bind('fStreet','street'); bind('fHouse','house'); bind('fCity','city');
-  bind('fPostal','postal'); bind('fPhone','phone'); bind('fEmail','email'); bind('fContact','contactValue');
+  bind('fPostal','postal'); bind('fPhone','phone'); bind('fEmail','email'); bind('fContact','contactValue'); bind('fComment','comment');
 
   const age21Box = document.getElementById('fAge21');
   if(age21Box) age21Box.closest('label').addEventListener('click', (e) => {
@@ -2049,13 +2089,13 @@ function validateStep(step){
     else if(checkout.contactType === 'telegram' && !checkout.contactValue.trim().startsWith('@')) errs.push('Telegram-юзернейм должен начинаться с @');
     else if(checkout.contactType === 'phone' && !checkout.contactValue.trim().startsWith('+')) errs.push('Номер телефона должен начинаться с +');
   }
-  if(step === 4){
+  if(step === 5){
     if(!checkout.age21) errs.push('Подтверди, что тебе есть 21 год');
   }
   return errs;
 }
 function validateCheckout(){
-  return [1,2,3,4].reduce((acc, s) => acc.concat(validateStep(s)), []);
+  return [1,2,3,4,5].reduce((acc, s) => acc.concat(validateStep(s)), []);
 }
 
 /* Короткие кодовые обозначения товаров для отчёта админу — полное название
@@ -2084,6 +2124,9 @@ function adminProductCode(p){
   return n.replace(/[^A-Za-zА-Яа-я0-9]/g,'').slice(0,5);
 }
 
+function escHtml(v){
+  return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 function buildOrderText(){
   const payLabels = {card:'Карта', crypto:'Криптовалюта', cash:'Наличные'};
   let text = `🛒 <b>Новый заказ</b>\n\n`;
@@ -2097,15 +2140,17 @@ function buildOrderText(){
   if(checkout.promo) text += `\n🏷 Применён промокод: ${checkout.promo.code} (−${checkout.promo.amount ? checkout.promo.amount + ' €' : checkout.promo.percent + '%'})\n💰 Сумма без скидки: ${cartTotal().toFixed(2).replace('.',',')} €\n💰 Итого к оплате: ${cartDiscountedTotal().toFixed(2).replace('.',',')} €\n`;
   else text += `\n💰 Итого: ${cartTotal().toFixed(2).replace('.',',')} €\n`;
   text += `\n📦 Способ: ${checkout.method === 'delivery' ? 'Доставка' : 'Самовывоз'}\n`;
-  text += `👤 Имя: ${checkout.name}\n`;
+  text += `👤 Имя: ${escHtml(checkout.name)}\n`;
   if(checkout.method === 'delivery'){
-    text += `🏠 Адрес: ${checkout.street} ${checkout.house}, ${checkout.city}, ${checkout.postal}\n`;
-    text += `📞 Телефон: ${checkout.phone}\n`;
-    text += `✉️ Email: ${checkout.email}\n`;
+    text += `🏠 Адрес: ${escHtml(checkout.street)} ${escHtml(checkout.house)}, ${escHtml(checkout.city)}, ${escHtml(checkout.postal)}\n`;
+    text += `📞 Телефон: ${escHtml(checkout.phone)}\n`;
+    text += `✉️ Email: ${escHtml(checkout.email)}\n`;
   }
-  text += `💬 Связь: ${checkout.contactValue} (${checkout.contactType === 'telegram' ? 'Telegram' : 'телефон'})\n`;
+  text += `💬 Связь: ${escHtml(checkout.contactValue)} (${checkout.contactType === 'telegram' ? 'Telegram' : 'телефон'})\n`;
   text += `💳 Оплата: ${payLabels[checkout.payment]}\n`;
   text += `🔞 21+: подтверждено\n`;
+  const comment = (checkout.comment || '').trim();
+  if(comment) text += `\n📝 <b>Комментарий клиента:</b>\n${escHtml(comment)}\n`;
   if(tgUser) text += `\n🆔 Telegram: ${tgUser.first_name||''} ${tgUser.username ? '(@'+tgUser.username+')' : ''} · id ${tgUser.id}\n`;
   text += `🏷 Личный промокод клиента: ${getPromoCode()}`;
   return text;
