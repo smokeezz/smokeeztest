@@ -870,15 +870,15 @@ const RAW = [
   // ---------------- ОДНОРАЗКИ (пока пусто) ----------------
 
   // ---------------- POD-СИСТЕМЫ ----------------
-  L('Vaporesso Xros 4 Mini','pod', F(['Black','Space Grey','Ice Purple','Ice Green','Ice Blue','Champagne Gold','Camo Yellow','Camo Red','Camo Silver','Ice Pink'], false), {desc:'Компактная перезаряжаемая POD-система Vaporesso Xros 4 Mini.'}),
-  L('Vaporesso Xros 5','pod', F(['Blue Silk','Carbon Stripe','Coral Red','Cosmic Black','Grey Silk','Jade Green','Lavender Purple','Opal Pink','Opal White','Violet Silk'], false), {desc:'Перезаряжаемая POD-система Vaporesso Xros 5.'}),
-  L('Vaporesso Xros 5 Mini','pod', F(['Black','Carbon Black','Flowing Blue','Flowing Green','Flowing Pink','Pastel Crystal','Purple','Rose Red','Sky Blue','Titanium Silver'], false), {desc:'Компактная POD-система Vaporesso Xros 5 Mini.'}),
-  L('Vaporesso Xros Pro 2','pod', F(['Dawn Purple','Gem Green','Glittering Black','Glittering Gold','Glittering Silver','Moonlit Pink','Storm Blue'], false), {desc:'Перезаряжаемая POD-система Vaporesso Xros Pro 2.'}),
-  L('Vaporesso Xros 6 Mini','pod', Q([['Titanium Black',2]]), {desc:'Компактная перезаряжаемая POD-система Vaporesso Xros 6 Mini.'}),
-  L('Vaporesso Xros 6','pod', Q([['Carbon Fiber Gray',0]]), {desc:'Перезаряжаемая POD-система Vaporesso Xros 6.', note:'Carbon Fiber Gray — 2 шт. на складе уже забронированы под предыдущий заказ.'}),
+  L('Vaporesso XROS 4 Mini','pod', F(['Black','Space Grey','Ice Purple','Ice Green','Ice Blue','Champagne Gold','Camo Yellow','Camo Red','Camo Silver','Ice Pink'], false), {desc:'Компактная перезаряжаемая POD-система Vaporesso XROS 4 Mini.'}),
+  L('Vaporesso XROS 5','pod', F(['Blue Silk','Carbon Stripe','Coral Red','Cosmic Black','Grey Silk','Jade Green','Lavender Purple','Opal Pink','Opal White','Violet Silk'], false), {desc:'Перезаряжаемая POD-система Vaporesso XROS 5.'}),
+  L('Vaporesso XROS 5 Mini','pod', F(['Black','Carbon Black','Flowing Blue','Flowing Green','Flowing Pink','Pastel Crystal','Purple','Rose Red','Sky Blue','Titanium Silver'], false), {desc:'Компактная POD-система Vaporesso XROS 5 Mini.'}),
+  L('Vaporesso XROS Pro 2','pod', F(['Dawn Purple','Gem Green','Glittering Black','Glittering Gold','Glittering Silver','Moonlit Pink','Storm Blue'], false), {desc:'Перезаряжаемая POD-система Vaporesso XROS Pro 2.'}),
+  L('Vaporesso XROS 6 Mini','pod', Q([['Titanium Black',2]]), {desc:'Компактная перезаряжаемая POD-система Vaporesso XROS 6 Mini.'}),
+  L('Vaporesso XROS 6','pod', Q([['Carbon Fiber Gray',0]]), {desc:'Перезаряжаемая POD-система Vaporesso XROS 6.'}),
 
   // ---------------- КАРТРИДЖИ ----------------
-  L('Картриджи Xros','cartridge', Q([['Corex 3.0 XROS 3мл 0.4 Ω',2],['Corex 3.0 XROS 3мл 0.6 Ω',0],['Corex 3.0 XROS 3мл 0.8 Ω',1]]), {desc:'Сменные картриджи Corex для линейки Vaporesso Xros, 3 мл.'}),
+  L('Картриджи XROS','cartridge', Q([['Corex 3.0 XROS 3мл 0.4 Ω',2],['Corex 3.0 XROS 3мл 0.6 Ω',0],['Corex 3.0 XROS 3мл 0.8 Ω',1]]), {desc:'Сменные картриджи Corex для линейки Vaporesso XROS, 3 мл.'}),
 
   // ---------------- СНЮС ----------------
   L('Снюс Cuba 66мг','snus', F(['Apple Juice','Banana Hit','Black Currant','Blackberry','Blueberry','Cherry','Cola','Cold Dry','Double Fresh','Forest Berries','Grape','Ice Spearmint','Mango','Peach','Tropical Fruit','Watermelon'], false), {desc:'Никотиновые паучи Cuba, крепость 66 мг/г. Без табака, готовы к использованию.'}),
@@ -901,14 +901,14 @@ function priceFor(line){
     if(/^Chaser/i.test(line.name)) return 10.50;
   }
   if(line.category === 'pod'){
-    if(/^Vaporesso Xros 4 Mini/i.test(line.name)) return 16.50;
-    if(/^Vaporesso Xros 5 Mini/i.test(line.name)) return 18.50;
-    if(/^Vaporesso Xros 5(?!\s*Mini)/i.test(line.name)) return 20.50;
-    if(/^Vaporesso Xros Pro 2/i.test(line.name)) return 32.50;
-    if(/^Vaporesso Xros 6 Mini/i.test(line.name)) return 19.50;
-    if(/^Vaporesso Xros 6(?!\s*Mini)/i.test(line.name)) return 22.50;
+    if(/^Vaporesso XROS 4 Mini/i.test(line.name)) return 16.50;
+    if(/^Vaporesso XROS 5 Mini/i.test(line.name)) return 18.50;
+    if(/^Vaporesso XROS 5(?!\s*Mini)/i.test(line.name)) return 20.50;
+    if(/^Vaporesso XROS Pro 2/i.test(line.name)) return 32.50;
+    if(/^Vaporesso XROS 6 Mini/i.test(line.name)) return 19.50;
+    if(/^Vaporesso XROS 6(?!\s*Mini)/i.test(line.name)) return 22.50;
   }
-  if(line.name === 'Картриджи Xros') return 4.00;
+  if(line.name === 'Картриджи XROS') return 4.00;
   if(line.category === 'snus') return 5.00;
   if(line.promo){
     const m = line.promo.match(/([\d,.]+)\s*€/);
@@ -947,14 +947,14 @@ const PREORDER_ARRIVALS = {
   'Vozol Prime 30ml 5%': ['Berry','Berry Peach','Blue Raspberry','Cherry Cola','Lemon Lime','LavaFire','Mixed Berries','Peach Ice','Pineapple Passion Fruit Lime','Pomegranate Lemonade','Watermelon Bubblegum'],
   'ElfLiq 30ml 5%': ['Blackberry Lemon','Blueberry Sour Raspberry','Cherry','Cool Mint','Grape Cherry','Elf Jack','Pineapple Colada','Pineapple Ice','Pink Lemonade','Pink Grapefruit','Sour Watermelon Gummy'],
   'Puffy 30ml 5%': ['Cherry Ice','Energy Drink','Grape','Turbo Mint'],
-  'Vaporesso Xros 6': ['Scorching Cloud','Carbon Fiber Gray'],
-  'Vaporesso Xros 6 Mini': ['Titanium Black','Jelly Pink'],
+  'Vaporesso XROS 6': ['Scorching Cloud','Carbon Fiber Gray'],
+  'Vaporesso XROS 6 Mini': ['Titanium Black','Jelly Pink'],
   'Снюс Baron 77мг': ['Classic'],
-  'Картриджи Xros': ['Corex 3.0 XROS 3мл 0.4 Ω','Corex 3.0 XROS 3мл 0.6 Ω']
+  'Картриджи XROS': ['Corex 3.0 XROS 3мл 0.4 Ω','Corex 3.0 XROS 3мл 0.6 Ω']
 };
 const LIVE_NOW = {
   'Vozol Prime 30ml 5%': {'Berry':1,'Lemon Lime':2,'Mixed Berries':1,'Peach Ice':2},
-  'Картриджи Xros': {'Corex 3.0 XROS 3мл 0.4 Ω':1,'Corex 3.0 XROS 3мл 0.8 Ω':3}
+  'Картриджи XROS': {'Corex 3.0 XROS 3мл 0.4 Ω':1,'Corex 3.0 XROS 3мл 0.8 Ω':3}
 };
 RAW.forEach(line => {
   const live = LIVE_NOW[line.name] || {};
@@ -1554,8 +1554,8 @@ function hzRailHtml(products){
 }
 function renderHome(){
   const body = document.getElementById('homeBody');
-  const topSales = findProductsByPrefix([/^Vozol Prime/i, /^ElfLiq/i, /^Vaporesso Xros 6(?!\s*Mini)/i]);
-  const newArrivals = findProductsByPrefix([/^Puffy/i, /^Vaporesso Xros 6(?!\s*Mini)/i, /^Vaporesso Xros 6 Mini/i]);
+  const topSales = findProductsByPrefix([/^Vozol Prime/i, /^ElfLiq/i, /^Vaporesso XROS 6(?!\s*Mini)/i]);
+  const newArrivals = findProductsByPrefix([/^Puffy/i, /^Vaporesso XROS 6(?!\s*Mini)/i, /^Vaporesso XROS 6 Mini/i]);
   body.innerHTML = `
     <div class="home-hero">
       <h1 class="home-title">Добро пожаловать в SMOKEEZ🇩🇪💨</h1>
@@ -2052,13 +2052,13 @@ function adminProductCode(p){
   if(/^Chaser for Pods/i.test(n)) return 'ChPod';
   if(/^Chaser Special/i.test(n)) return 'ChSp';
   if(/^Chaser Mix/i.test(n)) return 'ChMix';
-  if(/^Vaporesso Xros 4 Mini/i.test(n)) return 'X4M';
-  if(/^Vaporesso Xros 5 Mini/i.test(n)) return 'X5M';
-  if(/^Vaporesso Xros 5(?!\s*Mini)/i.test(n)) return 'X5';
-  if(/^Vaporesso Xros Pro 2/i.test(n)) return 'XP2';
-  if(/^Vaporesso Xros 6 Mini/i.test(n)) return 'X6M';
-  if(/^Vaporesso Xros 6(?!\s*Mini)/i.test(n)) return 'X6';
-  if(/^Картриджи Xros/i.test(n)) return 'CartX';
+  if(/^Vaporesso XROS 4 Mini/i.test(n)) return 'X4M';
+  if(/^Vaporesso XROS 5 Mini/i.test(n)) return 'X5M';
+  if(/^Vaporesso XROS 5(?!\s*Mini)/i.test(n)) return 'X5';
+  if(/^Vaporesso XROS Pro 2/i.test(n)) return 'XP2';
+  if(/^Vaporesso XROS 6 Mini/i.test(n)) return 'X6M';
+  if(/^Vaporesso XROS 6(?!\s*Mini)/i.test(n)) return 'X6';
+  if(/^Картриджи XROS/i.test(n)) return 'CartX';
   if(/^Снюс Cuba/i.test(n)) return 'Cuba';
   if(/^Снюс Baron/i.test(n)) return 'Baron';
   return n.replace(/[^A-Za-zА-Яа-я0-9]/g,'').slice(0,5);
