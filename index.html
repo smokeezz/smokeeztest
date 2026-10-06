@@ -247,13 +247,19 @@
       linear-gradient(160deg,#3a1160 0%,#240b3d 50%,#150620 100%);
     border:1px solid rgba(255,140,235,0.45);box-shadow:0 20px 50px -10px rgba(0,0,0,0.8);
   }
-  /* фоновый узор из логотипа SMOKEEZ */
-  .pre-modal.city-modal::before{
-    content:'';position:absolute;inset:-60%;pointer-events:none;
-    background:url('smokeez-logo.webp') center/96px auto repeat space;
-    opacity:0.07;transform:rotate(-24deg);
+  /* фон-«обои» из надписи SMOKEEZ — как на фоне самого приложения, но мельче и реже */
+  .city-bg-text{
+    position:absolute;inset:-25% -30%;transform:rotate(-18deg);
+    display:flex;flex-direction:column;gap:16px;
+    font-family:'Oswald',sans-serif;font-style:italic;font-weight:700;
+    font-size:24px;line-height:1;letter-spacing:0.06em;white-space:nowrap;
+    pointer-events:none;user-select:none;
+    -webkit-mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,0.75) 55%,rgba(0,0,0,0.25) 100%);
+    mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,0.75) 55%,rgba(0,0,0,0.25) 100%);
   }
-  .city-modal > *{position:relative;z-index:1;}
+  .city-bg-text div{color:rgba(139,92,246,0.16);}
+  .city-bg-text div:nth-child(even){color:transparent;-webkit-text-stroke:1px rgba(190,110,230,0.26);margin-left:-70px;}
+  .city-modal > *:not(.city-bg-text){position:relative;z-index:1;}
   .city-logo{display:block;height:28px;margin:0 auto 12px;}
   .city-modal h3{margin:0 0 8px;font-size:1.08rem;text-align:center;display:flex;justify-content:center;align-items:center;gap:6px;}
   .city-modal p{text-align:center;}
@@ -1894,6 +1900,7 @@ function showCityPicker(forced){
   el.id = 'cityModal';
   el.className = 'pre-modal-bg city-bg';
   el.innerHTML = `<div class="pre-modal city-modal" role="dialog" aria-modal="true">
+      <div class="city-bg-text" aria-hidden="true">${Array.from({length:9}, () => `<div>${Array(5).fill('SMOKEEZ').join('&nbsp;&nbsp;&nbsp;')}</div>`).join('')}</div>
       <img class="city-logo" src="smokeez-logo.webp" alt="SMOKEEZ">
       <h3>📍 ${forced ? 'Выберите ваш город' : 'Город'}</h3>
       ${forced ? '<p>От города зависят цены и наличие товаров.</p>' : '<p>У каждого города свои цены, наличие и корзина.</p>'}
