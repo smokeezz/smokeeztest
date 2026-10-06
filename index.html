@@ -213,6 +213,14 @@
   .brand{display:flex;align-items:center;gap:8px;}
   .brand img{height:26px;display:block;}
   .topbar-actions{display:flex;align-items:center;gap:8px;}
+  .city-pill{
+    max-width:150px;padding:7px 11px;border-radius:99px;cursor:pointer;
+    border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:var(--text);
+    font-family:'Manrope',sans-serif;font-size:0.72rem;font-weight:700;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:4px;
+  }
+  .city-pill #cityPillName{overflow:hidden;text-overflow:ellipsis;}
+  .city-opt{margin-top:10px;}
   /* Liquid Glass кнопка корзины в шапке */
   .icon-btn{
     position:relative;
@@ -807,6 +815,7 @@
 <header class="topbar hv-orig">
   <div class="brand"><img src="smokeez-logo.webp" alt="SMOKEEZ"></div>
   <div class="topbar-actions">
+    <button class="city-pill" id="cityPill" type="button" aria-label="Выбрать город">📍 <span id="cityPillName"></span> ▾</button>
     <button class="icon-btn" id="topCartBtn" aria-label="Корзина">
       🛒<span class="badge" id="topCartBadge" style="display:none;">0</span>
     </button>
@@ -1099,7 +1108,7 @@ const PRODUCTS = RAW.map((line, idx) => {
     name: line.name,
     category: line.category,
     items: line.items,
-    price: priceFor(line),
+    get price(){ return cityPrice(line); }, // зависит от выбранного города
     unit: unitFor(line),
     variantLabel: variantLabelFor(line),
     desc: line.desc || '',
@@ -1124,15 +1133,48 @@ const PRODUCTS = RAW.map((line, idx) => {
    (stockKey/remainingQty/decrementStock) достаточно переключить на
    запросы к нему вместо localStorage.
    ====================================================================== */
-function stockKey(productId, flavorName){ return productId + '::' + flavorName; }
-let STOCK = storeGet('smokeez_stock_v2', null);
-if(!STOCK){
-  STOCK = {};
-  PRODUCTS.forEach(p => p.items.forEach(it => {
-    if(it.qty !== null && it.qty !== undefined) STOCK[stockKey(p.id, it.n)] = it.qty;
-  }));
-  storeSet('smokeez_stock_v2', STOCK);
+/* ======================================================================
+   ГОРОДА
+   ------------------------------------------------------------------
+   Один застосунок, несколько городов. Сейчас каталог общий; отличия города
+   описываются здесь (цены — функцией price). Когда ассортименты разойдутся,
+   сюда же переедут собственные списки товаров/предзаказов города.
+   У каждого города отдельно: остатки (своя таблица), корзина, менеджер.
+   Id менеджера НЕ хранится в браузере — он лежит в настройках Worker (по ключу города).
+   ====================================================================== */
+const CITIES = {
+  kl: { key:'kl', name:'Кайзерслаутерн', price:null },
+  sb: { key:'sb', name:'Саарбрюкен',
+        // жидкости Vozol / ElfLiq / Puffy — 11 €, остальное как в базовом прайсе
+        price: line => (line.category === 'liquid' && /^(Vozol Prime|ElfLiq|Puffy)/i.test(line.name)) ? 11.00 : null }
+};
+const DEFAULT_CITY = 'kl';
+let CITY = storeGet('smokeez_city', null);
+if(!CITIES[CITY]) CITY = null; // город ещё не выбран — при запуске покажем выбор
+function cityKey(){ return CITY || DEFAULT_CITY; }
+function cityName(){ return CITIES[cityKey()].name; }
+function cityPrice(line){
+  const c = CITIES[cityKey()];
+  if(c && c.price){ const v = c.price(line); if(v !== null && v !== undefined) return v; }
+  return priceFor(line);
 }
+// для Кайзерслаутерна оставлены прежние ключи хранилища — у действующих клиентов ничего не пропадает
+function stockStorageKey(){ return cityKey() === 'kl' ? 'smokeez_stock_v2' : 'smokeez_stock_v2_' + cityKey(); }
+function cartStorageKey(){ return cityKey() === 'kl' ? 'smokeez_cart_' + UID : 'smokeez_cart_' + UID + '_' + cityKey(); }
+
+function stockKey(productId, flavorName){ return productId + '::' + flavorName; }
+function loadStock(){
+  let st = storeGet(stockStorageKey(), null);
+  if(!st){
+    st = {};
+    PRODUCTS.forEach(p => p.items.forEach(it => {
+      if(it.qty !== null && it.qty !== undefined) st[stockKey(p.id, it.n)] = it.qty;
+    }));
+    storeSet(stockStorageKey(), st);
+  }
+  return st;
+}
+let STOCK = loadStock();
 function remainingQty(productId, flavorName){
   const k = stockKey(productId, flavorName);
   const v = STOCK.hasOwnProperty(k) ? STOCK[k] : null; // null = количество не отслеживается (неограниченно)
@@ -1153,7 +1195,7 @@ function decrementStock(productId, flavorName, qty){
   const k = stockKey(productId, flavorName);
   if(!STOCK.hasOwnProperty(k)) return;
   STOCK[k] = Math.max(0, STOCK[k] - qty);
-  storeSet('smokeez_stock_v2', STOCK);
+  storeSet(stockStorageKey(), STOCK);
 }
 
 /* Список ожидаемых файлов изображений — положи их РЯДОМ с index.html (в ту же папку,
@@ -1314,7 +1356,7 @@ let activeCat = 'all';
 let searchTerm = '';
 let stockOnly = false;
 let currentProductId = null;
-let cart = storeGet('smokeez_cart_' + UID, []); // [{productId, flavor, qty}]
+let cart = storeGet(cartStorageKey(), []); // [{productId, flavor, qty}] — своя корзина у каждого города
 let orders = storeGet('smokeez_orders_' + UID, []);
 let favorites = new Set(storeGet('smokeez_favs_' + UID, []));
 let checkout = { method:'delivery', payment:'card', contactType:'telegram', age21:false, comment:'', promo:null };
@@ -1801,7 +1843,46 @@ function showPreorderInfo(){
   el.addEventListener('click', e => { if(e.target === el) el.remove(); });
   el.querySelector('#preModalOk').addEventListener('click', () => el.remove());
 }
-function persistCart(){ storeSet('smokeez_cart_' + UID, cart); refreshCartBadges(); }
+function updateCityPill(){
+  const el = document.getElementById('cityPillName');
+  if(el) el.textContent = cityName();
+}
+function showCityPicker(forced){
+  const old = document.getElementById('cityModal');
+  if(old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'cityModal';
+  el.className = 'pre-modal-bg';
+  el.innerHTML = `<div class="pre-modal" role="dialog" aria-modal="true">
+      <div class="pre-modal-ic">📍</div>
+      <h3>${forced ? 'Выберите ваш город' : 'Город'}</h3>
+      ${forced ? '<p>От города зависят цены и наличие товаров.</p>' : '<p>У каждого города свои цены, наличие и корзина.</p>'}
+      ${Object.keys(CITIES).map(k => `<button type="button" class="btn ${(CITY === k) ? 'btn-primary' : (forced ? 'btn-primary' : 'btn-ghost')} btn-wide btn-block city-opt" data-city="${k}">${CITIES[k].name}${CITY === k ? ' ✓' : ''}</button>`).join('')}
+    </div>`;
+  document.body.appendChild(el);
+  if(!forced) el.addEventListener('click', e => { if(e.target === el) el.remove(); });
+  el.querySelectorAll('[data-city]').forEach(b => b.addEventListener('click', () => { haptic('light'); setCity(b.dataset.city); }));
+}
+function setCity(key){
+  if(!CITIES[key]) return;
+  const changed = key !== cityKey();
+  CITY = key;
+  storeSet('smokeez_city', key);
+  const modal = document.getElementById('cityModal');
+  if(modal) modal.remove();
+  updateCityPill();
+  if(!changed) return;
+  STOCK = loadStock();                 // остатки выбранного города
+  cart = storeGet(cartStorageKey(), []); // корзина выбранного города
+  refreshCartBadges();
+  const cur = (document.querySelector('.view.active') || {}).id || '';
+  const tabs = ['home','catalog','favorites','cart','profile'];
+  const name = cur.replace('view-','');
+  goto(tabs.includes(name) ? name : 'home');
+  showToast('Город: ' + cityName());
+  syncStockFromSheet();
+}
+function persistCart(){ storeSet(cartStorageKey(), cart); refreshCartBadges(); }
 
 function addToCart(productId, flavor, qty){
   const r = remainingQty(productId, flavor);
@@ -2199,7 +2280,7 @@ function escHtml(v){
 }
 function buildOrderText(){
   const payLabels = {card:'Карта', crypto:'Криптовалюта', cash:'Наличные'};
-  let text = `🛒 <b>Новый заказ</b>\n\n`;
+  let text = `🛒 <b>Новый заказ</b>\n🏙 <b>Город:</b> ${escHtml(cityName())}\n\n`;
   cart.forEach(ci => {
     const p = productById(ci.productId);
     if(!p) return;
@@ -2235,7 +2316,7 @@ async function sendOrderToOwner(text){
       const resp = await fetch(CONFIG.ORDER_ENDPOINT, {
         method:'POST',
         headers:{'Content-Type':'application/json', 'X-App-Key': CONFIG.APP_KEY},
-        body: JSON.stringify({text})
+        body: JSON.stringify({text, city: cityKey()}) // Worker по городу выбирает менеджера
       });
       const data = await resp.json();
       if(data.ok) return {ok:true};
@@ -2442,13 +2523,15 @@ if(tg && tg.BackButton){
 async function syncStockFromSheet(){
   const ready = CONFIG.ORDER_ENDPOINT && CONFIG.ORDER_ENDPOINT !== 'YOUR_WORKER_URL';
   if(!ready) return;
+  const forCity = cityKey();
   try{
-    const resp = await fetch(CONFIG.ORDER_ENDPOINT + '?stock=1', {
+    const resp = await fetch(CONFIG.ORDER_ENDPOINT + '?stock=1&city=' + encodeURIComponent(forCity), {
       method:'GET',
       headers:{'X-App-Key': CONFIG.APP_KEY}
     });
     if(!resp.ok) return;
     const csv = await resp.text();
+    if(forCity !== cityKey()) return; // пока шёл запрос, клиент сменил город — эти остатки уже чужие
     const rows = parseStockCsv(csv);
     let updated = 0;
     rows.forEach(row => {
@@ -2460,7 +2543,7 @@ async function syncStockFromSheet(){
       updated++;
     });
     if(updated){
-      storeSet('smokeez_stock_v2', STOCK);
+      storeSet(stockStorageKey(), STOCK);
       if(typeof renderHome === 'function') renderHome();
       if(typeof renderCatalog === 'function') renderCatalog();
     }
@@ -2480,6 +2563,10 @@ function parseStockCsv(text){
     product: r[pI], flavor: r[fI], stock: parseInt(r[sI], 10)
   })).filter(r => r.product && r.flavor && !isNaN(r.stock));
 }
+const cityPillBtn = document.getElementById('cityPill');
+if(cityPillBtn) cityPillBtn.addEventListener('click', () => { haptic('light'); showCityPicker(false); });
+updateCityPill();
+if(!CITY) showCityPicker(true); // первый запуск: город нужно выбрать
 syncStockFromSheet();
 </script>
 </body>
