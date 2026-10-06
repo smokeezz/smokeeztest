@@ -234,12 +234,33 @@
   }
   .city-pill:active{transform:scale(0.92);}
   .city-pill #cityPillName{overflow:hidden;text-overflow:ellipsis;}
-  /* окно выбора города: непрозрачное, фон размыт, чтобы текст не сливался с картинками позади */
-  .pre-modal-bg.city-bg{background:rgba(5,2,10,0.88);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
-  .pre-modal.city-modal{background:linear-gradient(150deg,#3a1160 0%,#240b3d 50%,#150620 100%);border:1px solid rgba(255,140,235,0.45);box-shadow:0 20px 50px -10px rgba(0,0,0,0.8);}
-  .city-modal h3{margin:0 0 8px;font-size:1.08rem;}
+  /* окно выбора города: непрозрачное, лёгкое затемнение и небольшое размытие фона за ним */
+  .pre-modal-bg.city-bg{background:rgba(5,2,10,0.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);}
+  .pre-modal.city-modal{
+    position:relative;overflow:hidden;
+    /* грани и сияние в стиле фона приложения */
+    background:
+      linear-gradient(112deg, transparent 0 42%, rgba(139,92,246,0.20) 42% 66%, transparent 66%),
+      linear-gradient(68deg, transparent 0 64%, rgba(227,79,239,0.16) 64% 88%, transparent 88%),
+      linear-gradient(105deg, rgba(0,0,0,0.28) 0 22%, transparent 22%),
+      radial-gradient(75% 55% at 50% 0%, rgba(227,79,239,0.38), transparent 70%),
+      linear-gradient(160deg,#3a1160 0%,#240b3d 50%,#150620 100%);
+    border:1px solid rgba(255,140,235,0.45);box-shadow:0 20px 50px -10px rgba(0,0,0,0.8);
+  }
+  /* фоновый узор из логотипа SMOKEEZ */
+  .pre-modal.city-modal::before{
+    content:'';position:absolute;inset:-60%;pointer-events:none;
+    background:url('smokeez-logo.webp') center/96px auto repeat space;
+    opacity:0.07;transform:rotate(-24deg);
+  }
+  .city-modal > *{position:relative;z-index:1;}
+  .city-logo{display:block;height:28px;margin:0 auto 12px;}
+  .city-modal h3{margin:0 0 8px;font-size:1.08rem;text-align:center;display:flex;justify-content:center;align-items:center;gap:6px;}
+  .city-modal p{text-align:center;}
   .city-modal .pay-opt{text-align:left;margin-top:10px;background:rgba(255,255,255,0.06);}
   .city-modal .pay-opt.active{background:rgba(227,79,239,0.18);}
+  /* товар без наличия в каталоге — тёмный и без цвета */
+  .product-card.is-out{filter:grayscale(1) brightness(0.55);}
   /* Liquid Glass кнопка корзины в шапке */
   .icon-btn{
     position:relative;
@@ -1595,7 +1616,7 @@ function productCardHtml(p){
     : (preCount && inStockCount === 0 ? `<span class="tag pre">Предзаказ</span>`
     : (allOut ? `<span class="tag out">Нет в наличии</span>` : ''));
   const fav = isFavorite(p.id);
-  return `<div class="product-card" data-id="${p.id}">
+  return `<div class="product-card ${allOut ? 'is-out' : ''}" data-id="${p.id}">
       <div class="thumb">${tag}<button type="button" class="fav-btn ${fav?'active':''}" data-fav="${p.id}">${fav ? '♥\uFE0E' : '♡'}</button>${thumbHtml(p)}</div>
       <div class="card-body">
         <div class="name">${p.name}</div>
@@ -1873,6 +1894,7 @@ function showCityPicker(forced){
   el.id = 'cityModal';
   el.className = 'pre-modal-bg city-bg';
   el.innerHTML = `<div class="pre-modal city-modal" role="dialog" aria-modal="true">
+      <img class="city-logo" src="smokeez-logo.webp" alt="SMOKEEZ">
       <h3>📍 ${forced ? 'Выберите ваш город' : 'Город'}</h3>
       ${forced ? '<p>От города зависят цены и наличие товаров.</p>' : '<p>У каждого города свои цены, наличие и корзина.</p>'}
       ${Object.keys(CITIES).map(k => `<div class="pay-opt ${CITY === k ? 'active' : ''}" data-city="${k}"><span class="radio"></span><span>${CITIES[k].name}</span></div>`).join('')}
