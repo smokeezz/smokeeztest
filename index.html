@@ -29,6 +29,7 @@
     --card-grad:linear-gradient(160deg, rgba(58,15,92,0.5) 0%, rgba(18,6,30,0.55) 45%, rgba(227,79,239,0.16) 100%);
     --card-border:rgba(190,110,230,0.35);
     --safe-b:env(safe-area-inset-bottom, 0px);
+    --topbar-h:64px;
   }
   /* ---------- экран запуска: только название, показывается при каждом открытии мини-аппа ---------- */
   #splash{
@@ -67,6 +68,7 @@
   html{scroll-behavior:smooth;}
   body{
     margin:0;
+    padding-top:var(--topbar-h); /* место под закреплённую шапку */
     min-height:101vh;
     background:var(--bg);
     color:var(--text);
@@ -136,17 +138,24 @@
   }
 
   /* ---------- header ---------- */
+  /* fixed, а не sticky: при «резиновой» протяжке страницы вниз шапка остаётся на месте */
   header.topbar{
-    position:sticky;
-    top:0;
+    position:fixed;
+    top:0;left:0;right:0;
     z-index:40;
+    height:var(--topbar-h);
     display:flex;
     align-items:center;
     justify-content:space-between;
     gap:12px;
-    padding:12px 16px;
-    background:rgba(11,7,18,0.78);
-    backdrop-filter:blur(14px);
+    padding:0 16px;
+    background:
+      radial-gradient(110% 260% at 0% 0%, rgba(139,92,246,0.55) 0%, transparent 58%),
+      radial-gradient(90% 240% at 100% 0%, rgba(227,79,239,0.42) 0%, transparent 62%),
+      linear-gradient(180deg, rgba(38,15,62,0.94) 0%, rgba(16,8,28,0.90) 100%);
+    -webkit-backdrop-filter:blur(16px) saturate(160%);
+    backdrop-filter:blur(16px) saturate(160%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.14), 0 10px 26px -12px rgba(227,79,239,0.5);
     border-bottom:none;
   }
   /* неоновая градиентная полоска между шапкой и телом сайта */
@@ -157,7 +166,7 @@
     box-shadow:0 0 10px rgba(227,79,239,0.55), 0 0 5px rgba(139,92,246,0.45);
   }
   .brand{display:flex;align-items:center;gap:8px;}
-  .brand img{height:26px;display:block;}
+  .brand img{height:26px;display:block;filter:drop-shadow(0 0 8px rgba(227,79,239,0.5));}
   .topbar-actions{display:flex;align-items:center;gap:8px;}
   /* Liquid Glass кнопка корзины в шапке */
   .icon-btn{
@@ -1152,7 +1161,8 @@ const PROMO_CODES = {
 };
 const REFERRAL_DISCOUNT_PERCENT = 10;   // скидка другу по чужому личному промокоду (только первый заказ)
 const REFERRAL_BONUS_POINTS = 50;       // баллы пригласившему за друга, который сделал первый заказ
-const POINTS_PER_10_EUR = 100;          // баллов за каждые полных 10€ фактически оплаченной суммы
+const POINTS_STEP_EUR = 5;              // шаг начисления: за каждые полные 5€ фактически оплаченной суммы
+const POINTS_PER_STEP = 50;             // ...начисляется столько баллов
 const POINTS_TO_REDEEM = 1000;          // сколько баллов нужно для купона
 const REDEEM_COUPON_AMOUNT = 10;        // фиксированная скидка по купону за баллы, в €
 
@@ -2211,7 +2221,7 @@ async function submitOrder(){
   cart.forEach(ci => decrementStock(ci.productId, ci.flavor, ci.qty));
 
   const finalTotal = cartDiscountedTotal();
-  const earnedPoints = Math.floor(finalTotal / 10) * POINTS_PER_10_EUR;
+  const earnedPoints = Math.floor(Math.round(finalTotal * 100) / (POINTS_STEP_EUR * 100)) * POINTS_PER_STEP;
   applyPromoSideEffects(checkout.promo);
   addPoints(earnedPoints);
 
@@ -2289,7 +2299,7 @@ function renderProfile(){
         </div>
       </div>
       <div class="points-bar"><div class="points-bar-fill" style="width:${Math.min(100, points/POINTS_TO_REDEEM*100)}%;"></div></div>
-      <div class="pd-note">Каждые потраченные 10€ на заказ — ${POINTS_PER_10_EUR} баллов. За каждого приглашённого друга, который сделал первый заказ, — ${REFERRAL_BONUS_POINTS} баллов. ${POINTS_TO_REDEEM} баллов = купон на скидку ${REDEEM_COUPON_AMOUNT} €.</div>
+      <div class="pd-note">Каждые потраченные ${POINTS_STEP_EUR}€ на заказ — ${POINTS_PER_STEP} баллов. За каждого приглашённого друга, который сделал первый заказ, — ${REFERRAL_BONUS_POINTS} баллов. ${POINTS_TO_REDEEM} баллов = купон на скидку ${REDEEM_COUPON_AMOUNT} €.</div>
       ${points >= POINTS_TO_REDEEM ? `<button class="btn btn-primary btn-wide btn-block" id="redeemPointsBtn" style="margin-top:12px;">Обменять ${POINTS_TO_REDEEM} баллов на купон ${REDEEM_COUPON_AMOUNT} €</button>` : ''}
       ${refStats.invited > 0 ? `<div class="pd-note" style="margin-top:10px;">Приглашено друзей: ${refStats.invited}</div>` : ''}
       ${rewards.length ? `<div class="pd-block" style="margin-top:14px;">
