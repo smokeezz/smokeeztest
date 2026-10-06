@@ -6,6 +6,8 @@
 <title>SMOKEEZ</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -434,6 +436,9 @@
   .card-body .price.ask{font-size:0.74rem;color:var(--muted);font-style:normal;font-family:'Manrope',sans-serif;font-weight:700;}
 
   .empty-state{text-align:center;padding:60px 20px;color:var(--muted-dim);}
+  .press-start-2p-regular{font-family:"Press Start 2P",system-ui;font-weight:400;font-style:normal;}
+  .empty-state .empty-title{display:inline-block;font-size:0.95rem;line-height:1.6;color:var(--text);text-shadow:0 0 14px rgba(227,79,239,0.6);margin-bottom:10px;}
+  .points-card .points-row .lbl{font-family:"Press Start 2P",system-ui;font-weight:400;font-size:0.8rem;}
   .empty-state svg{width:40px;height:40px;opacity:0.4;margin-bottom:12px;}
   .empty-state .empty-cart-img, .empty-state .empty-fav-img{display:block;width:min(220px,60vw);height:auto;margin:0 auto 14px;opacity:1;filter:drop-shadow(0 10px 24px rgba(227,79,239,0.35));animation:emptyCartFloat 3.2s ease-in-out infinite;}
   @keyframes emptyCartFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
@@ -1588,7 +1593,7 @@ function renderFavorites(){
   if(list.length === 0){
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
       <img class="empty-fav-img" src="favorites-empty.webp" alt="Избранное пусто" draggable="false">
-      <div>Список избранного пуст<br><span style="font-size:0.8rem;">Нажимай на ♡ на товаре, чтобы сохранить его сюда</span></div></div>`;
+      <div><span class="empty-title press-start-2p-regular">Список избранного пуст</span><br><span style="font-size:0.8rem;">Нажимай на ♡ на товаре, чтобы сохранить его <b style="color:#a78bfa;font-weight:800;">сюда</b></span></div></div>`;
     return;
   }
   grid.innerHTML = list.map(productCardHtml).join('');
@@ -1831,7 +1836,7 @@ function renderCart(){
   if(cart.length === 0){
     body.innerHTML = `<div class="empty-state">
       <img class="empty-cart-img" src="cart-empty.webp" alt="Корзина пуста" draggable="false">
-      <div>Корзина пуста<br><span style="font-size:0.8rem;">Загляни в каталог и выбери что-нибудь вкусное</span></div>
+      <div><span class="empty-title press-start-2p-regular">Корзина пуста</span><br><span style="font-size:0.8rem;">Загляни в каталог и выбери что-нибудь <b style="color:#a78bfa;font-weight:800;">вкусное</b></span></div>
     </div>`;
     return;
   }
@@ -2322,7 +2327,7 @@ function renderProfile(){
           </div>
           <button class="btn btn-ghost copy-mini" id="copyPromoBtn">Копировать</button>
         </div>
-        <div class="pc-hint">Друг получит скидку 10% на первый заказ, ты — ${REFERRAL_BONUS_POINTS} SMOKEY-POINTS.</div>`;
+        <div class="pc-hint">Друг получит <b style="color:#a78bfa;font-weight:800;">скидку 10%</b> на первый заказ, ты — ${REFERRAL_BONUS_POINTS} SMOKEY-POINTS.</div>`;
 
   let head;
   if(tgUser){
@@ -2354,7 +2359,7 @@ function renderProfile(){
     <div class="profile-card points-card">
       <div class="points-row">
         <div>
-          <div class="lbl">Баланс</div>
+          <div class="lbl press-start-2p-regular">Баланс</div>
           <div class="points-val">${points} <span>SMOKEY-POINTS</span></div>
         </div>
         <div class="points-ic">
