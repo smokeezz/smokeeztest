@@ -1155,7 +1155,6 @@ const PREORDER_ARRIVALS = {
   'Картриджи XROS': ['Corex 3.0 XROS 3мл 0.4 Ω','Corex 3.0 XROS 3мл 0.6 Ω']
 };
 const LIVE_NOW = {
-  'Vozol Prime 30ml 5%': {'Berry':1,'Lemon Lime':2,'Mixed Berries':1,'Peach Ice':2},
   'Картриджи XROS': {'Corex 3.0 XROS 3мл 0.4 Ω':1,'Corex 3.0 XROS 3мл 0.8 Ω':3}
 };
 RAW.forEach(line => {
@@ -1169,29 +1168,26 @@ RAW.forEach(line => {
     const k = liveKeys.find(x => norm(x) === norm(it.n));
     it.qty = k ? live[k] : 0;
     it.ok = it.qty > 0;
-    if(k) it.live = true;
   });
   list.forEach(name => {
     let it = line.items.find(i => norm(i.n) === norm(name));
     if(!it){ it = {n:name, ok:true, qty:null}; line.items.push(it); }
     it.pre = true;
     const k = liveKeys.find(x => norm(x) === norm(name));
-    if(k){ it.live = true; it.qty = live[k]; it.ok = it.qty > 0; }
+    if(k){ it.qty = live[k]; it.ok = true; } // есть на руках; на нуле станет предзаказом
     else { it.qty = null; it.ok = true; }
   });
 });
-// Предзаказ действует, пока не прошла дата.
-// «Живая» позиция (есть на руках): пока остаток > 0 — обычная; на нуле — предзаказ.
-// Остальные: число в таблице = лимит предзаказа; когда оно дошло до 0 (всё забронировали
-// или ты поставил 0) — предзаказа больше нет, позиция «Нет в наличии».
-// Нет числа вообще — предзаказ без лимита (до 50 шт. за раз).
+// Две цифры в таблице для позиций из списка поставки:
+//   stock    — сколько реально есть на руках (> 0 → обычная позиция без плашки);
+//   preorder — сколько заказано у поставщика и доступно для брони (лимит предзаказа).
+// stock = 0 и preorder > 0 → «Предзаказ»; preorder дошёл до 0 (всё забронировали) → «Нет в наличии»;
+// колонки preorder нет / ячейка пустая → предзаказ без лимита (до 50 шт. за раз).
 function isPreorderItem(item, productId){
   if(!item || !item.pre || !preorderActive()) return false;
   const k = stockKey(productId, item.n);
-  const has = STOCK.hasOwnProperty(k);
-  const v = STOCK[k];
-  if(item.live) return !(v > 0);
-  if(has && v <= 0) return false;
+  if(STOCK[k] > 0) return false;                       // есть на руках
+  if(PRE.hasOwnProperty(k) && PRE[k] <= 0) return false; // бронь выбрана
   return true;
 }
 
@@ -1254,7 +1250,7 @@ function cityPrice(line){
   return priceFor(line);
 }
 // для Кайзерслаутерна оставлены прежние ключи хранилища — у действующих клиентов ничего не пропадает
-function stockStorageKey(){ return cityKey() === 'kl' ? 'smokeez_stock_v2' : 'smokeez_stock_v2_' + cityKey(); }
+function stockStorageKey(){ return cityKey() === 'kl' ? 'smokeez_stock_v3' : 'smokeez_stock_v3_' + cityKey(); }
 function cartStorageKey(){ return cityKey() === 'kl' ? 'smokeez_cart_' + UID : 'smokeez_cart_' + UID + '_' + cityKey(); }
 
 function stockKey(productId, flavorName){ return productId + '::' + flavorName; }
@@ -1270,14 +1266,18 @@ function loadStock(){
   return st;
 }
 let STOCK = loadStock();
+// остаток по предзаказу из колонки preorder (отдельно для каждого города)
+function preStorageKey(){ return cityKey() === 'kl' ? 'smokeez_pre_v1' : 'smokeez_pre_v1_' + cityKey(); }
+function loadPre(){ return storeGet(preStorageKey(), null) || {}; }
+let PRE = loadPre();
 function remainingQty(productId, flavorName){
   const k = stockKey(productId, flavorName);
   const v = STOCK.hasOwnProperty(k) ? STOCK[k] : null; // null = количество не отслеживается (неограниченно)
-  if(v !== null && v <= 0){
-    // «живая» позиция, которая закончилась, переходит в предзаказ без жёсткого лимита
-    const pr = productById(productId);
-    const it = pr && pr.items.find(i => i.n === flavorName);
-    if(it && it.live && isPreorderItem(it, productId)) return null;
+  const pr = productById(productId);
+  const it = pr && pr.items.find(i => i.n === flavorName);
+  if(it && it.pre && preorderActive()){
+    if(v !== null && v > 0) return v;                    // есть на руках
+    return PRE.hasOwnProperty(k) ? Math.max(0, PRE[k]) : null; // лимит предзаказа; null — без лимита
   }
   return v;
 }
@@ -1288,6 +1288,12 @@ function isAvailable(productId, item){
 }
 function decrementStock(productId, flavorName, qty){
   const k = stockKey(productId, flavorName);
+  const pr = productById(productId);
+  const it = pr && pr.items.find(i => i.n === flavorName);
+  if(it && isPreorderItem(it, productId)){ // заказ шёл из предзаказа — уменьшаем лимит предзаказа
+    if(PRE.hasOwnProperty(k)){ PRE[k] = Math.max(0, PRE[k] - qty); storeSet(preStorageKey(), PRE); }
+    return;
+  }
   if(!STOCK.hasOwnProperty(k)) return;
   STOCK[k] = Math.max(0, STOCK[k] - qty);
   storeSet(stockStorageKey(), STOCK);
@@ -1992,6 +1998,7 @@ function setCity(key){
   updateCityPill();
   if(!changed) return;
   STOCK = loadStock();                 // остатки выбранного города
+  PRE = loadPre();                     // лимиты предзаказа выбранного города
   cart = storeGet(cartStorageKey(), []); // корзина выбранного города
   refreshCartBadges();
   const cur = (document.querySelector('.view.active') || {}).id || '';
@@ -2666,11 +2673,18 @@ async function syncStockFromSheet(){
       if(!product) return;
       const item = product.items.find(i => i.n.trim().toLowerCase() === row.flavor.trim().toLowerCase());
       if(!item) return;
-      STOCK[stockKey(product.id, item.n)] = row.stock;
+      const k = stockKey(product.id, item.n);
+      if(!isNaN(row.stock)) STOCK[k] = row.stock;
+      else if(row.pre !== null) STOCK[k] = 0;       // указан лимит предзаказа, а на руках пусто — значит 0
+      if(row.hasPreCol){
+        if(row.pre !== null) PRE[k] = Math.max(0, row.pre);
+        else delete PRE[k];                         // ячейка пустая — предзаказ без лимита
+      }
       updated++;
     });
     if(updated){
       storeSet(stockStorageKey(), STOCK);
+      storeSet(preStorageKey(), PRE);
       if(typeof renderHome === 'function') renderHome();
       if(typeof renderCatalog === 'function') renderCatalog();
     }
@@ -2685,10 +2699,15 @@ function parseStockCsv(text){
   const pI = header.indexOf('product');
   const fI = header.indexOf('flavor');
   const sI = header.indexOf('stock');
+  const prI = header.indexOf('preorder'); // необязательная колонка: лимит предзаказа
   if(pI === -1 || fI === -1 || sI === -1) return [];
-  return lines.filter(r => r.length > sI).map(r => ({
-    product: r[pI], flavor: r[fI], stock: parseInt(r[sI], 10)
-  })).filter(r => r.product && r.flavor && !isNaN(r.stock));
+  return lines.filter(r => r.length > sI).map(r => {
+    const pre = prI === -1 ? NaN : parseInt(r[prI], 10);
+    return {
+      product: r[pI], flavor: r[fI], stock: parseInt(r[sI], 10),
+      pre: isNaN(pre) ? null : pre, hasPreCol: prI !== -1
+    };
+  }).filter(r => r.product && r.flavor && (!isNaN(r.stock) || r.pre !== null));
 }
 const cityPillBtn = document.getElementById('cityPill');
 if(cityPillBtn) cityPillBtn.addEventListener('click', () => { haptic('light'); showCityPicker(false); });
