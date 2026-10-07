@@ -741,7 +741,20 @@
   .points-card{margin-top:14px;text-align:left;}
   .points-row{display:flex;align-items:center;justify-content:space-between;}
   .points-val{font-family:'Oswald',sans-serif;font-style:italic;font-size:1.5rem;color:var(--gold);margin-top:2px;}
-  .points-val span{font-family:'Manrope',sans-serif;font-style:normal;font-size:0.62rem;color:var(--muted-dim);text-transform:uppercase;letter-spacing:0.04em;}
+  .points-val span{font-family:'Manrope',sans-serif;font-style:normal;font-weight:700;font-size:0.85rem;color:#fff;text-transform:uppercase;letter-spacing:0.04em;}
+  /* «Баланс» + кнопка информации + подпись «Как работают баллы?» */
+  .points-lbl-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;}
+  .points-help{display:inline-flex;align-items:center;gap:6px;background:none;border:0;padding:0;margin:0;color:inherit;cursor:pointer;font-family:'Manrope',sans-serif;-webkit-tap-highlight-color:transparent;}
+  .points-help .pre-info{pointer-events:none;}
+  .points-help-txt{font-size:0.7rem;font-weight:700;color:rgba(255,255,255,0.8);text-decoration:underline;text-decoration-color:rgba(255,255,255,0.35);text-underline-offset:2px;}
+  .points-help:active .pre-info{transform:scale(0.9);}
+  /* кнопка обмена: пока не набрано 1000 баллов — серая и неактивная */
+  .btn.btn-redeem:disabled{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.4);box-shadow:none;border:1px solid rgba(255,255,255,0.12);opacity:1;cursor:not-allowed;filter:grayscale(1);}
+  /* окно «Как работают баллы?» */
+  .pts-list{list-style:none;margin:0 0 18px;padding:0;text-align:left;counter-reset:pts;}
+  .pts-list li{counter-increment:pts;position:relative;padding:10px 12px 10px 44px;margin-top:8px;border-radius:12px;background:rgba(255,255,255,0.06);font-size:0.84rem;line-height:1.45;color:var(--text);}
+  .pts-list li::before{content:counter(pts);position:absolute;left:11px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--magenta),var(--violet));font-weight:800;font-size:0.75rem;color:#fff;}
+  .pts-list b{color:var(--gold);font-weight:800;}
   .points-ic{font-size:2.5rem;display: flex;align-items: center;justify-content: center;}
   .points-ic img {width: 2.5rem;height: 2.5rem;object-fit: contain;}
   .points-bar{margin-top:12px;height:8px;border-radius:999px;background:var(--panel2);overflow:hidden;}
@@ -1925,6 +1938,29 @@ function showPreorderInfo(){
   el.addEventListener('click', e => { if(e.target === el) el.remove(); });
   el.querySelector('#preModalOk').addEventListener('click', () => el.remove());
 }
+function showPointsInfo(){
+  haptic('light');
+  const old = document.getElementById('pointsModal');
+  if(old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'pointsModal';
+  el.className = 'pre-modal-bg city-bg';
+  el.innerHTML = `<div class="pre-modal city-modal" role="dialog" aria-modal="true">
+      <div class="city-wall" aria-hidden="true"><div class="city-bg-text">${Array.from({length:9}, () => `<div>${Array(5).fill('SMOKEEZ').join('&nbsp;&nbsp;&nbsp;')}</div>`).join('')}</div></div>
+      <img class="city-logo" src="smokeez-logo.webp" alt="SMOKEEZ">
+      <h3>Как работают баллы?</h3>
+      <ol class="pts-list">
+        <li>Каждые потраченные <b>${POINTS_STEP_EUR}€</b> на заказ — <b>${POINTS_PER_STEP} баллов</b>.</li>
+        <li>За каждого приглашённого друга, который сделал первый заказ, — <b>${REFERRAL_BONUS_POINTS} баллов</b>.</li>
+        <li><b>${POINTS_TO_REDEEM} баллов</b> = купон на скидку <b>${REDEEM_COUPON_AMOUNT} €</b>.</li>
+        <li>Когда наберёшь ${POINTS_TO_REDEEM} баллов, кнопка обмена станет активной — нажми её, и купон появится в разделе «Твои купоны».</li>
+      </ol>
+      <button type="button" class="btn btn-primary" id="pointsModalOk">Понятно</button>
+    </div>`;
+  document.body.appendChild(el);
+  el.addEventListener('click', e => { if(e.target === el) el.remove(); });
+  el.querySelector('#pointsModalOk').addEventListener('click', () => el.remove());
+}
 function updateCityPill(){
   const el = document.getElementById('cityPillName');
   if(el) el.textContent = cityName();
@@ -2526,7 +2562,9 @@ function renderProfile(){
     <div class="profile-card points-card">
       <div class="points-row">
         <div>
-          <div class="lbl press-start-2p-regular">Баланс</div>
+          <div class="lbl press-start-2p-regular points-lbl-row">Баланс
+            <button type="button" class="points-help" id="pointsHelpBtn" aria-label="Как работают баллы?"><span class="pre-info">i</span><span class="points-help-txt">Как работают баллы?</span></button>
+          </div>
           <div class="points-val">${points} <span>SMOKEY-POINTS</span></div>
         </div>
         <div class="points-ic">
@@ -2534,8 +2572,7 @@ function renderProfile(){
         </div>
       </div>
       <div class="points-bar"><div class="points-bar-fill" style="width:${Math.min(100, points/POINTS_TO_REDEEM*100)}%;"></div></div>
-      <div class="pd-note">Каждые потраченные ${POINTS_STEP_EUR}€ на заказ — ${POINTS_PER_STEP} баллов. За каждого приглашённого друга, который сделал первый заказ, — ${REFERRAL_BONUS_POINTS} баллов. ${POINTS_TO_REDEEM} баллов = купон на скидку ${REDEEM_COUPON_AMOUNT} €.</div>
-      ${points >= POINTS_TO_REDEEM ? `<button class="btn btn-primary btn-wide btn-block" id="redeemPointsBtn" style="margin-top:12px;">Обменять ${POINTS_TO_REDEEM} баллов на купон ${REDEEM_COUPON_AMOUNT} €</button>` : ''}
+      <button class="btn btn-primary btn-redeem btn-wide btn-block" id="redeemPointsBtn" style="margin-top:12px;" ${points >= POINTS_TO_REDEEM ? '' : 'disabled'}>Обменять ${POINTS_TO_REDEEM} баллов на купон ${REDEEM_COUPON_AMOUNT} €</button>
       ${refStats.invited > 0 ? `<div class="pd-note" style="margin-top:10px;">Приглашено друзей: ${refStats.invited}</div>` : ''}
       ${rewards.length ? `<div class="pd-block" style="margin-top:14px;">
           <div class="lbl">Твои купоны</div>
@@ -2565,8 +2602,12 @@ function renderProfile(){
 
   body.innerHTML = head + pointsHtml + `<h2 class="section-title">История заказов</h2>` + ordersHtml;
 
+  const helpBtn = document.getElementById('pointsHelpBtn');
+  if(helpBtn) helpBtn.addEventListener('click', showPointsInfo);
+
   const redeemBtn = document.getElementById('redeemPointsBtn');
   if(redeemBtn) redeemBtn.addEventListener('click', () => {
+    if(getPoints() < POINTS_TO_REDEEM) return;
     const code = redeemPointsForCoupon();
     if(code){ showToast('Купон создан: ' + code); haptic('success'); renderProfile(); }
   });
