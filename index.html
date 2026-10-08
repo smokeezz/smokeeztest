@@ -1132,8 +1132,12 @@ function variantLabelFor(line){
 /* ======================================================================
    ПРЕДЗАКАЗ
    ------------------------------------------------------------------
-   PREORDER_ARRIVALS — всё, что приходит в новой поставке. До даты PREORDER_UNTIL
-   (включительно) эти позиции показываются с плашкой «Предзаказ».
+   ПРЕДЗАКАЗЫ МОЖНО ВЕСТИ ПРЯМО В ТАБЛИЦЕ (без правки кода): строка с заполненной колонкой
+   preorder = предзаказ; колонка until (дата ДД.ММ.ГГГГ) — до какого числа; нового вкуса/цвета
+   у существующего товара ещё нет в каталоге — он появится сам. PREORDER_UNTIL ниже — дата по
+   умолчанию, если в таблице until не указана.
+   PREORDER_ARRIVALS — всё, что приходит в новой поставке. До даты (включительно)
+   эти позиции показываются с плашкой «Предзаказ».
    LIVE_NOW — то, что реально есть на руках прямо сейчас (с количеством): эти
    вкусы/цвета продаются как обычные, пока остаток > 0. Как только таблица
    присылает 0 (остаток закончился), а вкус есть в PREORDER_ARRIVALS —
@@ -1142,9 +1146,11 @@ function variantLabelFor(line){
    PREORDER_ARRIVALS, считается закончившимся (qty 0), пока таблица не скажет иное.
    После PREORDER_UNTIL плашки пропадают, позиции продаются как обычные.
    ====================================================================== */
-const PREORDER_UNTIL = '2026-10-08';
-const PREORDER_UNTIL_LABEL = '08.10.2026';
-function preorderActive(){ return new Date() <= new Date(PREORDER_UNTIL + 'T23:59:59'); }
+const PREORDER_UNTIL = '2026-10-12'; // дата по умолчанию (ГГГГ-ММ-ДД)
+// у позиции может быть своя дата из таблицы (item.preUntil), иначе — общая
+function preUntilOf(item){ return (item && item.preUntil) || PREORDER_UNTIL; }
+function preUntilLabel(item){ const d = preUntilOf(item).split('-'); return d[2] + '.' + d[1] + '.' + d[0]; }
+function preorderActive(item){ return new Date() <= new Date(preUntilOf(item) + 'T23:59:59'); }
 const PREORDER_ARRIVALS = {
   'Vozol Prime 30ml 5%': ['Berry','Berry Peach','Blue Raspberry','Cherry Cola','Lemon Lime','LavaFire','Mixed Berries','Peach Ice','Pineapple Passion Fruit Lime','Pomegranate Lemonade','Watermelon Bubblegum'],
   'ElfLiq 30ml 5%': ['Blackberry Lemon','Blueberry Sour Raspberry','Cherry','Cool Mint','Grape Cherry','Elf Jack','Pineapple Colada','Pineapple Ice','Pink Lemonade','Pink Grapefruit','Sour Watermelon Gummy'],
@@ -1172,7 +1178,7 @@ RAW.forEach(line => {
   list.forEach(name => {
     let it = line.items.find(i => norm(i.n) === norm(name));
     if(!it){ it = {n:name, ok:true, qty:null}; line.items.push(it); }
-    it.pre = true;
+    it.pre = true; it.codePre = true;
     const k = liveKeys.find(x => norm(x) === norm(name));
     if(k){ it.qty = live[k]; it.ok = true; } // есть на руках; на нуле станет предзаказом
     else { it.qty = null; it.ok = true; }
@@ -1184,7 +1190,7 @@ RAW.forEach(line => {
 // stock = 0 и preorder > 0 → «Предзаказ»; preorder дошёл до 0 (всё забронировали) → «Нет в наличии»;
 // колонки preorder нет / ячейка пустая → предзаказ без лимита (до 50 шт. за раз).
 function isPreorderItem(item, productId){
-  if(!item || !item.pre || !preorderActive()) return false;
+  if(!item || !item.pre || !preorderActive(item)) return false;
   const k = stockKey(productId, item.n);
   if(STOCK[k] > 0) return false;                       // есть на руках
   if(PRE.hasOwnProperty(k) && PRE[k] <= 0) return false; // бронь выбрана
@@ -1270,12 +1276,50 @@ let STOCK = loadStock();
 function preStorageKey(){ return cityKey() === 'kl' ? 'smokeez_pre_v1' : 'smokeez_pre_v1_' + cityKey(); }
 function loadPre(){ return storeGet(preStorageKey(), null) || {}; }
 let PRE = loadPre();
+
+/* Предзаказы из таблицы: строка с заполненной колонкой preorder делает позицию предзаказом
+   (при необходимости создаёт новый вкус/цвет у существующего товара); колонка until — своя дата. */
+function preMetaStorageKey(){ return cityKey() === 'kl' ? 'smokeez_premeta_v1' : 'smokeez_premeta_v1_' + cityKey(); }
+function loadPreMeta(){ return storeGet(preMetaStorageKey(), null) || []; }
+function applyPreorderMeta(meta){
+  const norm = x => String(x || '').trim().toLowerCase();
+  // сброс прежних отметок из таблицы (чтобы убранная из таблицы строка перестала быть предзаказом)
+  PRODUCTS.forEach(pr => {
+    for(let i = pr.items.length - 1; i >= 0; i--){
+      const it = pr.items[i];
+      if(!it.sheetPre) continue;
+      if(it.dyn){ pr.items.splice(i, 1); continue; }
+      delete it.preUntil; delete it.sheetPre;
+      if(!it.codePre) delete it.pre;
+    }
+  });
+  (meta || []).forEach(m => {
+    const pr = PRODUCTS.find(x => norm(x.name) === norm(m.product));
+    if(!pr) return; // новый товар целиком (с ценой и картинкой) по-прежнему добавляется в код
+    let it = pr.items.find(i => norm(i.n) === norm(m.flavor));
+    if(!it){
+      if(m.until && new Date() > new Date(m.until + 'T23:59:59')) return; // срок нового вкуса уже прошёл — не показываем
+      it = {n: String(m.flavor).trim(), ok:true, qty:null, dyn:true}; pr.items.push(it);
+    }
+    it.pre = true; it.sheetPre = true;
+    if(m.until) it.preUntil = m.until;
+  });
+}
+function parseUntil(v){
+  const t = String(v || '').trim();
+  let m = t.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
+  if(m) return m[3] + '-' + String(m[2]).padStart(2,'0') + '-' + String(m[1]).padStart(2,'0');
+  m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(m) return m[1] + '-' + String(m[2]).padStart(2,'0') + '-' + String(m[3]).padStart(2,'0');
+  return null;
+}
+applyPreorderMeta(loadPreMeta());
 function remainingQty(productId, flavorName){
   const k = stockKey(productId, flavorName);
   const v = STOCK.hasOwnProperty(k) ? STOCK[k] : null; // null = количество не отслеживается (неограниченно)
   const pr = productById(productId);
   const it = pr && pr.items.find(i => i.n === flavorName);
-  if(it && it.pre && preorderActive()){
+  if(it && it.pre && preorderActive(it)){
     if(v !== null && v > 0) return v;                    // есть на руках
     return PRE.hasOwnProperty(k) ? Math.max(0, PRE[k]) : null; // лимит предзаказа; null — без лимита
   }
@@ -1867,7 +1911,7 @@ function renderProductDetail(){
   const canBuy = !!pendingFlavor;
   const selItem = pendingFlavor ? p.items.find(i => i.n === pendingFlavor) : null;
   const selPre = isPreorderItem(selItem, p.id);
-  const preBanner = selPre ? `<div class="pre-banner"><span class="pre-pill">⏳ Предзаказ до ${PREORDER_UNTIL_LABEL}</span><button type="button" class="pre-info" aria-label="Информация о предзаказе">i</button></div>` : '';
+  const preBanner = selPre ? `<div class="pre-banner"><span class="pre-pill">⏳ Предзаказ до ${preUntilLabel(selItem)}</span><button type="button" class="pre-info" data-until="${preUntilLabel(selItem)}" aria-label="Информация о предзаказе">i</button></div>` : '';
   const favActive = isFavorite(p.id);
   body.innerHTML = `
     <div class="pd-hero">${thumbHtml(p, 'lg').replace('фото скоро будет', 'фото скоро появится')}<button type="button" class="fav-btn ${favActive?'active':''}" id="pdFavBtn">${favActive ? '♥\uFE0E' : '♡'}</button></div>
@@ -1927,8 +1971,9 @@ function renderProductDetail(){
 /* ======================================================================
    КОРЗИНА
    ====================================================================== */
-function showPreorderInfo(){
+function showPreorderInfo(e){
   haptic('light');
+  const until = (e && e.currentTarget && e.currentTarget.dataset.until) || preUntilLabel(null);
   const old = document.getElementById('preModal');
   if(old) old.remove();
   const el = document.createElement('div');
@@ -1936,7 +1981,7 @@ function showPreorderInfo(){
   el.className = 'pre-modal-bg';
   el.innerHTML = `<div class="pre-modal" role="dialog" aria-modal="true">
       <div class="pre-modal-ic">⏳</div>
-      <h3>Предзаказ до ${PREORDER_UNTIL_LABEL}</h3>
+      <h3>Предзаказ до ${until}</h3>
       <p>Этого товара пока нет в наличии, но он появится в ближайшие дни. Оформляя предзаказ сейчас, вы бронируете его за собой.</p>
       <button type="button" class="btn btn-primary" id="preModalOk">Понятно</button>
     </div>`;
@@ -1999,6 +2044,7 @@ function setCity(key){
   if(!changed) return;
   STOCK = loadStock();                 // остатки выбранного города
   PRE = loadPre();                     // лимиты предзаказа выбранного города
+  applyPreorderMeta(loadPreMeta());    // предзаказы из таблицы выбранного города
   cart = storeGet(cartStorageKey(), []); // корзина выбранного города
   refreshCartBadges();
   const cur = (document.querySelector('.view.active') || {}).id || '';
@@ -2051,8 +2097,9 @@ function renderCart(){
     const p = productById(ci.productId);
     if(!p) return '';
     const lineTotal = p.price ? (p.price * ci.qty) : null;
-    const isPre = isPreorderItem(p.items.find(i => i.n === ci.flavor), p.id);
-    const preHtml = isPre ? `<div class="ci-pre"><span class="pre-pill sm">⏳ Предзаказ до ${PREORDER_UNTIL_LABEL}</span><button type="button" class="pre-info" aria-label="Информация о предзаказе">i</button></div>` : '';
+    const ciItem = p.items.find(i => i.n === ci.flavor);
+    const isPre = isPreorderItem(ciItem, p.id);
+    const preHtml = isPre ? `<div class="ci-pre"><span class="pre-pill sm">⏳ Предзаказ до ${preUntilLabel(ciItem)}</span><button type="button" class="pre-info" data-until="${preUntilLabel(ciItem)}" aria-label="Информация о предзаказе">i</button></div>` : '';
     return `<div class="cart-item">
         <div class="thumb-sm">${thumbHtml(p, 'sm')}</div>
         <div class="ci-info">
@@ -2411,7 +2458,8 @@ function buildOrderText(){
     const p = productById(ci.productId);
     if(!p) return;
     const lt = p.price ? (p.price*ci.qty).toFixed(2).replace('.',',')+' €' : 'цена по запросу';
-    const preMark = isPreorderItem(p.items.find(i => i.n === ci.flavor), p.id) ? ` ⏳ ПРЕДЗАКАЗ до ${PREORDER_UNTIL_LABEL}` : '';
+    const mItem = p.items.find(i => i.n === ci.flavor);
+    const preMark = isPreorderItem(mItem, p.id) ? ` ⏳ ПРЕДЗАКАЗ до ${preUntilLabel(mItem)}` : '';
     text += `• ${adminProductCode(p)} — ${ci.flavor} × ${ci.qty} (${lt})${preMark}\n`;
   });
   if(checkout.promo) text += `\n🏷 Применён промокод: ${checkout.promo.code} (−${checkout.promo.amount ? checkout.promo.amount + ' €' : checkout.promo.percent + '%'})\n💰 Сумма без скидки: ${cartTotal().toFixed(2).replace('.',',')} €\n💰 Итого к оплате: ${cartDiscountedTotal().toFixed(2).replace('.',',')} €\n`;
@@ -2668,6 +2716,12 @@ async function syncStockFromSheet(){
     if(forCity !== cityKey()) return; // пока шёл запрос, клиент сменил город — эти остатки уже чужие
     const rows = parseStockCsv(csv);
     let updated = 0;
+    // 1) предзаказы из таблицы (при необходимости создаются новые вкусы/цвета) — до разбора остатков
+    const meta = rows.filter(r => r.pre !== null).map(r => ({product: r.product, flavor: r.flavor, until: r.until}));
+    storeSet(preMetaStorageKey(), meta);
+    applyPreorderMeta(meta);
+    PRE = {}; // лимиты предзаказа целиком берутся из таблицы
+    // 2) остатки и лимиты по строкам
     rows.forEach(row => {
       const product = PRODUCTS.find(p => p.name.trim().toLowerCase() === row.product.trim().toLowerCase());
       if(!product) return;
@@ -2682,7 +2736,7 @@ async function syncStockFromSheet(){
       }
       updated++;
     });
-    if(updated){
+    if(updated || meta.length){
       storeSet(stockStorageKey(), STOCK);
       storeSet(preStorageKey(), PRE);
       if(typeof renderHome === 'function') renderHome();
@@ -2700,12 +2754,14 @@ function parseStockCsv(text){
   const fI = header.indexOf('flavor');
   const sI = header.indexOf('stock');
   const prI = header.indexOf('preorder'); // необязательная колонка: лимит предзаказа
+  const untilI = header.indexOf('until'); // необязательная колонка: дата окончания предзаказа
   if(pI === -1 || fI === -1 || sI === -1) return [];
   return lines.filter(r => r.length > sI).map(r => {
     const pre = prI === -1 ? NaN : parseInt(r[prI], 10);
     return {
       product: r[pI], flavor: r[fI], stock: parseInt(r[sI], 10),
-      pre: isNaN(pre) ? null : pre, hasPreCol: prI !== -1
+      pre: isNaN(pre) ? null : pre, hasPreCol: prI !== -1,
+      until: untilI === -1 ? null : parseUntil(r[untilI])
     };
   }).filter(r => r.product && r.flavor && (!isNaN(r.stock) || r.pre !== null));
 }
