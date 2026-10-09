@@ -1053,14 +1053,15 @@ const EMPTY_CATEGORY_MSG = {
 function L(name, category, items, extra){ return Object.assign({name, category, items}, extra||{}); }
 function F(list, val){ return list.map(n => ({n, ok: val, qty: null})); }
 function P(pairs){ return pairs.map(([n,ok]) => ({n, ok, qty: null})); }
-// Q — вкусы с известным точным остатком на складе (по факту наличия), qty=0 значит "нет в наличии"
-function Q(pairs){ return pairs.map(([n,qty]) => ({n, qty, ok: qty > 0})); }
+// Q — вкусы с ОТСЛЕЖИВАЕМЫМ остатком. Количества в коде нет: их присылает таблица (Sheets).
+// Пока таблица не ответила (или позиции в ней нет) — позиция считается «нет в наличии».
+function Q(names){ return names.map(n => ({n, qty: 0, ok: false})); }
 
 const RAW = [
   // ---------------- ЖИДКОСТИ ----------------
-  L('Vozol Prime 30ml 5%','liquid', Q([['Berry',3],['Blueberry Ice',3],['Blue Raspberry',2],['LavaFire',1],['Love 777',1],['Lemon Lime',4],['Mint Ice',2],['Mixed Berries',3],['Peach Ice',4],['Pineapple Passion Fruit Lime',1],['Pomegranate Lemonade',5],['Strawberry Ice Cream',2],['Watermelon Bubblegum',1],['Berry Peach',0],['Blueberry Watermelon',0],['Dragon Fruit Banana Cherry',0],['Kiwi Passion Fruit Guava',0],['Grape Ice',0],['Cola Gummies',0],['Perfume Lemon',0]]), {desc:'Солевая жидкость на основе никотиновой соли — плотный пар и насыщенный вкус, не дерёт горло. Объём флакона 30 мл, крепость 5% (50 мг/мл).'}),
-  L('ElfLiq 30ml 5%','liquid', Q([['Blackberry Lemon',4],['Blueberry Sour Raspberry',2],['Cherry',2],['Cool Mint',1],['Grape',3],['Pink Lemonade',2],['Pineapple Ice',1],['Pink Grapefruit',1],['Sour Watermelon Gummy',1],['Strawberry Cherry Lemon',1],['Apple Peach',0],['Double Apple',0],['Peach Ice',0],['Sour Apple',0],['Cherry Lemon Peach',0]]), {desc:'Фирменная линейка жидкостей Elf Bar для POD-систем и одноразок. Объём 30 мл, крепость 5% (50 мг/мл), мягкая подача без першения.'}),
-  L('Puffy 30ml 5%','liquid', Q([['Cherry Ice',1],['Energy Drink',1],['Gummy Bear',1]]), {desc:'Solt-жидкость Puffy — сочные вкусы и плотный пар. Объём флакона 30 мл, крепость 5% (50 мг/мл).'}),
+  L('Vozol Prime 30ml 5%','liquid', Q(['Berry','Blueberry Ice','Blue Raspberry','LavaFire','Love 777','Lemon Lime','Mint Ice','Mixed Berries','Peach Ice','Pineapple Passion Fruit Lime','Pomegranate Lemonade','Strawberry Ice Cream','Watermelon Bubblegum','Berry Peach','Blueberry Watermelon','Dragon Fruit Banana Cherry','Kiwi Passion Fruit Guava','Grape Ice','Cola Gummies','Perfume Lemon']), {desc:'Солевая жидкость на основе никотиновой соли — плотный пар и насыщенный вкус, не дерёт горло. Объём флакона 30 мл, крепость 5% (50 мг/мл).'}),
+  L('ElfLiq 30ml 5%','liquid', Q(['Blackberry Lemon','Blueberry Sour Raspberry','Cherry','Cool Mint','Grape','Pink Lemonade','Pineapple Ice','Pink Grapefruit','Sour Watermelon Gummy','Strawberry Cherry Lemon','Apple Peach','Double Apple','Peach Ice','Sour Apple','Cherry Lemon Peach']), {desc:'Фирменная линейка жидкостей Elf Bar для POD-систем и одноразок. Объём 30 мл, крепость 5% (50 мг/мл), мягкая подача без першения.'}),
+  L('Puffy 30ml 5%','liquid', Q(['Cherry Ice','Energy Drink','Gummy Bear']), {desc:'Solt-жидкость Puffy — сочные вкусы и плотный пар. Объём флакона 30 мл, крепость 5% (50 мг/мл).'}),
   L('Chaser Black 30ml 5%','liquid', F(['Bali','Banana Apple','Blackberry Sour Raspberry','Blackcurrant Peach Apple','Blackcurrant Rose','Bubblegum','Energy Grape','Energy Raspberry','Flirt','Forest Mix','Kiwi Wild Strawberry','Lemon Mint','Mojito','Multifruit','Peach Lemonade','Pink Lemonade','Sherbet','Strawberry Blueberry','Triple Berry','Triple Raspberry','Triple Sour Apple','Watermelon Lemon'], false), {desc:'Chaser Black — насыщенная солевая линейка на 30 мл, 5%. Яркий вкус и плотное облако пара.'}),
   L('Chaser Lux 30ml 5%','liquid', F(['Berry Lemonade','Blackberry Lemonade','Blackberry Pink Guava','Blueberry Mint','Blueberry Raspberry','Cherry Lemon','Coconut Melon','Energetic','Grape Mint','Kiwi Passion Fruit Guava','Mango Nectar','Sangria','Sour Apple','Strawberry Cream','Peach Tea','Tropic Punch','Turbo Mint','Vitamin','Watermelon Raspberry','Peach Yogurt','Watermelon Lime','Berry Needles','Ice Latte'], false), {desc:'Chaser Lux — премиальная линейка со сложными многослойными вкусами. Объём 30 мл, крепость 5%.'}),
   L('Chaser Limitini Editini 30ml 5%','liquid', F(['Ballerina Capuccino','Glorbo Fruttodrillo','Tung Tung Tung Sahur'], false), {desc:'Лимитированная серия Chaser с необычными сочетаниями вкусов. 30 мл, 5%.'}),
@@ -1075,11 +1076,11 @@ const RAW = [
   L('Vaporesso XROS 5','pod', F(['Blue Silk','Carbon Stripe','Coral Red','Cosmic Black','Grey Silk','Jade Green','Lavender Purple','Opal Pink','Opal White','Violet Silk'], false), {desc:'Перезаряжаемая POD-система Vaporesso XROS 5.'}),
   L('Vaporesso XROS 5 Mini','pod', F(['Black','Carbon Black','Flowing Blue','Flowing Green','Flowing Pink','Pastel Crystal','Purple','Rose Red','Sky Blue','Titanium Silver'], false), {desc:'Компактная POD-система Vaporesso XROS 5 Mini.'}),
   L('Vaporesso XROS Pro 2','pod', F(['Dawn Purple','Gem Green','Glittering Black','Glittering Gold','Glittering Silver','Moonlit Pink','Storm Blue'], false), {desc:'Перезаряжаемая POD-система Vaporesso XROS Pro 2.'}),
-  L('Vaporesso XROS 6 Mini','pod', Q([['Titanium Black',2]]), {desc:'Компактная перезаряжаемая POD-система Vaporesso XROS 6 Mini.'}),
-  L('Vaporesso XROS 6','pod', Q([['Carbon Fiber Gray',0]]), {desc:'Перезаряжаемая POD-система Vaporesso XROS 6.'}),
+  L('Vaporesso XROS 6 Mini','pod', Q(['Titanium Black']), {desc:'Компактная перезаряжаемая POD-система Vaporesso XROS 6 Mini.'}),
+  L('Vaporesso XROS 6','pod', Q(['Carbon Fiber Gray']), {desc:'Перезаряжаемая POD-система Vaporesso XROS 6.'}),
 
   // ---------------- КАРТРИДЖИ ----------------
-  L('Картриджи XROS','cartridge', Q([['Corex 3.0 XROS 3мл 0.4 Ω',2],['Corex 3.0 XROS 3мл 0.6 Ω',0],['Corex 3.0 XROS 3мл 0.8 Ω',1]]), {desc:'Сменные картриджи Corex для линейки Vaporesso XROS, 3 мл.'}),
+  L('Картриджи XROS','cartridge', Q(['Corex 3.0 XROS 3мл 0.4 Ω','Corex 3.0 XROS 3мл 0.6 Ω','Corex 3.0 XROS 3мл 0.8 Ω']), {desc:'Сменные картриджи Corex для линейки Vaporesso XROS, 3 мл.'}),
 
   // ---------------- СНЮС ----------------
   L('Снюс Cuba 66мг','snus', F(['Apple Juice','Banana Hit','Black Currant','Blackberry','Blueberry','Cherry','Cola','Cold Dry','Double Fresh','Forest Berries','Grape','Ice Spearmint','Mango','Peach','Tropical Fruit','Watermelon'], false), {desc:'Никотиновые паучи Cuba, крепость 66 мг/г. Без табака, готовы к использованию.'}),
@@ -1159,9 +1160,7 @@ const PREORDER_ARRIVALS = {
   'Снюс Baron 77мг': ['Classic'],
   'Картриджи XROS': ['Corex 3.0 XROS 3мл 0.4 Ω','Corex 3.0 XROS 3мл 0.6 Ω']
 };
-const LIVE_NOW = {
-  'Картриджи XROS': {'Corex 3.0 XROS 3мл 0.4 Ω':1,'Corex 3.0 XROS 3мл 0.8 Ω':3}
-};
+const LIVE_NOW = {}; // количества «на руках» живут только в таблице — в коде их нет
 RAW.forEach(line => {
   const live = LIVE_NOW[line.name] || {};
   const list = PREORDER_ARRIVALS[line.name] || [];
@@ -1253,15 +1252,8 @@ function cartStorageKey(){ return cityKey() === 'kl' ? 'smokeez_cart_' + UID : '
 
 function stockKey(productId, flavorName){ return productId + '::' + flavorName; }
 function loadStock(){
-  let st = storeGet(stockStorageKey(), null);
-  if(!st){
-    st = {};
-    PRODUCTS.forEach(p => p.items.forEach(it => {
-      if(it.qty !== null && it.qty !== undefined) st[stockKey(p.id, it.n)] = it.qty;
-    }));
-    storeSet(stockStorageKey(), st);
-  }
-  return st;
+  // только последний снимок таблицы; без снимка — пусто (позиции с отслеживанием считаются «нет в наличии»)
+  return storeGet(stockStorageKey(), null) || {};
 }
 let STOCK = loadStock();
 // остаток по предзаказу из колонки preorder (отдельно для каждого города)
@@ -2492,6 +2484,7 @@ async function sendOrderToOwner(text, lines, orderId){
       network = false;
       if(data.code === 'STOCK_CONFLICT') return {ok:false, code:'STOCK_CONFLICT', conflicts:data.conflicts || [], error:'Наличие изменилось'};
       if(data.code === 'AUTH') return {ok:false, code:'AUTH', error:'Открой магазин через Telegram'};
+      if(data.code === 'RATE_LIMIT') return {ok:false, code:'RATE_LIMIT', error:'Слишком много заказов'};
       lastError = data.error || 'Сервер отклонил запрос';
     }catch(e){
       network = true;
@@ -2604,6 +2597,8 @@ async function submitOrder(){
     errBox.style.display = 'block';
     errBox.innerHTML = sent.code === 'AUTH'
       ? 'Не удалось подтвердить сессию. Закрой и снова открой магазин в Telegram.'
+      : sent.code === 'RATE_LIMIT'
+      ? 'Слишком много заказов за короткое время. Подожди немного и попробуй снова — или напиши менеджеру.'
       : `Не удалось отправить заказ (${sent.error}). Проверь соединение и нажми «Подтвердить заказ» ещё раз.`;
     errBox.scrollIntoView({behavior:'smooth', block:'center'});
     haptic('error');
@@ -2827,8 +2822,29 @@ async function syncStockFromSheet(opts){
     return false; // связи нет — останется последний снимок таблицы
   }
 }
+// Разбор CSV с кавычками: поля вида "Corex 3.0, 0.4 Ω" с запятыми внутри читаются целиком
+function csvRows(text){
+  const rows = []; let row = [], cur = '', q = false;
+  for(let i = 0; i < text.length; i++){
+    const c = text[i];
+    if(q){
+      if(c === '"'){ if(text[i+1] === '"'){ cur += '"'; i++; } else q = false; }
+      else cur += c;
+    }else if(c === '"') q = true;
+    else if(c === ','){ row.push(cur.trim()); cur = ''; }
+    else if(c === '\n' || c === '\r'){
+      if(c === '\r' && text[i+1] === '\n') i++;
+      row.push(cur.trim()); cur = '';
+      if(row.some(x => x !== '')) rows.push(row);
+      row = [];
+    }else cur += c;
+  }
+  row.push(cur.trim());
+  if(row.some(x => x !== '')) rows.push(row);
+  return rows;
+}
 function parseStockCsv(text){
-  const lines = text.trim().split(/\r?\n/).map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g,'')));
+  const lines = csvRows(String(text || '').replace(/^\uFEFF/, ''));
   if(lines.length < 2) return [];
   const header = lines.shift().map(h => h.toLowerCase());
   const pI = header.indexOf('product');
@@ -2851,6 +2867,14 @@ if(cityPillBtn) cityPillBtn.addEventListener('click', () => { haptic('light'); s
 updateCityPill();
 if(!CITY) showCityPicker(true); // первый запуск: город нужно выбрать
 syncStockFromSheet();
+// Вернулся в мини-апп после паузы — подтягиваем свежие остатки (не чаще раза в 20 секунд)
+let lastVisSync = Date.now();
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState !== 'visible') return;
+  if(Date.now() - lastVisSync < 20000) return;
+  lastVisSync = Date.now();
+  syncStockFromSheet();
+});
 </script>
 </body>
 </html>
