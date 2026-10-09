@@ -1362,7 +1362,8 @@ function storeGet(key, fallback){
 function storeSet(key, val){
   try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){}
 }
-function getPromoCode(){
+// Запасной (старый) алгоритм личного кода — пока профиль не пришёл с сервера
+function legacyPromoCode(){
   const str = String(UID);
   let hash = 0;
   for(let i=0;i<str.length;i++){ hash = (hash*31 + str.charCodeAt(i)) >>> 0; }
@@ -1370,100 +1371,69 @@ function getPromoCode(){
 }
 
 /* ======================================================================
-   ПРОМОКОДЫ
+   ПРОФИЛЬ, БАЛЛЫ, ПРОМОКОДЫ — ВСЁ ЭТО ЖИВЁТ НА СЕРВЕРЕ
+   ------------------------------------------------------------------
+   Телефон хранит только последний снимок профиля (ME) для показа без связи.
+   Баллы, купоны, личный код, проверка и применение промокодов, сумма заказа — на стороне
+   Worker и Apps Script (таблица): подделать их в приложении нельзя.
+   Промокоды (общие) заводятся в таблице, вкладка «promos» — в код сайта они не попадают.
    ====================================================================== */
-// Общие промокоды магазина. expires — дата (включительно), после которой код перестаёт работать.
-const PROMO_CODES = {
-  'SMKZMINIAPP': { percent:20, expires:'2026-09-25', oneTimePerUser:true, label:'Промокод на запуск мини-аппа' },
-  'SKIDOCHKA-SMKZ': { amount:1.5, expires:'2026-10-31', oneTimePerUser:true, minTotal:10, label:'Промокод на скидку' },
-  'INST-SMKZ': { amount:1, expires:'2026-10-31', oneTimePerUser:true, minTotal:10, label:'Промокод на скидку' }
-};
-const REFERRAL_DISCOUNT_PERCENT = 10;   // скидка другу по чужому личному промокоду (только первый заказ)
-const REFERRAL_BONUS_POINTS = 50;       // баллы пригласившему за друга, который сделал первый заказ
-const POINTS_STEP_EUR = 5;              // шаг начисления: за каждые полные 5€ фактически оплаченной суммы
-const POINTS_PER_STEP = 50;             // ...начисляется столько баллов
+const POINTS_STEP_EUR = 5;              // шаг начисления (для текстов; считает сервер)
+const POINTS_PER_STEP = 50;
 const POINTS_TO_REDEEM = 1000;          // сколько баллов нужно для купона
-const REDEEM_COUPON_AMOUNT = 10;        // фиксированная скидка по купону за баллы, в €
+const REDEEM_COUPON_AMOUNT = 10;        // скидка купона, €
+const REFERRAL_DISCOUNT_PERCENT = 10;   // скидка другу по личному промокоду (первый заказ)
+const REFERRAL_BONUS_POINTS = 50;       // баллы пригласившему
 
+let ME = storeGet('smokeez_me_' + UID, null); // {refCode, points, coupons:[{code,amount}], invited, orders:[…]}
+function getPromoCode(){ return (ME && ME.refCode) || legacyPromoCode(); }
+function getPoints(){ return (ME && ME.points) || 0; }
+function getRewardCoupons(){ return (ME && ME.coupons) || []; }
+function myReferralStats(){ return {invited: (ME && ME.invited) || 0}; }
 function normalizePromo(code){ return (code||'').trim().toUpperCase(); }
-
-function getPoints(){ return storeGet('smokeez_points_' + UID, 0); }
-function addPoints(n){ if(!n) return; storeSet('smokeez_points_' + UID, getPoints() + n); }
-function spendPoints(n){ storeSet('smokeez_points_' + UID, Math.max(0, getPoints() - n)); }
-
-function getRewardCoupons(){ return storeGet('smokeez_rewards_' + UID, []); } // [{code, percent, used}]
-function saveRewardCoupons(list){ storeSet('smokeez_rewards_' + UID, list); }
-function redeemPointsForCoupon(){
-  if(getPoints() < POINTS_TO_REDEEM) return null;
-  spendPoints(POINTS_TO_REDEEM);
-  const code = 'SMKZ-BONUS-' + Math.random().toString(36).slice(2,7).toUpperCase();
-  const list = getRewardCoupons();
-  list.push({code, amount:REDEEM_COUPON_AMOUNT, used:false});
-  saveRewardCoupons(list);
-  return code;
+function setMe(me){
+  if(!me || me.ok === false) return;
+  ME = {refCode: me.refCode, points: me.points || 0, coupons: me.coupons || [], invited: me.invited || 0, orders: me.orders || []};
+  storeSet('smokeez_me_' + UID, ME);
 }
-
-// Общий "журнал" рефералов — на этом устройстве связывает личный промокод пригласившего
-// с накопленными баллами/числом друзей. Как и остаток склада (STOCK), это localStorage-заглушка:
-// чтобы баллы начислялись пригласившему по-настоящему на любом устройстве, этот блок нужно
-// заменить на запросы к общему бэкенду.
-function getReferralLedger(){ return storeGet('smokeez_referral_ledger', {}); }
-function saveReferralLedger(l){ storeSet('smokeez_referral_ledger', l); }
-function creditReferral(referrerCode){
-  const ledger = getReferralLedger();
-  if(!ledger[referrerCode]) ledger[referrerCode] = {invited:0, points:0};
-  ledger[referrerCode].invited += 1;
-  ledger[referrerCode].points += REFERRAL_BONUS_POINTS; // ждёт, пока пригласивший зайдёт в профиль и заберёт баллы
-  saveReferralLedger(ledger);
+function apiReady(){ return CONFIG.ORDER_ENDPOINT && CONFIG.ORDER_ENDPOINT !== 'YOUR_WORKER_URL'; }
+async function apiPost(payload){
+  if(!apiReady()) return null;
+  try{
+    const resp = await fetch(CONFIG.ORDER_ENDPOINT, {
+      method:'POST',
+      headers:Object.assign({'Content-Type':'application/json'}, authHeaders()),
+      body: JSON.stringify(Object.assign({city: cityKey()}, payload))
+    });
+    return await resp.json();
+  }catch(e){ return null; }
 }
-function myReferralStats(){
-  const ledger = getReferralLedger();
-  return ledger[getPromoCode()] || {invited:0, points:0};
+async function loadMe(){
+  if(!apiReady() || !(tg && tg.initData)) return false;
+  try{
+    const resp = await fetch(CONFIG.ORDER_ENDPOINT + '?me=1&city=' + encodeURIComponent(cityKey()), {headers: authHeaders()});
+    if(!resp.ok) return false;
+    setMe(await resp.json());
+    const v = document.querySelector('.view.active');
+    if(v && v.id === 'view-profile' && typeof renderProfile === 'function') renderProfile();
+    return true;
+  }catch(e){ return false; }
 }
-// Переносит накопленные за рефералов баллы из общего журнала на личный счёт пользователя.
-// Вызывается при каждом открытии профиля.
-function claimReferralPoints(){
-  const ledger = getReferralLedger();
-  const mine = ledger[getPromoCode()];
-  if(mine && mine.points > 0){
-    addPoints(mine.points);
-    mine.points = 0;
-    saveReferralLedger(ledger);
-  }
+// Обмен баллов на купон — только через сервер
+async function redeemPointsForCoupon(){
+  const r = await apiPost({action:'redeem'});
+  if(r && r.ok){ await loadMe(); return {ok:true, code:r.code}; }
+  return {ok:false, error:(r && r.error) || 'Не получилось, попробуй ещё раз'};
 }
-
-function findPromo(raw){
+// Проверка промокода на сервере (ничего не списывает; окончательно код применяется при заказе)
+async function checkPromoServer(raw){
   const code = normalizePromo(raw);
   if(!code) return {ok:false, error:'Введи промокод'};
-  if(PROMO_CODES[code]){
-    const promo = PROMO_CODES[code];
-    if(promo.expires && new Date() > new Date(promo.expires + 'T23:59:59')) return {ok:false, error:'Срок действия промокода истёк'};
-    if(promo.oneTimePerUser && storeGet('smokeez_used_promo_' + code + '_' + UID, false)) return {ok:false, error:'Этот промокод уже был использован'};
-    if(promo.minTotal && cartTotal() < promo.minTotal) return {ok:false, error:`Минимальная сумма заказа для этого промокода — ${promo.minTotal} €`};
-    return {ok:true, code, percent:promo.percent, amount:promo.amount, kind:'global'};
-  }
-  const reward = getRewardCoupons().find(r => r.code === code && !r.used);
-  if(reward) return {ok:true, code, amount:reward.amount, kind:'reward'};
-  if(/^SMKZ-\d{5}$/.test(code)){
-    if(code === getPromoCode()) return {ok:false, error:'Нельзя применить свой собственный промокод'};
-    if(orders.length > 0) return {ok:false, error:'Промокод друга действует только на первый заказ'};
-    if(storeGet('smokeez_used_referral_' + UID, false)) return {ok:false, error:'Промокод друга уже был использован'};
-    return {ok:true, code, percent:REFERRAL_DISCOUNT_PERCENT, kind:'referral'};
-  }
-  return {ok:false, error:'Такой промокод не найден'};
-}
-function applyPromoSideEffects(applied){
-  if(!applied) return;
-  if(applied.kind === 'global') storeSet('smokeez_used_promo_' + applied.code + '_' + UID, true);
-  else if(applied.kind === 'reward'){
-    const list = getRewardCoupons();
-    const r = list.find(x => x.code === applied.code);
-    if(r) r.used = true;
-    saveRewardCoupons(list);
-  }else if(applied.kind === 'referral'){
-    storeSet('smokeez_used_referral_' + UID, true);
-    creditReferral(applied.code);
-  }
+  const r = await apiPost({action:'promo', code, lines: buildOrderLines()});
+  if(!r) return {ok:false, error:'Не удалось проверить промокод — нет связи'};
+  if(r.code === 'AUTH') return {ok:false, error:'Открой магазин через Telegram'};
+  if(!r.ok) return {ok:false, error:r.error || 'Промокод не найден'};
+  return {ok:true, code, percent:r.percent || 0, amount:r.amount || 0, kind:r.kind};
 }
 
 /* ======================================================================
@@ -2137,10 +2107,12 @@ function renderCart(){
     btn.addEventListener('click', () => removeCartItem(parseInt(btn.dataset.idx,10)));
   });
   const promoApplyBtn = document.getElementById('promoApplyBtn');
-  if(promoApplyBtn) promoApplyBtn.addEventListener('click', () => {
+  if(promoApplyBtn) promoApplyBtn.addEventListener('click', async () => {
     const val = document.getElementById('fPromo').value;
-    const res = findPromo(val);
     const errBox = document.getElementById('promoError');
+    promoApplyBtn.disabled = true;
+    const res = await checkPromoServer(val);
+    promoApplyBtn.disabled = false;
     if(!res.ok){
       errBox.style.display = 'block';
       errBox.textContent = res.error;
@@ -2477,14 +2449,16 @@ async function sendOrderToOwner(text, lines, orderId){
         method:'POST',
         headers:Object.assign({'Content-Type':'application/json'}, authHeaders()),
         // Worker по городу выбирает менеджера; orderId защищает от двойного списания при повторе
-        body: JSON.stringify({text, city: cityKey(), orderId, lines})
+        body: JSON.stringify({text, city: cityKey(), orderId, lines, method: checkout.method, promo: checkout.promo ? checkout.promo.code : '', clientTotal: Number(cartDiscountedTotal().toFixed(2))})
       });
       const data = await resp.json();
-      if(data.ok) return {ok:true};
+      if(data.ok) return {ok:true, data};
       network = false;
       if(data.code === 'STOCK_CONFLICT') return {ok:false, code:'STOCK_CONFLICT', conflicts:data.conflicts || [], error:'Наличие изменилось'};
       if(data.code === 'AUTH') return {ok:false, code:'AUTH', error:'Открой магазин через Telegram'};
       if(data.code === 'RATE_LIMIT') return {ok:false, code:'RATE_LIMIT', error:'Слишком много заказов'};
+      if(data.code === 'PROMO_INVALID') return {ok:false, code:'PROMO_INVALID', error:data.error || 'Промокод недействителен'};
+      if(data.code === 'PROMO_UNVERIFIED') return {ok:false, code:'PROMO_UNVERIFIED', error:'Не удалось проверить промокод', network:true};
       lastError = data.error || 'Сервер отклонил запрос';
     }catch(e){
       network = true;
@@ -2594,8 +2568,20 @@ async function submitOrder(){
       showStockChanges(changes.length ? changes : [{name:'Часть товара', flavor:'', was:0, now:0}], 'Товар только что разобрали');
       return;
     }
+    if(sent.code === 'PROMO_INVALID'){
+      // сервер не принял промокод — убираем его и просим подтвердить заказ уже без скидки
+      const why = sent.error;
+      checkout.promo = null;
+      renderCheckout();
+      const eb = document.getElementById('coError');
+      if(eb){ eb.style.display = 'block'; eb.textContent = why + '. Промокод убран — проверь итог и подтверди заказ ещё раз.'; eb.scrollIntoView({behavior:'smooth', block:'center'}); }
+      haptic('error');
+      return;
+    }
     errBox.style.display = 'block';
-    errBox.innerHTML = sent.code === 'AUTH'
+    errBox.innerHTML = sent.code === 'PROMO_UNVERIFIED'
+      ? 'Не удалось проверить промокод. Нажми «Подтвердить заказ» ещё раз или убери промокод.'
+      : sent.code === 'AUTH'
       ? 'Не удалось подтвердить сессию. Закрой и снова открой магазин в Telegram.'
       : sent.code === 'RATE_LIMIT'
       ? 'Слишком много заказов за короткое время. Подожди немного и попробуй снова — или напиши менеджеру.'
@@ -2608,10 +2594,12 @@ async function submitOrder(){
   // остатки списал сервер — подтягиваем свежие цифры из таблицы
   syncStockFromSheet({fresh:true});
 
-  const finalTotal = cartDiscountedTotal();
-  const earnedPoints = Math.floor(Math.round(finalTotal * 100) / (POINTS_STEP_EUR * 100)) * POINTS_PER_STEP;
-  applyPromoSideEffects(checkout.promo);
-  addPoints(earnedPoints);
+  // итог и баллы — как посчитал сервер
+  const srv = sent.data || {};
+  const finalTotal = typeof srv.total === 'number' ? srv.total : cartDiscountedTotal();
+  const earnedPoints = srv.pointsEarned || 0;
+  if(typeof srv.points === 'number' && ME){ ME.points = srv.points; storeSet('smokeez_me_' + UID, ME); }
+  loadMe(); // свежие баллы и купоны
 
   orders.unshift({
     date: new Date().toISOString(), items: cart.map(ci=>({...ci})),
@@ -2628,7 +2616,7 @@ async function submitOrder(){
   document.getElementById('checkoutBody').innerHTML = `
     <div class="success-box">
       <div class="ic">✅</div>
-      <h2>Заказ принят!</h2>
+      <h2>Заказ ${srv.no ? '№' + srv.no + ' ' : ''}принят!</h2>
       <p>Мы свяжемся с тобой в Telegram (${checkout.contactValue}) в ближайшее время, чтобы подтвердить заказ и прислать реквизиты для оплаты.</p>
       ${earnedPoints > 0 ? `<p style="margin-top:8px;color:var(--gold);font-weight:700;">+${earnedPoints} SMOKEY-POINTS начислено на твой счёт</p>` : ''}
       <button class="btn btn-primary" style="margin-top:20px;" id="backToCatalogBtn">В каталог</button>
@@ -2640,7 +2628,6 @@ async function submitOrder(){
    ПРОФИЛЬ
    ====================================================================== */
 function renderProfile(){
-  claimReferralPoints();
   const body = document.getElementById('profileBody');
   const promo = getPromoCode();
   const points = getPoints();
@@ -2709,23 +2696,36 @@ function renderProfile(){
         </div>` : ''}
     </div>`;
 
-  let ordersHtml = '';
-  if(orders.length === 0){
+  // История заказов — с сервера (с номерами); пока её нет — показываем то, что осталось на этом телефоне
+  const serverOrders = (ME && ME.orders) || [];
+  const fmtDate = ms => new Date(ms).toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric'});
+  const eur = n => Number(n).toFixed(2).replace('.',',') + ' €';
+  const cards = serverOrders.map(o => {
+    const itemsStr = (o.items || []).map(it => `${escHtml(it.product)} (${escHtml(it.flavor)}) × ${it.qty}`).join('<br>');
+    return `<div class="order-card">
+          <div class="oc-top"><span>№${o.no} · ${fmtDate(o.date)}</span><span>${o.method === 'delivery' ? 'Доставка' : 'Самовывоз'}</span></div>
+          <div class="oc-items">${itemsStr}</div>
+          <div class="oc-total">${eur(o.total)}${o.promo ? ` · ${escHtml(o.promo)}` : ''}${o.pointsEarned ? ` · +${o.pointsEarned} SP` : ''}</div>
+        </div>`;
+  });
+  if(!cards.length){
+    orders.forEach(o => {
+      const itemsStr = o.items.map(ci => { const p = productById(ci.productId); return p ? `${p.name} (${ci.flavor}) × ${ci.qty}` : ''; }).filter(Boolean).join('<br>');
+      cards.push(`<div class="order-card">
+          <div class="oc-top"><span>${fmtDate(o.date)}</span><span>${o.method === 'delivery' ? 'Доставка' : 'Самовывоз'}</span></div>
+          <div class="oc-items">${itemsStr}</div>
+          <div class="oc-total">${eur(o.total)}${o.pointsEarned ? ` · +${o.pointsEarned} SP` : ''}</div>
+        </div>`);
+    });
+  }
+  let ordersHtml;
+  if(!cards.length){
     ordersHtml = `<div class="empty-state" style="padding:32px 20px;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       <div style="font-size:0.85rem;">Заказов пока нет</div>
     </div>`;
   }else{
-    ordersHtml = `<div class="orders-list">` + orders.map(o => {
-      const d = new Date(o.date);
-      const dateStr = d.toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric'});
-      const itemsStr = o.items.map(ci => { const p = productById(ci.productId); return p ? `${p.name} (${ci.flavor}) × ${ci.qty}` : ''; }).filter(Boolean).join('<br>');
-      return `<div class="order-card">
-          <div class="oc-top"><span>${dateStr}</span><span>${o.method === 'delivery' ? 'Доставка' : 'Самовывоз'}</span></div>
-          <div class="oc-items">${itemsStr}</div>
-          <div class="oc-total">${o.total.toFixed(2).replace('.',',')} €${o.pointsEarned ? ` · +${o.pointsEarned} SP` : ''}</div>
-        </div>`;
-    }).join('') + `</div>`;
+    ordersHtml = `<div class="orders-list">` + cards.join('') + `</div>`;
   }
 
   body.innerHTML = head + pointsHtml + `<h2 class="section-title">История заказов</h2>` + ordersHtml;
@@ -2734,10 +2734,13 @@ function renderProfile(){
   if(helpBtn) helpBtn.addEventListener('click', showPointsInfo);
 
   const redeemBtn = document.getElementById('redeemPointsBtn');
-  if(redeemBtn) redeemBtn.addEventListener('click', () => {
+  if(redeemBtn) redeemBtn.addEventListener('click', async () => {
     if(getPoints() < POINTS_TO_REDEEM) return;
-    const code = redeemPointsForCoupon();
-    if(code){ showToast('Купон создан: ' + code); haptic('success'); renderProfile(); }
+    redeemBtn.disabled = true;
+    const r = await redeemPointsForCoupon();
+    if(r.ok){ showToast('Купон создан: ' + r.code); haptic('success'); }
+    else { showToast(r.error); haptic('error'); }
+    renderProfile();
   });
 
   const copyBtn = document.getElementById('copyPromoBtn');
@@ -2867,6 +2870,7 @@ if(cityPillBtn) cityPillBtn.addEventListener('click', () => { haptic('light'); s
 updateCityPill();
 if(!CITY) showCityPicker(true); // первый запуск: город нужно выбрать
 syncStockFromSheet();
+loadMe();
 // Вернулся в мини-апп после паузы — подтягиваем свежие остатки (не чаще раза в 20 секунд)
 let lastVisSync = Date.now();
 document.addEventListener('visibilitychange', () => {
@@ -2874,6 +2878,7 @@ document.addEventListener('visibilitychange', () => {
   if(Date.now() - lastVisSync < 20000) return;
   lastVisSync = Date.now();
   syncStockFromSheet();
+  loadMe();
 });
 </script>
 </body>
