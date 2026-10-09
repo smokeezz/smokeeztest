@@ -2409,19 +2409,10 @@ function escHtml(v){
   return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 function buildOrderText(){
+  // Позиции, суммы и номер заказа собирает сервер (Worker) — здесь только данные покупателя
   const payLabels = {card:'Карта', crypto:'Криптовалюта', cash:'Наличные'};
-  let text = `🛒 <b>Новый заказ</b>\n🏙 <b>Город:</b> ${escHtml(cityName())}\n\n`;
-  cart.forEach(ci => {
-    const p = productById(ci.productId);
-    if(!p) return;
-    const lt = p.price ? (p.price*ci.qty).toFixed(2).replace('.',',')+' €' : 'цена по запросу';
-    const mItem = p.items.find(i => i.n === ci.flavor);
-    const preMark = isPreorderItem(mItem, p.id) ? ` ⏳ ПРЕДЗАКАЗ до ${preUntilLabel(mItem)}` : '';
-    text += `• ${adminProductCode(p)} — ${ci.flavor} × ${ci.qty} (${lt})${preMark}\n`;
-  });
-  if(checkout.promo) text += `\n🏷 Применён промокод: ${checkout.promo.code} (−${checkout.promo.amount ? checkout.promo.amount + ' €' : checkout.promo.percent + '%'})\n💰 Сумма без скидки: ${cartTotal().toFixed(2).replace('.',',')} €\n💰 Итого к оплате: ${cartDiscountedTotal().toFixed(2).replace('.',',')} €\n`;
-  else text += `\n💰 Итого: ${cartTotal().toFixed(2).replace('.',',')} €\n`;
-  text += `\n📦 Способ: ${checkout.method === 'delivery' ? 'Доставка' : 'Самовывоз'}\n`;
+  let text = '';
+  text += `📦 Способ: ${checkout.method === 'delivery' ? 'Доставка' : 'Самовывоз'}\n`;
   text += `👤 Имя: ${escHtml(checkout.name)}\n`;
   if(checkout.method === 'delivery'){
     text += `🏠 Адрес: ${escHtml(checkout.street)} ${escHtml(checkout.house)}, ${escHtml(checkout.city)}, ${escHtml(checkout.postal)}\n`;
@@ -2433,7 +2424,7 @@ function buildOrderText(){
   text += `🔞 21+: подтверждено\n`;
   const comment = (checkout.comment || '').trim();
   if(comment) text += `\n📝 <b>Комментарий клиента:</b>\n${escHtml(comment)}\n`;
-  if(tgUser) text += `\n🆔 Telegram: ${tgUser.first_name||''} ${tgUser.username ? '(@'+tgUser.username+')' : ''} · id ${tgUser.id}\n`;
+  if(tgUser) text += `\n🆔 Telegram: ${escHtml(tgUser.first_name||'')} ${tgUser.username ? '(@'+escHtml(tgUser.username)+')' : ''} · id ${tgUser.id}\n`;
   text += `🏷 Личный промокод клиента: ${getPromoCode()}`;
   return text;
 }
@@ -2449,7 +2440,7 @@ async function sendOrderToOwner(text, lines, orderId){
         method:'POST',
         headers:Object.assign({'Content-Type':'application/json'}, authHeaders()),
         // Worker по городу выбирает менеджера; orderId защищает от двойного списания при повторе
-        body: JSON.stringify({text, city: cityKey(), orderId, lines, method: checkout.method, promo: checkout.promo ? checkout.promo.code : '', clientTotal: Number(cartDiscountedTotal().toFixed(2))})
+        body: JSON.stringify({v: 2, text, city: cityKey(), orderId, lines, method: checkout.method, promo: checkout.promo ? checkout.promo.code : '', clientTotal: Number(cartDiscountedTotal().toFixed(2))})
       });
       const data = await resp.json();
       if(data.ok) return {ok:true, data};
@@ -2478,7 +2469,8 @@ function buildOrderLines(){
     const p = productById(ci.productId);
     if(!p) return null;
     const it = p.items.find(i => i.n === ci.flavor);
-    return {product:p.name, flavor:ci.flavor, qty:ci.qty, mode: isPreorderItem(it, p.id) ? 'preorder' : 'stock'};
+    const pre = isPreorderItem(it, p.id);
+    return {product:p.name, flavor:ci.flavor, qty:ci.qty, mode: pre ? 'preorder' : 'stock', until: pre ? preUntilLabel(it) : ''};
   }).filter(Boolean);
 }
 
