@@ -1023,8 +1023,7 @@
 const CONFIG = {
   // Адрес твоего Cloudflare Worker (после деплоя)
   ORDER_ENDPOINT: 'https://smokeez-orders.hchpfckj6h.workers.dev/',
-  // Тот же пароль, что ты задал в Cloudflare как секрет APP_KEY
-  APP_KEY: '13-11-2007Mar',
+  // Ключей на сайте больше нет: Worker сам проверяет подпись Telegram (initData).
   // Запасной вариант связи, если сервер ещё не настроен — юзернейм в Telegram (без @)
   OWNER_USERNAME: 'znllxs',
   SHOP_NAME: 'SMOKEEZ'
@@ -1215,20 +1214,13 @@ const PRODUCTS = RAW.map((line, idx) => {
   };
 });
 /* ======================================================================
-   ЖИВОЙ ОСТАТОК СКЛАДА
+   ОСТАТКИ СКЛАДА
    ------------------------------------------------------------------
-   Для позиций, где известно точное количество единиц (Q(...) в RAW),
-   ниже ведётся "живой" счётчик остатка: он уменьшается на количество
-   единиц каждый раз, когда заказ реально отправляется (submitOrder),
-   и как только остаток по вкусу доходит до 0 — на сайте эта позиция
-   сразу помечается "нет в наличии", без ручного вмешательства.
-   ВАЖНО: т.к. это статический сайт без сервера, счётчик хранится в
-   localStorage этого браузера/устройства. Если заказы будут приходить
-   с разных устройств одновременно, для по-настоящему общего остатка
-   на все устройства нужен небольшой бэкенд (например, Google Sheet
-   через Apps Script или простой сервер) — тогда функции ниже
-   (stockKey/remainingQty/decrementStock) достаточно переключить на
-   запросы к нему вместо localStorage.
+   Единственный источник правды — таблица (Google Sheets). Застосунок остатки сам НЕ считает:
+   на телефоне хранится только последний снимок таблицы (кэш на случай плохой связи).
+   Списание делает сервер в момент подтверждения заказа (Worker → Apps Script, под блокировкой),
+   поэтому одну и ту же последнюю штуку двое не закажут. Перед шагом «Итог» остатки
+   перепроверяются, а при конфликте клиент получает понятное сообщение.
    ====================================================================== */
 /* ======================================================================
    ГОРОДА
@@ -1329,18 +1321,6 @@ function isAvailable(productId, item){
   const r = remainingQty(productId, item.n);
   if(r === null) return item.ok; // товар без точного остатка — используем статический флаг
   return r > 0;
-}
-function decrementStock(productId, flavorName, qty){
-  const k = stockKey(productId, flavorName);
-  const pr = productById(productId);
-  const it = pr && pr.items.find(i => i.n === flavorName);
-  if(it && isPreorderItem(it, productId)){ // заказ шёл из предзаказа — уменьшаем лимит предзаказа
-    if(PRE.hasOwnProperty(k)){ PRE[k] = Math.max(0, PRE[k] - qty); storeSet(preStorageKey(), PRE); }
-    return;
-  }
-  if(!STOCK.hasOwnProperty(k)) return;
-  STOCK[k] = Math.max(0, STOCK[k] - qty);
-  storeSet(stockStorageKey(), STOCK);
 }
 
 /* Список ожидаемых файлов изображений — положи их РЯДОМ с index.html (в ту же папку,
@@ -2054,6 +2034,12 @@ function setCity(key){
   showToast('Город: ' + cityName());
   syncStockFromSheet();
 }
+// Заголовки авторизации: подпись Telegram initData (Worker проверяет её по токену бота)
+function authHeaders(){
+  const h = {};
+  if(tg && tg.initData) h['X-Telegram-Init-Data'] = tg.initData;
+  return h;
+}
 function persistCart(){ storeSet(cartStorageKey(), cart); refreshCartBadges(); }
 
 function addToCart(productId, flavor, qty){
@@ -2375,7 +2361,7 @@ function renderCheckout(){
   if(backBtn) backBtn.addEventListener('click', () => { checkout.step -= 1; renderCheckout(); window.scrollTo(0,0); });
 
   const nextBtn = document.getElementById('coNextBtn');
-  if(nextBtn) nextBtn.addEventListener('click', () => {
+  if(nextBtn) nextBtn.addEventListener('click', async () => {
     const errs = validateStep(checkout.step);
     const errBox = document.getElementById('coError');
     if(errs.length){
@@ -2385,6 +2371,13 @@ function renderCheckout(){
       return;
     }
     errBox.style.display = 'none';
+    if(checkout.step === 4){
+      // перед шагом «Итог» перепроверяем наличие, чтобы не оформить то, что уже разобрали
+      nextBtn.disabled = true; nextBtn.textContent = 'Проверяем наличие…';
+      await syncStockFromSheet({fresh:true});
+      const changes = reconcileCartWithStock();
+      if(changes.length){ haptic('error'); showStockChanges(changes); return; }
+    }
     checkout.step += 1;
     haptic('light');
     renderCheckout();
@@ -2481,26 +2474,98 @@ function buildOrderText(){
   return text;
 }
 
-async function sendOrderToOwner(text){
+async function sendOrderToOwner(text, lines, orderId){
   const ready = CONFIG.ORDER_ENDPOINT && CONFIG.ORDER_ENDPOINT !== 'YOUR_WORKER_URL';
   if(!ready) return {ok:false, error:'Сервер не настроен'};
   let lastError = 'Нет связи с сервером';
+  let network = true;
   for(let attempt = 0; attempt < 2; attempt++){
     try{
       const resp = await fetch(CONFIG.ORDER_ENDPOINT, {
         method:'POST',
-        headers:{'Content-Type':'application/json', 'X-App-Key': CONFIG.APP_KEY},
-        body: JSON.stringify({text, city: cityKey()}) // Worker по городу выбирает менеджера
+        headers:Object.assign({'Content-Type':'application/json'}, authHeaders()),
+        // Worker по городу выбирает менеджера; orderId защищает от двойного списания при повторе
+        body: JSON.stringify({text, city: cityKey(), orderId, lines})
       });
       const data = await resp.json();
       if(data.ok) return {ok:true};
+      network = false;
+      if(data.code === 'STOCK_CONFLICT') return {ok:false, code:'STOCK_CONFLICT', conflicts:data.conflicts || [], error:'Наличие изменилось'};
+      if(data.code === 'AUTH') return {ok:false, code:'AUTH', error:'Открой магазин через Telegram'};
       lastError = data.error || 'Сервер отклонил запрос';
     }catch(e){
+      network = true;
       lastError = 'Нет связи с сервером';
     }
     if(attempt === 0) await new Promise(r => setTimeout(r, 1200));
   }
-  return {ok:false, error:lastError};
+  return {ok:false, error:lastError, network};
+}
+
+function makeOrderId(){
+  return (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+    : 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+}
+function buildOrderLines(){
+  return cart.map(ci => {
+    const p = productById(ci.productId);
+    if(!p) return null;
+    const it = p.items.find(i => i.n === ci.flavor);
+    return {product:p.name, flavor:ci.flavor, qty:ci.qty, mode: isPreorderItem(it, p.id) ? 'preorder' : 'stock'};
+  }).filter(Boolean);
+}
+
+/* Сверка корзины с актуальными остатками: убирает исчезнувшее, уменьшает количество до доступного */
+function reconcileCartWithStock(){
+  const changes = [];
+  cart = cart.filter(ci => {
+    const p = productById(ci.productId);
+    const it = p && p.items.find(i => i.n === ci.flavor);
+    const label = p ? p.name : 'Товар';
+    if(!it || !isAvailable(p.id, it)){ changes.push({name:label, flavor:ci.flavor, was:ci.qty, now:0}); return false; }
+    const r = remainingQty(p.id, ci.flavor);
+    const cap = (r === null) ? 50 : r;
+    if(ci.qty > cap){ changes.push({name:label, flavor:ci.flavor, was:ci.qty, now:cap}); ci.qty = cap; }
+    return true;
+  });
+  persistCart();
+  return changes;
+}
+/* Конфликт, который сообщил сервер (подстраховка, если локальные данные ещё не обновились) */
+function applyServerConflicts(conflicts, changes){
+  const norm = x => String(x || '').trim().toLowerCase();
+  (conflicts || []).forEach(c => {
+    cart = cart.filter(ci => {
+      const p = productById(ci.productId);
+      if(!p || norm(p.name) !== norm(c.product) || norm(ci.flavor) !== norm(c.flavor)) return true;
+      const avail = Math.max(0, Number(c.available) || 0);
+      if(ci.qty <= avail) return true;
+      const already = changes.find(x => norm(x.name) === norm(p.name) && norm(x.flavor) === norm(ci.flavor));
+      if(already){ already.now = Math.min(already.now, avail); }
+      else changes.push({name:p.name, flavor:ci.flavor, was:ci.qty, now:avail});
+      if(avail <= 0) return false;
+      ci.qty = avail;
+      return true;
+    });
+  });
+  persistCart();
+}
+function showStockChanges(changes, title){
+  const old = document.getElementById('stockModal');
+  if(old) old.remove();
+  const rows = changes.map(c => `<div style="text-align:left;margin:6px 0;">• <b>${escHtml(c.name)} — ${escHtml(c.flavor)}</b>: ${c.now > 0 ? 'осталось ' + c.now + ' шт. (в корзине было ' + c.was + ')' : 'закончилось'}</div>`).join('');
+  const el = document.createElement('div');
+  el.id = 'stockModal';
+  el.className = 'pre-modal-bg';
+  el.innerHTML = `<div class="pre-modal" role="dialog" aria-modal="true">
+      <div class="pre-modal-ic">⚠️</div>
+      <h3>${escHtml(title || 'Наличие изменилось')}</h3>
+      <p style="margin-bottom:10px;">Мы обновили корзину:</p>
+      <div style="font-size:0.84rem;line-height:1.45;margin-bottom:16px;">${rows}</div>
+      <button type="button" class="btn btn-primary" id="stockModalOk">Вернуться в корзину</button>
+    </div>`;
+  document.body.appendChild(el);
+  el.querySelector('#stockModalOk').addEventListener('click', () => { el.remove(); goto('cart'); });
 }
 
 async function submitOrder(){
@@ -2519,21 +2584,34 @@ async function submitOrder(){
   btn.disabled = true; btn.textContent = 'Отправляем...';
 
   const orderText = buildOrderText();
-  const sent = await sendOrderToOwner(orderText);
+  // один и тот же orderId при повторе после обрыва связи — сервер не спишет остаток дважды
+  if(!checkout.pendingOrderId) checkout.pendingOrderId = makeOrderId();
+  const sent = await sendOrderToOwner(orderText, buildOrderLines(), checkout.pendingOrderId);
 
   if(!sent.ok){
-    // заказ НЕ отправлен — ничего не списываем и не очищаем корзину,
-    // чтобы клиент мог просто попробовать ещё раз
+    // заказ НЕ отправлен — корзину не очищаем, клиент может попробовать ещё раз
+    if(!sent.network) checkout.pendingOrderId = null; // сервер ответил отказом — для новой попытки нужен новый id
     btn.disabled = false; btn.textContent = 'Подтвердить заказ';
+    if(sent.code === 'STOCK_CONFLICT'){
+      // кто-то успел забрать товар — обновляем остатки и корзину и объясняем клиенту
+      await syncStockFromSheet({fresh:true});
+      const changes = reconcileCartWithStock();
+      applyServerConflicts(sent.conflicts, changes);
+      haptic('error');
+      showStockChanges(changes.length ? changes : [{name:'Часть товара', flavor:'', was:0, now:0}], 'Товар только что разобрали');
+      return;
+    }
     errBox.style.display = 'block';
-    errBox.innerHTML = `Не удалось отправить заказ (${sent.error}). Проверь соединение и нажми «Подтвердить заказ» ещё раз.`;
+    errBox.innerHTML = sent.code === 'AUTH'
+      ? 'Не удалось подтвердить сессию. Закрой и снова открой магазин в Telegram.'
+      : `Не удалось отправить заказ (${sent.error}). Проверь соединение и нажми «Подтвердить заказ» ещё раз.`;
     errBox.scrollIntoView({behavior:'smooth', block:'center'});
     haptic('error');
     return;
   }
-
-  // списываем реально купленные единицы с живого остатка склада
-  cart.forEach(ci => decrementStock(ci.productId, ci.flavor, ci.qty));
+  checkout.pendingOrderId = null;
+  // остатки списал сервер — подтягиваем свежие цифры из таблицы
+  syncStockFromSheet({fresh:true});
 
   const finalTotal = cartDiscountedTotal();
   const earnedPoints = Math.floor(Math.round(finalTotal * 100) / (POINTS_STEP_EUR * 100)) * POINTS_PER_STEP;
@@ -2702,18 +2780,20 @@ if(tg && tg.BackButton){
   });
   document.querySelectorAll('.view').forEach(v => nav.observe(v, {attributes:true, attributeFilter:['class']}));
 }
-async function syncStockFromSheet(){
+// opts.fresh = true — «живые» остатки прямо из таблицы (для проверки перед подтверждением заказа)
+async function syncStockFromSheet(opts){
+  const fresh = !!(opts && opts.fresh);
   const ready = CONFIG.ORDER_ENDPOINT && CONFIG.ORDER_ENDPOINT !== 'YOUR_WORKER_URL';
-  if(!ready) return;
+  if(!ready) return false;
   const forCity = cityKey();
   try{
-    const resp = await fetch(CONFIG.ORDER_ENDPOINT + '?stock=1&city=' + encodeURIComponent(forCity), {
+    const resp = await fetch(CONFIG.ORDER_ENDPOINT + '?stock=1&city=' + encodeURIComponent(forCity) + (fresh ? '&fresh=1' : ''), {
       method:'GET',
-      headers:{'X-App-Key': CONFIG.APP_KEY}
+      headers: fresh ? authHeaders() : {}
     });
-    if(!resp.ok) return;
+    if(!resp.ok) return false;
     const csv = await resp.text();
-    if(forCity !== cityKey()) return; // пока шёл запрос, клиент сменил город — эти остатки уже чужие
+    if(forCity !== cityKey()) return false; // пока шёл запрос, клиент сменил город — эти остатки уже чужие
     const rows = parseStockCsv(csv);
     let updated = 0;
     // 1) предзаказы из таблицы (при необходимости создаются новые вкусы/цвета) — до разбора остатков
@@ -2742,8 +2822,9 @@ async function syncStockFromSheet(){
       if(typeof renderHome === 'function') renderHome();
       if(typeof renderCatalog === 'function') renderCatalog();
     }
+    return true;
   }catch(e){
-    // тихо игнорируем — просто останутся текущие цифры, зашитые в коде
+    return false; // связи нет — останется последний снимок таблицы
   }
 }
 function parseStockCsv(text){
