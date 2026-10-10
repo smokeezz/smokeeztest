@@ -64,8 +64,26 @@
   @media (prefers-reduced-motion: reduce){
     #splash .sp-word span{animation-duration:.01s;animation-delay:0s;}
     #splash .sp-glow{animation:none;opacity:.5;}
+    #splash .sp-age{animation-duration:.01s;animation-delay:0s;}
     #splash{animation-delay:1s;}
   }
+  #splash .sp-age{
+    position:absolute;left:0;right:0;bottom:calc(26px + env(safe-area-inset-bottom, 0px));
+    display:flex;flex-direction:column;align-items:center;gap:9px;
+    opacity:0;animation:splashAge .7s ease 1s forwards;
+  }
+  #splash .sp-age-badge{
+    font-family:'Oswald',sans-serif;font-style:italic;font-weight:700;font-size:1.05rem;letter-spacing:0.08em;
+    padding:3px 14px 3px 12px;border-radius:999px;color:#fff;
+    background:linear-gradient(135deg,var(--magenta),var(--violet));
+    box-shadow:0 0 0 1px rgba(255,160,240,0.55), 0 0 18px rgba(227,79,239,0.55);
+  }
+  #splash .sp-age-txt{
+    font-family:'Oswald',sans-serif;font-weight:500;font-size:0.68rem;letter-spacing:0.28em;text-transform:uppercase;
+    color:var(--muted);text-align:center;padding:0 24px;line-height:1.5;
+  }
+  #splash .sp-age-txt b{font-weight:700;color:var(--text);}
+  @keyframes splashAge{to{opacity:1;}}
   *{box-sizing:border-box;}
   html{scroll-behavior:smooth;}
   body{
@@ -883,7 +901,7 @@
 </style>
 </head>
 <body>
-<div id="splash" aria-hidden="true"><div class="sp-glow"></div><div class="sp-word"><span style="--i:0">S</span><span style="--i:1">M</span><span style="--i:2">O</span><span style="--i:3">K</span><span style="--i:4">E</span><span style="--i:5">E</span><span style="--i:6">Z</span></div></div>
+<div id="splash" aria-hidden="true"><div class="sp-glow"></div><div class="sp-word"><span style="--i:0">S</span><span style="--i:1">M</span><span style="--i:2">O</span><span style="--i:3">K</span><span style="--i:4">E</span><span style="--i:5">E</span><span style="--i:6">Z</span></div><div class="sp-age"><div class="sp-age-badge">21+</div><div class="sp-age-txt">строго для людей <b>старше 21 года</b></div></div></div>
 
 <div class="smoke-field" id="smokeField">
   <div class="sf-facet sf-f1"></div><div class="sf-facet sf-f2"></div>
@@ -1044,7 +1062,6 @@ const CATEGORIES = [
   {key:'disposable', label:'Одноразки'},
   {key:'pod', label:'POD-системы'},
   {key:'cartridge', label:'Картриджи'},
-  {key:'snus', label:'Снюс'},
 ];
 const EMPTY_CATEGORY_MSG = {
   disposable: 'Одноразки скоро появятся в каталоге — следи за обновлениями.'
@@ -1082,14 +1099,14 @@ const RAW = [
   // ---------------- КАРТРИДЖИ ----------------
   L('Картриджи XROS','cartridge', Q(['Corex 3.0 XROS 3мл 0.4 Ω','Corex 3.0 XROS 3мл 0.6 Ω','Corex 3.0 XROS 3мл 0.8 Ω']), {desc:'Сменные картриджи Corex для линейки Vaporesso XROS, 3 мл.'}),
 
-  // ---------------- СНЮС ----------------
-  L('Снюс Cuba 66мг','snus', F(['Apple Juice','Banana Hit','Black Currant','Blackberry','Blueberry','Cherry','Cola','Cold Dry','Double Fresh','Forest Berries','Grape','Ice Spearmint','Mango','Peach','Tropical Fruit','Watermelon'], false), {desc:'Никотиновые паучи Cuba, крепость 66 мг/г. Без табака, готовы к использованию.'}),
-  L('Снюс Baron 77мг','snus', F(['Classic','Eucalyptus','Fruit Cocktail','Menthol','Wintergreen'], false), {desc:'Никотиновые паучи Baron, крепость 77 мг/г. Без табака, готовы к использованию.'}),
 ];
 
 /* ======================================================================
    ПОДГОТОВКА ТОВАРОВ
    ====================================================================== */
+// Короткое название для показа клиенту: «30ml 5%» уходит в описание. Внутреннее имя (name) не меняется —
+// по нему сайт сверяется с таблицей склада, ценами и картинками.
+function shortName(n){ return String(n || '').replace(/\s+30\s*ml\s+5\s*%/i, '').trim(); }
 function slugify(str){
   const map = {а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'c',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya'};
   return str.toLowerCase().split('').map(ch=>map[ch]!==undefined?map[ch]:ch).join('')
@@ -1157,7 +1174,6 @@ const PREORDER_ARRIVALS = {
   'Puffy 30ml 5%': ['Cherry Ice','Energy Drink','Grape','Turbo Mint'],
   'Vaporesso XROS 6': ['Scorching Cloud','Carbon Fiber Gray'],
   'Vaporesso XROS 6 Mini': ['Titanium Black','Jelly Pink'],
-  'Снюс Baron 77мг': ['Classic'],
   'Картриджи XROS': ['Corex 3.0 XROS 3мл 0.4 Ω','Corex 3.0 XROS 3мл 0.6 Ω']
 };
 const LIVE_NOW = {}; // количества «на руках» живут только в таблице — в коде их нет
@@ -1201,12 +1217,13 @@ const PRODUCTS = RAW.map((line, idx) => {
     id,
     idx,
     name: line.name,
+    title: shortName(line.name),
     category: line.category,
     items: line.items,
     get price(){ return cityPrice(line); }, // зависит от выбранного города
     unit: unitFor(line),
     variantLabel: variantLabelFor(line),
-    desc: line.desc || '',
+    desc: (line.desc || '') + ((line.category === 'liquid' && !/30\s*мл/i.test(line.desc || '')) ? ' Объём 30 мл, крепость 5% (50 мг/мл).' : ''),
     note: line.note || '',
     promo: line.promo || '',
     img: slugify(line.name) + '.webp'
@@ -1443,7 +1460,7 @@ let activeCat = 'all';
 let searchTerm = '';
 let stockOnly = false;
 let currentProductId = null;
-let cart = storeGet(cartStorageKey(), []); // [{productId, flavor, qty}] — своя корзина у каждого города
+let cart = storeGet(cartStorageKey(), []).filter(ci => productById(ci.productId)); // [{productId, flavor, qty}] — своя корзина у каждого города; убранные из каталога товары отсеиваются
 let orders = storeGet('smokeez_orders_' + UID, []);
 let favorites = new Set(storeGet('smokeez_favs_' + UID, []));
 let checkout = { method:'delivery', payment:'card', contactType:'telegram', age21:false, comment:'', promo:null };
@@ -1629,7 +1646,7 @@ function thumbHtml(product, size){
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 11h18"/></svg>
       <span>${size==='sm' ? '' : 'фото скоро будет'}</span>
     </div>`;
-  return `<img src="${product.img}" alt="${product.name}" loading="lazy"
+  return `<img src="${product.img}" alt="${product.title || product.name}" loading="lazy"
       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">${ph}`;
 }
 
@@ -1666,7 +1683,7 @@ function productCardHtml(p){
   return `<div class="product-card ${allOut ? 'is-out' : ''}" data-id="${p.id}">
       <div class="thumb">${tag}<button type="button" class="fav-btn ${fav?'active':''}" data-fav="${p.id}">${fav ? '♥\uFE0E' : '♡'}</button>${thumbHtml(p)}</div>
       <div class="card-body">
-        <div class="name">${p.name}</div>
+        <div class="name">${p.title || p.name}</div>
         <div class="meta">${inStockCount}/${p.items.length} вкусов в наличии${preCount ? ` · <span class="pre-meta">+${preCount} предзаказ</span>` : ''}</div>
         ${priceHtml}
       </div>
@@ -1697,7 +1714,7 @@ function renderCatalog(){
     if(activeCat !== 'all' && p.category !== activeCat) return false;
     if(stockOnly && !p.items.some(i => isAvailable(p.id, i))) return false;
     if(!t) return true;
-    if(p.name.toLowerCase().includes(t)) return true;
+    if(p.name.toLowerCase().includes(t) || (p.title || '').toLowerCase().includes(t)) return true;
     return p.items.some(i => i.n.toLowerCase().includes(t));
   });
   list.sort((a, b) => {
@@ -1787,7 +1804,7 @@ function renderHome(){
   body.innerHTML = `
     <div class="home-hero">
       <h1 class="home-title">Добро пожаловать в SMOKEEZ🇩🇪💨</h1>
-      <p class="home-sub">Жидкости, POD-системы и снюс с доставкой — выбирай вкус и оформляй заказ прямо здесь.</p>
+      <p class="home-sub">Жидкости и POD-системы с доставкой — выбирай вкус и оформляй заказ прямо здесь.</p>
     </div>
 
     <h2 class="section-title" style="margin-top:22px;">Новости</h2>
@@ -1857,7 +1874,7 @@ function renderProductDetail(){
   const favActive = isFavorite(p.id);
   body.innerHTML = `
     <div class="pd-hero">${thumbHtml(p, 'lg').replace('фото скоро будет', 'фото скоро появится')}<button type="button" class="fav-btn ${favActive?'active':''}" id="pdFavBtn">${favActive ? '♥\uFE0E' : '♡'}</button></div>
-    <h1 class="pd-title">${p.name}</h1>
+    <h1 class="pd-title">${p.title || p.name}</h1>
     ${priceHtml}
     ${p.desc ? `<p class="pd-desc">${p.desc}</p>` : ''}
     <div class="pd-block">
@@ -1987,7 +2004,7 @@ function setCity(key){
   STOCK = loadStock();                 // остатки выбранного города
   PRE = loadPre();                     // лимиты предзаказа выбранного города
   applyPreorderMeta(loadPreMeta());    // предзаказы из таблицы выбранного города
-  cart = storeGet(cartStorageKey(), []); // корзина выбранного города
+  cart = storeGet(cartStorageKey(), []).filter(ci => productById(ci.productId)); // корзина выбранного города
   refreshCartBadges();
   const cur = (document.querySelector('.view.active') || {}).id || '';
   const tabs = ['home','catalog','favorites','cart','profile'];
@@ -2051,7 +2068,7 @@ function renderCart(){
     return `<div class="cart-item">
         <div class="thumb-sm">${thumbHtml(p, 'sm')}</div>
         <div class="ci-info">
-          <div class="ci-name">${p.name}</div>
+          <div class="ci-name">${p.title || p.name}</div>
           <div class="ci-flavor">${ci.flavor}</div>
           ${preHtml}
           <div class="ci-row">
@@ -2282,7 +2299,7 @@ function renderCheckout(){
     <div class="co-step co-order-summary">
       <div class="co-title">Ваш заказ</div>
       ${cart.map(ci => { const p = productById(ci.productId); if(!p) return ''; const lt = p.price ? (p.price*ci.qty).toFixed(2).replace('.',',')+' €' : 'по запросу';
-        return `<div class="order-review-row"><span>${p.name} · ${ci.flavor} × ${ci.qty}</span><span>${lt}</span></div>`; }).join('')}
+        return `<div class="order-review-row"><span>${p.title || p.name} · ${ci.flavor} × ${ci.qty}</span><span>${lt}</span></div>`; }).join('')}
       ${checkout.promo ? `<div class="order-review-row"><span>Скидка по промокоду ${checkout.promo.code}</span><span style="color:var(--ok);">−${checkout.promo.amount ? checkout.promo.amount + ' €' : checkout.promo.percent + '%'}</span></div>` : ''}
       <div class="order-review-row" style="border:none;font-weight:800;color:var(--text);padding-top:10px;"><span>Итого</span><span style="color:var(--magenta);">${cartDiscountedTotal().toFixed(2).replace('.',',')} €</span></div>
     </div>`;
@@ -2480,7 +2497,7 @@ function reconcileCartWithStock(){
   cart = cart.filter(ci => {
     const p = productById(ci.productId);
     const it = p && p.items.find(i => i.n === ci.flavor);
-    const label = p ? p.name : 'Товар';
+    const label = p ? (p.title || p.name) : 'Товар';
     if(!it || !isAvailable(p.id, it)){ changes.push({name:label, flavor:ci.flavor, was:ci.qty, now:0}); return false; }
     const r = remainingQty(p.id, ci.flavor);
     const cap = (r === null) ? 50 : r;
@@ -2501,7 +2518,7 @@ function applyServerConflicts(conflicts, changes){
       if(ci.qty <= avail) return true;
       const already = changes.find(x => norm(x.name) === norm(p.name) && norm(x.flavor) === norm(ci.flavor));
       if(already){ already.now = Math.min(already.now, avail); }
-      else changes.push({name:p.name, flavor:ci.flavor, was:ci.qty, now:avail});
+      else changes.push({name:p.title || p.name, flavor:ci.flavor, was:ci.qty, now:avail});
       if(avail <= 0) return false;
       ci.qty = avail;
       return true;
@@ -2693,7 +2710,7 @@ function renderProfile(){
   const fmtDate = ms => new Date(ms).toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric'});
   const eur = n => Number(n).toFixed(2).replace('.',',') + ' €';
   const cards = serverOrders.map(o => {
-    const itemsStr = (o.items || []).map(it => `${escHtml(it.product)} (${escHtml(it.flavor)}) × ${it.qty}`).join('<br>');
+    const itemsStr = (o.items || []).map(it => `${escHtml(shortName(it.product))} (${escHtml(it.flavor)}) × ${it.qty}`).join('<br>');
     return `<div class="order-card">
           <div class="oc-top"><span>№${o.no} · ${fmtDate(o.date)}</span><span>${o.method === 'delivery' ? 'Доставка' : 'Самовывоз'}</span></div>
           <div class="oc-items">${itemsStr}</div>
@@ -2702,7 +2719,7 @@ function renderProfile(){
   });
   if(!cards.length){
     orders.forEach(o => {
-      const itemsStr = o.items.map(ci => { const p = productById(ci.productId); return p ? `${p.name} (${ci.flavor}) × ${ci.qty}` : ''; }).filter(Boolean).join('<br>');
+      const itemsStr = o.items.map(ci => { const p = productById(ci.productId); return p ? `${p.title || p.name} (${ci.flavor}) × ${ci.qty}` : ''; }).filter(Boolean).join('<br>');
       cards.push(`<div class="order-card">
           <div class="oc-top"><span>${fmtDate(o.date)}</span><span>${o.method === 'delivery' ? 'Доставка' : 'Самовывоз'}</span></div>
           <div class="oc-items">${itemsStr}</div>
