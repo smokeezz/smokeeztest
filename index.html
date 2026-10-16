@@ -781,6 +781,15 @@
   .order-card{background:var(--card-grad);border:1px solid var(--card-border);border-radius:12px;padding:12px 14px;margin-bottom:10px;}
   .order-card .oc-top{display:flex;justify-content:space-between;font-size:0.8rem;color:var(--muted);margin-bottom:6px;}
   .order-card .oc-items{font-size:0.8rem;color:var(--text);line-height:1.5;}
+  .order-card .oc-status{font-size:0.74rem;font-weight:700;margin-bottom:6px;color:var(--muted);}
+  .order-card .oc-status.ready{color:var(--ok);}
+  .order-card .oc-status.cancelled{color:#ff6b6b;}
+  .order-card.cancelled{opacity:.6;}
+  .privacy-body{max-height:62vh;overflow:auto;text-align:left;font-size:0.8rem;line-height:1.55;color:var(--text);margin:8px 0 14px;padding-right:4px;-webkit-overflow-scrolling:touch;}
+  .privacy-body h4{margin:12px 0 4px;font-size:0.86rem;}
+  .privacy-body p,.privacy-body li{margin:0 0 6px;color:var(--muted);text-align:left;}
+  .privacy-body ul{margin:0 0 6px;padding-left:18px;}
+  .privacy-link{color:var(--magenta);text-decoration:underline;cursor:pointer;background:none;border:0;padding:0;font:inherit;}
   .order-card .oc-total{margin-top:6px;font-weight:800;color:var(--magenta);font-family:'JetBrains Mono',monospace;font-size:0.88rem;}
   .guest-note{margin-top:14px;font-size:0.78rem;color:var(--muted-dim);text-align:center;line-height:1.5;}
 
@@ -1044,7 +1053,9 @@ const CONFIG = {
   // Ключей на сайте больше нет: Worker сам проверяет подпись Telegram (initData).
   // Запасной вариант связи, если сервер ещё не настроен — юзернейм в Telegram (без @)
   OWNER_USERNAME: 'znllxs',
-  SHOP_NAME: 'SMOKEEZ'
+  SHOP_NAME: 'SMOKEEZ',
+  // Контакт для запросов по персональным данным (политика конфиденциальности). E-mail — по желанию.
+  PRIVACY_EMAIL: ''
 };
 /* Как это работает:
    1) Пока BOT_TOKEN / OWNER_CHAT_ID не заполнены — заказ копируется в буфер обмена
@@ -1971,6 +1982,54 @@ function showPointsInfo(){
   el.addEventListener('click', e => { if(e.target === el) el.remove(); });
   el.querySelector('#pointsModalOk').addEventListener('click', () => el.remove());
 }
+
+function showPrivacy(){
+  haptic('light');
+  const old = document.getElementById('privacyModal');
+  if(old) old.remove();
+  const contact = (CONFIG.PRIVACY_EMAIL ? escHtml(CONFIG.PRIVACY_EMAIL) + ' или ' : '') + 'в Telegram: @' + escHtml(CONFIG.OWNER_USERNAME);
+  const el = document.createElement('div');
+  el.id = 'privacyModal';
+  el.className = 'pre-modal-bg city-bg';
+  el.innerHTML = `<div class="pre-modal city-modal" role="dialog" aria-modal="true">
+      <h3>Политика конфиденциальности</h3>
+      <div class="privacy-body">
+        <p>Редакция от 16.10.2026. Оператор данных — ${escHtml(CONFIG.SHOP_NAME)} (далее «мы»). Эта политика объясняет, какие данные мы собираем при заказе в Mini App и что с ними делаем.</p>
+        <h4>1. Какие данные мы обрабатываем</h4>
+        <ul>
+          <li>Telegram: числовой идентификатор, имя и @username (передаются Telegram при открытии приложения).</li>
+          <li>Данные заказа: имя, телефон, e-mail и адрес (для доставки), контакт для связи, комментарий, способ оплаты, состав и сумма заказа, применённый промокод.</li>
+          <li>Бонусная программа: баллы, купоны, личный промокод, число приглашённых друзей.</li>
+          <li>Подтверждение, что вам есть 21 год.</li>
+        </ul>
+        <h4>2. Для чего</h4>
+        <ul>
+          <li>принять и выполнить заказ, связаться с вами, организовать выдачу или доставку;</li>
+          <li>вести учёт заказов, баллов и промокодов, не допускать злоупотреблений;</li>
+          <li>сообщать вам о статусе заказа (готов к выдаче, отменён, поступил товар из предзаказа).</li>
+        </ul>
+        <p>Основание — исполнение договора (ваш заказ), ваше согласие при оформлении заказа и наш законный интерес в защите магазина от мошенничества.</p>
+        <h4>3. Кому передаём</h4>
+        <p>Менеджеру города, в котором вы заказываете. Для работы сервиса используются Telegram, Cloudflare (серверная часть и база заказов) и Google (таблицы склада и журнала заказов). Эти сервисы могут обрабатывать данные за пределами ЕС на основании стандартных договорных условий. Мы не продаём данные и не передаём их для рекламы.</p>
+        <h4>4. Сколько храним</h4>
+        <ul>
+          <li>Имя, контакты, адрес и комментарий — не дольше <b>60 дней</b> после заказа, затем они автоматически стираются из нашей базы и журнала заказов.</li>
+          <li>Номер заказа, состав, сумма и баллы — дольше, пока это нужно для учёта и в пределах сроков, которые требует закон.</li>
+          <li>Сообщения в чате с ботом хранит Telegram; мы можем удалить свои копии, но не переписку на стороне Telegram.</li>
+        </ul>
+        <h4>5. Ваши права</h4>
+        <p>Вы можете запросить доступ к своим данным, их исправление, удаление, ограничение обработки или переноса, возразить против обработки и отозвать согласие. Также можно подать жалобу в орган по защите данных вашей страны. Запросы — ${contact}.</p>
+        <h4>6. Возраст</h4>
+        <p>Магазин предназначен только для лиц старше 21 года. Мы не обрабатываем сознательно данные несовершеннолетних.</p>
+        <h4>7. Изменения</h4>
+        <p>Мы можем обновлять политику; актуальная версия всегда доступна в приложении.</p>
+      </div>
+      <button type="button" class="btn btn-primary" id="privacyOk">Понятно</button>
+    </div>`;
+  document.body.appendChild(el);
+  el.addEventListener('click', e => { if(e.target === el) el.remove(); });
+  el.querySelector('#privacyOk').addEventListener('click', () => el.remove());
+}
 function updateCityPill(){
   const el = document.getElementById('cityPillName');
   if(el) el.textContent = cityName();
@@ -2286,6 +2345,7 @@ function renderCheckout(){
           <span class="radio" id="age21Radio"></span>
           <span>Подтверждаю, что мне есть 21 год</span>
         </label>
+        <div class="pd-note" style="margin-top:10px;">Оформляя заказ, вы соглашаетесь на обработку данных согласно <button type="button" class="privacy-link" id="privacyLinkCo">политике конфиденциальности</button>.</div>
       </div>
       <div class="co-step">
         <div class="field" style="margin-bottom:0;">
@@ -2365,6 +2425,8 @@ function renderCheckout(){
     window.scrollTo(0,0);
   });
 
+  const privCo = document.getElementById('privacyLinkCo');
+  if(privCo) privCo.addEventListener('click', showPrivacy);
   const submitBtn = document.getElementById('submitOrderBtn');
   if(submitBtn) submitBtn.addEventListener('click', submitOrder);
 }
@@ -2711,8 +2773,10 @@ function renderProfile(){
   const eur = n => Number(n).toFixed(2).replace('.',',') + ' €';
   const cards = serverOrders.map(o => {
     const itemsStr = (o.items || []).map(it => `${escHtml(shortName(it.product))} (${escHtml(it.flavor)}) × ${it.qty}`).join('<br>');
-    return `<div class="order-card">
+    const st = ({ready:['✅ Готов к выдаче','ready'], done:['📦 Выдан','ready'], cancelled:['❌ Отменён','cancelled']})[o.status];
+    return `<div class="order-card${o.status === 'cancelled' ? ' cancelled' : ''}">
           <div class="oc-top"><span>№${o.no} · ${fmtDate(o.date)}</span><span>${o.method === 'delivery' ? 'Доставка' : 'Самовывоз'}</span></div>
+          ${st ? `<div class="oc-status ${st[1]}">${st[0]}</div>` : ''}
           <div class="oc-items">${itemsStr}</div>
           <div class="oc-total">${eur(o.total)}${o.promo ? ` · ${escHtml(o.promo)}` : ''}${o.pointsEarned ? ` · +${o.pointsEarned} SP` : ''}</div>
         </div>`;
@@ -2737,7 +2801,10 @@ function renderProfile(){
     ordersHtml = `<div class="orders-list">` + cards.join('') + `</div>`;
   }
 
-  body.innerHTML = head + pointsHtml + `<h2 class="section-title">История заказов</h2>` + ordersHtml;
+  body.innerHTML = head + pointsHtml + `<h2 class="section-title">История заказов</h2>` + ordersHtml +
+    `<div class="pd-note" style="text-align:center;margin:18px 0 6px;"><button type="button" class="privacy-link" id="privacyLinkPf">Политика конфиденциальности</button></div>`;
+  const privPf = document.getElementById('privacyLinkPf');
+  if(privPf) privPf.addEventListener('click', showPrivacy);
 
   const helpBtn = document.getElementById('pointsHelpBtn');
   if(helpBtn) helpBtn.addEventListener('click', showPointsInfo);
