@@ -785,6 +785,7 @@
   .order-card .oc-status.ready{color:var(--ok);}
   .order-card .oc-status.cancelled{color:#ff6b6b;}
   .order-card.cancelled{opacity:.6;}
+  .order-card .oc-cancel{margin-top:10px;width:100%;font-size:0.8rem;padding:9px 12px;}
   .privacy-body{max-height:62vh;overflow:auto;text-align:left;font-size:0.8rem;line-height:1.55;color:var(--text);margin:8px 0 14px;padding-right:4px;-webkit-overflow-scrolling:touch;}
   .privacy-body h4{margin:12px 0 4px;font-size:0.86rem;}
   .privacy-body p,.privacy-body li{margin:0 0 6px;color:var(--muted);text-align:left;}
@@ -1446,6 +1447,20 @@ async function loadMe(){
     if(v && v.id === 'view-profile' && typeof renderProfile === 'function') renderProfile();
     return true;
   }catch(e){ return false; }
+}
+// Отмена своего заказа: только пока менеджер не отметил его как готовый
+function askConfirm(text){
+  return new Promise(res => {
+    if(tg && typeof tg.showConfirm === 'function'){ try{ tg.showConfirm(text, ok => res(!!ok)); return; }catch(e){} }
+    res(window.confirm(text));
+  });
+}
+async function cancelMyOrder(no, btn){
+  if(!(await askConfirm('Отменить заказ №' + no + '? Товар вернётся на склад, баллы и промокод — тоже.'))) return;
+  if(btn) btn.disabled = true;
+  const r = await apiPost({action:'cancel', no});
+  if(r && r.ok){ showToast('Заказ №' + no + ' отменён'); haptic('success'); await loadMe(); renderProfile(); }
+  else { showToast((r && r.error) || 'Не удалось отменить, попробуй позже'); haptic('error'); if(btn) btn.disabled = false; }
 }
 // Обмен баллов на купон — только через сервер
 async function redeemPointsForCoupon(){
@@ -2779,6 +2794,7 @@ function renderProfile(){
           ${st ? `<div class="oc-status ${st[1]}">${st[0]}</div>` : ''}
           <div class="oc-items">${itemsStr}</div>
           <div class="oc-total">${eur(o.total)}${o.promo ? ` · ${escHtml(o.promo)}` : ''}${o.pointsEarned ? ` · +${o.pointsEarned} SP` : ''}</div>
+          ${o.status === 'delivered' ? `<button type="button" class="btn btn-ghost oc-cancel" data-cancel="${o.no}">Отменить заказ</button>` : ''}
         </div>`;
   });
   if(!cards.length){
@@ -2803,6 +2819,7 @@ function renderProfile(){
 
   body.innerHTML = head + pointsHtml + `<h2 class="section-title">История заказов</h2>` + ordersHtml +
     `<div class="pd-note" style="text-align:center;margin:18px 0 6px;"><button type="button" class="privacy-link" id="privacyLinkPf">Политика конфиденциальности</button></div>`;
+  body.querySelectorAll('[data-cancel]').forEach(btn => btn.addEventListener('click', () => cancelMyOrder(Number(btn.dataset.cancel), btn)));
   const privPf = document.getElementById('privacyLinkPf');
   if(privPf) privPf.addEventListener('click', showPrivacy);
 
