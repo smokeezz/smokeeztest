@@ -1259,15 +1259,36 @@ const PRODUCTS = RAW.map((line, idx) => {
    У каждого города отдельно: остатки (своя таблица), корзина, менеджер.
    Id менеджера НЕ хранится в браузере — он лежит в настройках Worker (по ключу города).
    ====================================================================== */
+// Прайс Словакии: остальное — как в базовом
+function skPrice(line){
+  const n = line.name || '';
+  if(line.category === 'liquid'){
+    if(/^(Vozol Prime|ElfLiq|Puffy)/i.test(n)) return 11.00;
+    if(/^Chaser/i.test(n)) return 12.00;
+  }
+  if(line.category === 'pod'){
+    if(/^Vaporesso XROS 6 Mini/i.test(n)) return 20.00;
+    if(/^Vaporesso XROS 6(?!\s*Mini)/i.test(n)) return 28.00;
+  }
+  if(n === 'Картриджи XROS') return 3.80;
+  return null;
+}
 const CITIES = {
-  kl: { key:'kl', name:'Кайзерслаутерн', price:null },
-  sb: { key:'sb', name:'Саарбрюкен',
+  kl: { key:'kl', region:'de', name:'Кайзерслаутерн', price:null },
+  sb: { key:'sb', region:'de', name:'Саарбрюкен',
         // жидкости Vozol / ElfLiq / Puffy — 11 €, остальное как в базовом прайсе
-        price: line => (line.category === 'liquid' && /^(Vozol Prime|ElfLiq|Puffy)/i.test(line.name)) ? 11.00 : null }
+        price: line => (line.category === 'liquid' && /^(Vozol Prime|ElfLiq|Puffy)/i.test(line.name)) ? 11.00 : null },
+  // Словакия: отдельный бот и свой прайс (см. skPrice)
+  bb: { key:'bb', region:'sk', name:'Banská Bystrica', price:skPrice },
+  zv: { key:'zv', region:'sk', name:'Zvolen', price:skPrice },
+  za: { key:'za', region:'sk', name:'Žilina', price:skPrice },
+  ba: { key:'ba', region:'sk', name:'Bratislava', price:skPrice }
 };
-const DEFAULT_CITY = 'kl';
+// Регион задаёт адрес Mini App в боте: …/index.html?region=sk (для немецкого бота параметра нет)
+const REGION = (function(){ try{ return new URLSearchParams(location.search).get('region') === 'sk' ? 'sk' : 'de'; }catch(e){ return 'de'; } })();
+const DEFAULT_CITY = REGION === 'sk' ? 'ba' : 'kl';
 let CITY = storeGet('smokeez_city', null);
-if(!CITIES[CITY]) CITY = null; // город ещё не выбран — при запуске покажем выбор
+if(!CITIES[CITY] || CITIES[CITY].region !== REGION) CITY = null; // город ещё не выбран (или он из другой страны) — покажем выбор
 function cityKey(){ return CITY || DEFAULT_CITY; }
 function cityName(){ return CITIES[cityKey()].name; }
 function cityPrice(line){
@@ -2060,7 +2081,7 @@ function showCityPicker(forced){
       <img class="city-logo" src="smokeez-logo.webp" alt="SMOKEEZ">
       <h3>📍 ${forced ? 'Выберите ваш город' : 'Город'}</h3>
       ${forced ? '<p>От города зависят цены и наличие товаров.</p>' : '<p>У каждого города свои цены, наличие и корзина.</p>'}
-      ${Object.keys(CITIES).map(k => `<div class="pay-opt ${CITY === k ? 'active' : ''}" data-city="${k}"><span class="radio"></span><span>${CITIES[k].name}</span></div>`).join('')}
+      ${Object.keys(CITIES).filter(k => CITIES[k].region === REGION).map(k => `<div class="pay-opt ${CITY === k ? 'active' : ''}" data-city="${k}"><span class="radio"></span><span>${CITIES[k].name}</span></div>`).join('')}
     </div>`;
   document.body.appendChild(el);
   if(!forced) el.addEventListener('click', e => { if(e.target === el) el.remove(); });
