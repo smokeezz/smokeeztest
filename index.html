@@ -1097,6 +1097,7 @@ const RAW = [
   L('Chaser for Pods 30ml 5%','liquid', F(['Apple','Apple Mint','Banana','Berries','Blackcurrant Menthol','Blue Raspberry','Blueberry Menthol','Cherry','Cherry Menthol','Grape','Kiwi','Mint','Peach','Pineapple','Pomegranate','Red Currant','Strawberry','Watermelon','Watermelon Menthol','Yellow Cherry','Wild Strawberry','Yellow Raspberry','Yellow Dragonfruit'], false), {desc:'Chaser for Pods — облегчённая рецептура специально под POD-системы. 30 мл, 5%.'}),
   L('Chaser Special 30ml 5%','liquid', F(['Berry Candy','Berry Needles','Bilberry Mint','Blackberry','Blueberry Lemon','Cherries','Cranberry Mint','Energy Cherry','Fall Tea','Mystery One','Punch','Strawberry Jelly'], false), {desc:'Chaser Special — авторская серия вкусов лимитированным тиражом. 30 мл, 5%.'}),
   L('Chaser Mix 30ml 5%','liquid', F(['Cherry Tobacco','Cherry Watermelon','Cola','Basil Mint','Blackberry Jam','Fanta','Guava Peach','Orbit','Smoothie','Strawberry Grape','Strawberry Kvass','Watermelon Apple','Banana Aloe','Strawberry Banana','Rum Cola','Cranberry Cactus','Blue Raspberry Lemonade'], false), {desc:'Chaser Mix — вкусы на основе газировок и десертов. 30 мл, 5%.'}),
+  L('Chaser You&Me 30ml 5%','liquid', Q([]), {desc:'Chaser You&Me — линейка жидкостей Chaser. 30 мл, 5%.'}),
 
   // ---------------- ОДНОРАЗКИ (пока пусто) ----------------
 
@@ -1110,6 +1111,7 @@ const RAW = [
 
   // ---------------- КАРТРИДЖИ ----------------
   L('Картриджи XROS','cartridge', Q(['Corex 3.0 XROS 3мл 0.4 Ω','Corex 3.0 XROS 3мл 0.6 Ω','Corex 3.0 XROS 3мл 0.8 Ω']), {desc:'Сменные картриджи Corex для линейки Vaporesso XROS, 3 мл.'}),
+  L('Картриджи OXVA Xlim','cartridge', Q(['OXVA Xlim 0.4 Ω','OXVA Xlim 0.6 Ω','OXVA Xlim 0.8 Ω']), {desc:'Сменные картриджи для POD-систем OXVA Xlim, сопротивление 0,4 / 0,6 / 0,8 Ω.'}),
 
 ];
 
@@ -1140,6 +1142,7 @@ function priceFor(line){
     if(/^Vaporesso XROS 6(?!\s*Mini)/i.test(line.name)) return 22.50;
   }
   if(line.name === 'Картриджи XROS') return 4.00;
+  if(line.name === 'Картриджи OXVA Xlim') return 4.00;
   if(line.category === 'snus') return 5.00;
   if(line.promo){
     const m = line.promo.match(/([\d,.]+)\s*€/);
@@ -1317,12 +1320,13 @@ function preMetaStorageKey(){ return cityKey() === 'kl' ? 'smokeez_premeta_v1' :
 function loadPreMeta(){ return storeGet(preMetaStorageKey(), null) || []; }
 function applyPreorderMeta(meta){
   const norm = x => String(x || '').trim().toLowerCase();
-  // сброс прежних отметок из таблицы (чтобы убранная из таблицы строка перестала быть предзаказом)
+  // сброс прежних отметок из таблицы (чтобы убранная из таблицы строка перестала действовать)
   PRODUCTS.forEach(pr => {
     for(let i = pr.items.length - 1; i >= 0; i--){
       const it = pr.items[i];
-      if(!it.sheetPre) continue;
+      delete it.hidden;
       if(it.dyn){ pr.items.splice(i, 1); continue; }
+      if(!it.sheetPre) continue;
       delete it.preUntil; delete it.sheetPre;
       if(!it.codePre) delete it.pre;
     }
@@ -1330,13 +1334,22 @@ function applyPreorderMeta(meta){
   (meta || []).forEach(m => {
     const pr = PRODUCTS.find(x => norm(x.name) === norm(m.product));
     if(!pr) return; // новый товар целиком (с ценой и картинкой) по-прежнему добавляется в код
+    const isPre = m.pre !== false; // старый кэш хранил только строки предзаказа — у него поля pre нет
     let it = pr.items.find(i => norm(i.n) === norm(m.flavor));
     if(!it){
-      if(m.until && new Date() > new Date(m.until + 'T23:59:59')) return; // срок нового вкуса уже прошёл — не показываем
-      it = {n: String(m.flavor).trim(), ok:true, qty:null, dyn:true}; pr.items.push(it);
+      if(m.hide) return;                                   // скрытый новый вкус вообще не создаём
+      if(isPre){
+        if(m.until && new Date() > new Date(m.until + 'T23:59:59')) return; // срок нового вкуса уже прошёл — не показываем
+        it = {n: String(m.flavor).trim(), ok:true, qty:null, dyn:true}; pr.items.push(it);
+      }else if(m.stock > 0){
+        it = {n: String(m.flavor).trim(), ok:true, qty:null, dyn:true}; pr.items.push(it); // новый вкус появился строкой в таблице
+      }else return;
     }
-    it.pre = true; it.sheetPre = true;
-    if(m.until) it.preUntil = m.until;
+    if(m.hide) it.hidden = true;
+    if(isPre){
+      it.pre = true; it.sheetPre = true;
+      if(m.until) it.preUntil = m.until;
+    }
   });
 }
 function parseUntil(v){
@@ -1348,6 +1361,10 @@ function parseUntil(v){
   return null;
 }
 applyPreorderMeta(loadPreMeta());
+// Вкусы, скрытые менеджером через колонку hide в таблице, в каталоге не показываются (корзина и история их по-прежнему знают)
+function shownItems(p){ return p.items.filter(i => !i.hidden); }
+// товар без единого видимого вкуса (ещё не завезли или всё скрыто) в каталоге не показываем
+function isListed(p){ return shownItems(p).length > 0; }
 function remainingQty(productId, flavorName){
   const k = stockKey(productId, flavorName);
   const v = STOCK.hasOwnProperty(k) ? STOCK[k] : null; // null = количество не отслеживается (неограниченно)
@@ -1715,12 +1732,13 @@ function buildCatFilters(){
 }
 
 function productCardHtml(p){
-  const availCount = p.items.filter(i => isAvailable(p.id, i)).length;
+  const shown = shownItems(p);
+  const availCount = shown.filter(i => isAvailable(p.id, i)).length;
   const allOut = availCount === 0;
   const priceHtml = p.price
     ? `<div class="price">${p.price.toFixed(2).replace('.',',')} €</div>`
     : `<div class="price ask">Цена по запросу</div>`;
-  const preCount = p.items.filter(i => isPreorderItem(i, p.id) && isAvailable(p.id, i)).length;
+  const preCount = shown.filter(i => isPreorderItem(i, p.id) && isAvailable(p.id, i)).length;
   const inStockCount = availCount - preCount;
   const tag = p.promo
     ? `<span class="tag promo">${p.promo}</span>`
@@ -1731,7 +1749,7 @@ function productCardHtml(p){
       <div class="thumb">${tag}<button type="button" class="fav-btn ${fav?'active':''}" data-fav="${p.id}">${fav ? '♥\uFE0E' : '♡'}</button>${thumbHtml(p)}</div>
       <div class="card-body">
         <div class="name">${p.title || p.name}</div>
-        <div class="meta">${inStockCount}/${p.items.length} вкусов в наличии${preCount ? ` · <span class="pre-meta">+${preCount} предзаказ</span>` : ''}</div>
+        <div class="meta">${inStockCount}/${shown.length} вкусов в наличии${preCount ? ` · <span class="pre-meta">+${preCount} предзаказ</span>` : ''}</div>
         ${priceHtml}
       </div>
     </div>`;
@@ -1758,15 +1776,16 @@ function renderCatalog(){
   const grid = document.getElementById('productGrid');
   const t = searchTerm.trim().toLowerCase();
   const list = PRODUCTS.filter(p => {
+    if(!isListed(p)) return false;
     if(activeCat !== 'all' && p.category !== activeCat) return false;
-    if(stockOnly && !p.items.some(i => isAvailable(p.id, i))) return false;
+    if(stockOnly && !shownItems(p).some(i => isAvailable(p.id, i))) return false;
     if(!t) return true;
     if(p.name.toLowerCase().includes(t) || (p.title || '').toLowerCase().includes(t)) return true;
-    return p.items.some(i => i.n.toLowerCase().includes(t));
+    return shownItems(p).some(i => i.n.toLowerCase().includes(t));
   });
   list.sort((a, b) => {
-    const aHas = a.items.some(i => isAvailable(a.id, i)) ? 0 : 1;
-    const bHas = b.items.some(i => isAvailable(b.id, i)) ? 0 : 1;
+    const aHas = shownItems(a).some(i => isAvailable(a.id, i)) ? 0 : 1;
+    const bHas = shownItems(b).some(i => isAvailable(b.id, i)) ? 0 : 1;
     return aHas - bHas;
   });
   if(list.length === 0){
@@ -1839,7 +1858,7 @@ function stopBannerAutoplay(){
   if(bannerTimer){ clearInterval(bannerTimer); bannerTimer = null; }
 }
 function findProductsByPrefix(prefixes){
-  return prefixes.map(rx => PRODUCTS.find(p => rx.test(p.name))).filter(Boolean);
+  return prefixes.map(rx => PRODUCTS.find(p => rx.test(p.name))).filter(p => p && isListed(p));
 }
 function hzRailHtml(products){
   return `<div class="hscroll">${products.map(p => productCardHtml(p)).join('')}</div>`;
@@ -1882,7 +1901,7 @@ function openProduct(id){
   currentProductId = id;
   const p = productById(id);
   if(!p) return;
-  const firstAvail = p.items.find(i => isAvailable(p.id, i) && !isPreorderItem(i, p.id)) || p.items.find(i => isAvailable(p.id, i));
+  const firstAvail = shownItems(p).find(i => isAvailable(p.id, i) && !isPreorderItem(i, p.id)) || shownItems(p).find(i => isAvailable(p.id, i));
   pendingFlavor = firstAvail ? firstAvail.n : null;
   pdQty = 1;
   renderProductDetail();
@@ -1904,7 +1923,7 @@ function renderProductDetail(){
   const priceHtml = p.price
     ? `<div class="pd-price">${p.price.toFixed(2).replace('.',',')} € <span style="font-size:0.65em;color:var(--muted-dim);font-family:'Manrope',sans-serif;font-style:normal;">/ ${p.unit}</span></div>`
     : `<div class="pd-price ask">Цена по запросу — уточним в переписке</div>`;
-  const flavorChips = [...p.items].sort((a, b) => (isAvailable(p.id, b) ? 1 : 0) - (isAvailable(p.id, a) ? 1 : 0)).map(item => {
+  const flavorChips = [...shownItems(p)].sort((a, b) => (isAvailable(p.id, b) ? 1 : 0) - (isAvailable(p.id, a) ? 1 : 0)).map(item => {
     const ok = isAvailable(p.id, item);
     const isSel = pendingFlavor === item.n;
     const hue = hueFor(item.n);
@@ -2508,6 +2527,7 @@ function adminProductCode(p){
   if(/^Chaser for Pods/i.test(n)) return 'ChPod';
   if(/^Chaser Special/i.test(n)) return 'ChSp';
   if(/^Chaser Mix/i.test(n)) return 'ChMix';
+  if(/^Chaser You/i.test(n)) return 'ChYM';
   if(/^Vaporesso XROS 4 Mini/i.test(n)) return 'X4M';
   if(/^Vaporesso XROS 5 Mini/i.test(n)) return 'X5M';
   if(/^Vaporesso XROS 5(?!\s*Mini)/i.test(n)) return 'X5';
@@ -2515,6 +2535,7 @@ function adminProductCode(p){
   if(/^Vaporesso XROS 6 Mini/i.test(n)) return 'X6M';
   if(/^Vaporesso XROS 6(?!\s*Mini)/i.test(n)) return 'X6';
   if(/^Картриджи XROS/i.test(n)) return 'CartX';
+  if(/^Картриджи OXVA/i.test(n)) return 'CartOX';
   if(/^Снюс Cuba/i.test(n)) return 'Cuba';
   if(/^Снюс Baron/i.test(n)) return 'Baron';
   return n.replace(/[^A-Za-zА-Яа-я0-9]/g,'').slice(0,5);
@@ -2909,7 +2930,7 @@ async function syncStockFromSheet(opts){
     const rows = parseStockCsv(csv);
     let updated = 0;
     // 1) предзаказы из таблицы (при необходимости создаются новые вкусы/цвета) — до разбора остатков
-    const meta = rows.filter(r => r.pre !== null).map(r => ({product: r.product, flavor: r.flavor, until: r.until}));
+    const meta = rows.map(r => ({product: r.product, flavor: r.flavor, until: r.until, pre: r.pre !== null, stock: isNaN(r.stock) ? 0 : r.stock, hide: r.hide}));
     storeSet(preMetaStorageKey(), meta);
     applyPreorderMeta(meta);
     PRE = {}; // лимиты предзаказа целиком берутся из таблицы
@@ -2969,15 +2990,17 @@ function parseStockCsv(text){
   const sI = header.indexOf('stock');
   const prI = header.indexOf('preorder'); // необязательная колонка: лимит предзаказа
   const untilI = header.indexOf('until'); // необязательная колонка: дата окончания предзаказа
+  const hideI = header.indexOf('hide');   // необязательная колонка: 1 / да / x — скрыть вкус в каталоге
   if(pI === -1 || fI === -1 || sI === -1) return [];
   return lines.filter(r => r.length > sI).map(r => {
     const pre = prI === -1 ? NaN : parseInt(r[prI], 10);
     return {
       product: r[pI], flavor: r[fI], stock: parseInt(r[sI], 10),
       pre: isNaN(pre) ? null : pre, hasPreCol: prI !== -1,
-      until: untilI === -1 ? null : parseUntil(r[untilI])
+      until: untilI === -1 ? null : parseUntil(r[untilI]),
+      hide: hideI !== -1 && /^(1|x|y|yes|true|да|так|ano|hide|скрыть)$/i.test(String(r[hideI] || '').trim())
     };
-  }).filter(r => r.product && r.flavor && (!isNaN(r.stock) || r.pre !== null));
+  }).filter(r => r.product && r.flavor && (!isNaN(r.stock) || r.pre !== null || r.hide));
 }
 const cityPillBtn = document.getElementById('cityPill');
 if(cityPillBtn) cityPillBtn.addEventListener('click', () => { haptic('light'); showCityPicker(false); });
