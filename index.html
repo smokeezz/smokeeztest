@@ -1341,9 +1341,9 @@ function applyPreorderMeta(meta){
       if(isPre){
         if(m.until && new Date() > new Date(m.until + 'T23:59:59')) return; // срок нового вкуса уже прошёл — не показываем
         it = {n: String(m.flavor).trim(), ok:true, qty:null, dyn:true}; pr.items.push(it);
-      }else if(m.stock > 0){
-        it = {n: String(m.flavor).trim(), ok:true, qty:null, dyn:true}; pr.items.push(it); // новый вкус появился строкой в таблице
-      }else return;
+      }else{
+        it = {n: String(m.flavor).trim(), ok:true, qty:null, dyn:true}; pr.items.push(it); // новый вкус появился строкой в таблице (при stock 0 — «нет в наличии», пока не скроешь колонкой hide)
+      }
     }
     if(m.hide) it.hidden = true;
     if(isPre){
