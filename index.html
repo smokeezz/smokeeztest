@@ -1093,9 +1093,11 @@ const RAW = [
   L('Puffy 30ml 5%','liquid', Q(['Cherry Ice','Energy Drink','Gummy Bear']), {desc:'Solt-жидкость Puffy — сочные вкусы и плотный пар. Объём флакона 30 мл, крепость 5% (50 мг/мл).'}),
   L('Chaser Black 30ml 5%','liquid', F(['Bali','Banana Apple','Blackberry Sour Raspberry','Blackcurrant Peach Apple','Blackcurrant Rose','Bubblegum','Energy Grape','Energy Raspberry','Flirt','Forest Mix','Kiwi Wild Strawberry','Lemon Mint','Mojito','Multifruit','Peach Lemonade','Pink Lemonade','Sherbet','Strawberry Blueberry','Triple Berry','Triple Raspberry','Triple Sour Apple','Watermelon Lemon'], false), {desc:'Chaser Black — насыщенная солевая линейка на 30 мл, 5%. Яркий вкус и плотное облако пара.'}),
   L('Chaser Lux 30ml 5%','liquid', F(['Berry Lemonade','Blackberry Lemonade','Blackberry Pink Guava','Blueberry Mint','Blueberry Raspberry','Cherry Lemon','Coconut Melon','Energetic','Grape Mint','Kiwi Passion Fruit Guava','Mango Nectar','Sangria','Sour Apple','Strawberry Cream','Peach Tea','Tropic Punch','Turbo Mint','Vitamin','Watermelon Raspberry','Peach Yogurt','Watermelon Lime','Berry Needles','Ice Latte'], false), {desc:'Chaser Lux — премиальная линейка со сложными многослойными вкусами. Объём 30 мл, крепость 5%.'}),
+  L('Chaser Lux 30ml 6,5%','liquid', Q([]), {img:'chaser-lux-30ml-5.webp', desc:'Chaser Lux — крепкая версия. Объём 30 мл, крепость 6,5% (65 мг/мл).'}),
   L('Chaser Limitini Editini 30ml 5%','liquid', F(['Ballerina Capuccino','Glorbo Fruttodrillo','Tung Tung Tung Sahur'], false), {desc:'Лимитированная серия Chaser с необычными сочетаниями вкусов. 30 мл, 5%.'}),
   L('Chaser for Pods 30ml 5%','liquid', F(['Apple','Apple Mint','Banana','Berries','Blackcurrant Menthol','Blue Raspberry','Blueberry Menthol','Cherry','Cherry Menthol','Grape','Kiwi','Mint','Peach','Pineapple','Pomegranate','Red Currant','Strawberry','Watermelon','Watermelon Menthol','Yellow Cherry','Wild Strawberry','Yellow Raspberry','Yellow Dragonfruit'], false), {desc:'Chaser for Pods — облегчённая рецептура специально под POD-системы. 30 мл, 5%.'}),
   L('Chaser Special 30ml 5%','liquid', F(['Berry Candy','Berry Needles','Bilberry Mint','Blackberry','Blueberry Lemon','Cherries','Cranberry Mint','Energy Cherry','Fall Tea','Mystery One','Punch','Strawberry Jelly'], false), {desc:'Chaser Special — авторская серия вкусов лимитированным тиражом. 30 мл, 5%.'}),
+  L('Chaser Special 30ml 6%','liquid', Q([]), {img:'chaser-special-30ml-5.webp', desc:'Chaser Special — крепкая версия авторской серии. Объём 30 мл, крепость 6% (60 мг/мл).'}),
   L('Chaser Mix 30ml 5%','liquid', F(['Cherry Tobacco','Cherry Watermelon','Cola','Basil Mint','Blackberry Jam','Fanta','Guava Peach','Orbit','Smoothie','Strawberry Grape','Strawberry Kvass','Watermelon Apple','Banana Aloe','Strawberry Banana','Rum Cola','Cranberry Cactus','Blue Raspberry Lemonade'], false), {desc:'Chaser Mix — вкусы на основе газировок и десертов. 30 мл, 5%.'}),
   L('Chaser You&Me 30ml 5%','liquid', Q([]), {desc:'Chaser You&Me — линейка жидкостей Chaser. 30 мл, 5%.'}),
 
@@ -1120,7 +1122,12 @@ const RAW = [
    ====================================================================== */
 // Короткое название для показа клиенту: «30ml 5%» уходит в описание. Внутреннее имя (name) не меняется —
 // по нему сайт сверяется с таблицей склада, ценами и картинками.
-function shortName(n){ return String(n || '').replace(/\s+30\s*ml\s+5\s*%/i, '').trim(); }
+function shortName(n){
+  // «30ml 5%» убираем; нестандартная крепость (6%, 6,5%) превращается в «Strong», а точная цифра остаётся в описании
+  const m = String(n || '').trim().match(/^(.*?)\s+30\s*ml\s+([\d.,]+)\s*%$/i);
+  if(!m) return String(n || '').trim();
+  return parseFloat(m[2].replace(',', '.')) === 5 ? m[1] : m[1] + ' Strong';
+}
 function slugify(str){
   const map = {а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'c',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya'};
   return str.toLowerCase().split('').map(ch=>map[ch]!==undefined?map[ch]:ch).join('')
@@ -1241,7 +1248,7 @@ const PRODUCTS = RAW.map((line, idx) => {
     desc: (line.desc || '') + ((line.category === 'liquid' && !/30\s*мл/i.test(line.desc || '')) ? ' Объём 30 мл, крепость 5% (50 мг/мл).' : ''),
     note: line.note || '',
     promo: line.promo || '',
-    img: slugify(line.name) + '.webp'
+    img: line.img || (slugify(line.name) + '.webp')
   };
 });
 /* ======================================================================
@@ -2522,9 +2529,11 @@ function adminProductCode(p){
   if(/^ElfLiq/i.test(n)) return 'EL';
   if(/^Puffy/i.test(n)) return 'Puf';
   if(/^Chaser Black/i.test(n)) return 'ChB';
+  if(/^Chaser Lux.*6[,.]5/i.test(n)) return 'ChLux65';
   if(/^Chaser Lux/i.test(n)) return 'ChLux';
   if(/^Chaser Limitini Editini/i.test(n)) return 'ChLE';
   if(/^Chaser for Pods/i.test(n)) return 'ChPod';
+  if(/^Chaser Special.*\b6\s*%/i.test(n)) return 'ChSp6';
   if(/^Chaser Special/i.test(n)) return 'ChSp';
   if(/^Chaser Mix/i.test(n)) return 'ChMix';
   if(/^Chaser You/i.test(n)) return 'ChYM';
