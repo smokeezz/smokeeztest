@@ -1091,6 +1091,7 @@ const RAW = [
   L('Vozol Prime 30ml 5%','liquid', Q(['Berry','Blueberry Ice','Blue Raspberry','LavaFire','Love 777','Lemon Lime','Mint Ice','Mixed Berries','Peach Ice','Pineapple Passion Fruit Lime','Pomegranate Lemonade','Strawberry Ice Cream','Watermelon Bubblegum','Berry Peach','Blueberry Watermelon','Dragon Fruit Banana Cherry','Kiwi Passion Fruit Guava','Grape Ice','Cola Gummies','Perfume Lemon']), {desc:'Солевая жидкость на основе никотиновой соли — плотный пар и насыщенный вкус, не дерёт горло. Объём флакона 30 мл, крепость 5% (50 мг/мл).'}),
   L('ElfLiq 30ml 5%','liquid', Q(['Blackberry Lemon','Blueberry Sour Raspberry','Cherry','Cool Mint','Grape','Pink Lemonade','Pineapple Ice','Pink Grapefruit','Sour Watermelon Gummy','Strawberry Cherry Lemon','Apple Peach','Double Apple','Peach Ice','Sour Apple','Cherry Lemon Peach']), {desc:'Фирменная линейка жидкостей Elf Bar для POD-систем и одноразок. Объём 30 мл, крепость 5% (50 мг/мл), мягкая подача без першения.'}),
   L('Puffy 30ml 5%','liquid', Q(['Cherry Ice','Energy Drink','Gummy Bear']), {desc:'Solt-жидкость Puffy — сочные вкусы и плотный пар. Объём флакона 30 мл, крепость 5% (50 мг/мл).'}),
+  L('Puffy 30ml 7%','liquid', Q([]), {img:'puffy-30ml-5.webp', desc:'Puffy Strong — крепкая версия Solt-жидкости Puffy. Объём 30 мл, крепость 7% (70 мг/мл).'}),
   L('Chaser Black 30ml 5%','liquid', F(['Bali','Banana Apple','Blackberry Sour Raspberry','Blackcurrant Peach Apple','Blackcurrant Rose','Bubblegum','Energy Grape','Energy Raspberry','Flirt','Forest Mix','Kiwi Wild Strawberry','Lemon Mint','Mojito','Multifruit','Peach Lemonade','Pink Lemonade','Sherbet','Strawberry Blueberry','Triple Berry','Triple Raspberry','Triple Sour Apple','Watermelon Lemon'], false), {desc:'Chaser Black — насыщенная солевая линейка на 30 мл, 5%. Яркий вкус и плотное облако пара.'}),
   L('Chaser Lux 30ml 5%','liquid', F(['Berry Lemonade','Blackberry Lemonade','Blackberry Pink Guava','Blueberry Mint','Blueberry Raspberry','Cherry Lemon','Coconut Melon','Energetic','Grape Mint','Kiwi Passion Fruit Guava','Mango Nectar','Sangria','Sour Apple','Strawberry Cream','Peach Tea','Tropic Punch','Turbo Mint','Vitamin','Watermelon Raspberry','Peach Yogurt','Watermelon Lime','Berry Needles','Ice Latte'], false), {desc:'Chaser Lux — премиальная линейка со сложными многослойными вкусами. Объём 30 мл, крепость 5%.'}),
   L('Chaser Lux 30ml 6,5%','liquid', Q([]), {img:'chaser-lux-30ml-5.webp', desc:'Chaser Lux — крепкая версия. Объём 30 мл, крепость 6,5% (65 мг/мл).'}),
@@ -1137,6 +1138,7 @@ function priceFor(line){
   if(line.category === 'liquid'){
     if(/^Vozol Prime/i.test(line.name)) return 9.50;
     if(/^ElfLiq/i.test(line.name)) return 9.50;
+    if(/^Puffy.*7\s*%/i.test(line.name)) return 11.00; // Puffy Strong — 11 € везде
     if(/^Puffy/i.test(line.name)) return 9.50;
     if(/^Chaser/i.test(line.name)) return 10.50;
   }
@@ -2527,6 +2529,7 @@ function adminProductCode(p){
   const n = p.name;
   if(/^Vozol Prime/i.test(n)) return 'VozPr';
   if(/^ElfLiq/i.test(n)) return 'EL';
+  if(/^Puffy.*7\s*%/i.test(n)) return 'PufS';
   if(/^Puffy/i.test(n)) return 'Puf';
   if(/^Chaser Black/i.test(n)) return 'ChB';
   if(/^Chaser Lux.*6[,.]5/i.test(n)) return 'ChLux65';
