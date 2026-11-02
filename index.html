@@ -3077,24 +3077,36 @@ document.addEventListener('visibilitychange', () => {
 });
 </script>
 <script>
-// Автоховання шапки: ховається/виїжджає пропорційно прокрутці. Внизу залишається видна неонова смужка (2px).
+// Автоховання шапки + стискання нижнього меню. Положення рахується від прокрутки (target),
+// а на екрані «доганяє» його з плавним сповільненням (cur), тому при швидкому свайпі немає різких стрибків.
 (function(){
   try{
     var hdr=document.querySelector('header.topbar'); if(!hdr) return;
     var nav=document.querySelector('nav.bottom-nav');
-    var last=window.scrollY||0, off=0, ticking=false, KEEP=2;
-    function upd(){
-      ticking=false;
-      var y=Math.max(0,window.scrollY||0), max=Math.max(0,hdr.offsetHeight-KEEP);
-      off=y<=0?0:Math.min(max,Math.max(0,off+(y-last)));
-      last=y;
-      hdr.style.transform=off?'translate3d(0,'+(-off)+'px,0)':'';
-      var pr=max?off/max:0;
+    var last=window.scrollY||0, target=0, cur=0, running=false, KEEP=2, EASE=0.12, MAXSTEP=0.06; // EASE: менше = плавніше; MAXSTEP: макс. зміна прогресу за кадр
+    function max(){ return Math.max(1,hdr.offsetHeight-KEEP); }
+    function render(){
+      var pr=cur;
+      var off=pr*max();
+      hdr.style.transform=off>0.05?'translate3d(0,'+(-off).toFixed(2)+'px,0)':'';
       hdr.style.setProperty('--dim',(1-0.85*pr).toFixed(3));
-      // нижнее меню уменьшается так же плавно (до 85%) и возвращается при прокрутке вверх
-      if(nav) nav.style.transform=pr?'scale('+(1-0.15*pr).toFixed(3)+')':'';
+      if(nav) nav.style.transform=pr>0.001?'scale('+(1-0.15*pr).toFixed(4)+')':'';
     }
-    window.addEventListener('scroll',function(){ if(!ticking){ticking=true;requestAnimationFrame(upd);} },{passive:true});
+    function frame(){
+      var d=target-cur;
+      if(Math.abs(d)<0.001){ cur=target; render(); running=false; return; }
+      var step=d*EASE;
+      if(step>MAXSTEP) step=MAXSTEP; else if(step<-MAXSTEP) step=-MAXSTEP;
+      cur+=step; render();
+      requestAnimationFrame(frame);
+    }
+    function kick(){ if(!running){ running=true; requestAnimationFrame(frame); } }
+    window.addEventListener('scroll',function(){
+      var y=Math.max(0,window.scrollY||0);
+      target = y<=0 ? 0 : Math.min(1,Math.max(0,target+(y-last)/max()));
+      last=y;
+      kick();
+    },{passive:true});
   }catch(e){}
 })();
 </script>
