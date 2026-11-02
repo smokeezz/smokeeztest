@@ -877,6 +877,7 @@
     -webkit-backdrop-filter:blur(18px) saturate(170%);
     backdrop-filter:blur(18px) saturate(170%);
     touch-action:none; /* позволяет вести пальцем по меню без скролла страницы */
+    transform-origin:50% 100%; will-change:transform; /* масштаб при прокрутке задаёт JS (см. автоховання шапки) */
   }
   /* ползунок-«линза», который плавно едет за пальцем */
   .nav-lens{
@@ -1641,11 +1642,12 @@ function navRecalcTrack(){
   const btns = navButtons();
   if(!navEl || !btns.length) return;
   const navRect = navEl.getBoundingClientRect();
+  const sc = navEl.offsetWidth ? navRect.width / navEl.offsetWidth : 1; // меню может быть уменьшено при прокрутке
   // измеряем каждую кнопку реально, а не умножаем ширину первой — иначе gap между
   // кнопками накапливается смещением и «линза» уезжает левее на дальних вкладках
   navBtnRects = btns.map(b => {
     const r = b.getBoundingClientRect();
-    return { left: r.left - navRect.left, width: r.width };
+    return { left: (r.left - navRect.left) / sc, width: r.width / sc };
   });
   navLensWidth = navBtnRects[0].width;
   navTrackLeft = navBtnRects[0].left;
@@ -1700,8 +1702,9 @@ window.addEventListener('resize', syncLensToActive);
     if(!navDragging) return;
     navDidMove = true;
     const navRect = navEl.getBoundingClientRect();
+    const sc = navEl.offsetWidth ? navRect.width / navEl.offsetWidth : 1;
     // ползунок плывёт плавно и непрерывно за пальцем — без доводки к центру кнопки
-    navMoveLens(navClampLensX(e.clientX - navRect.left - navLensWidth/2), false);
+    navMoveLens(navClampLensX((e.clientX - navRect.left) / sc - navLensWidth/2), false);
     const v = viewAt(e.clientX, e.clientY);
     if(v && v !== navPreviewView){
       navPreviewView = v;
@@ -3078,6 +3081,7 @@ document.addEventListener('visibilitychange', () => {
 (function(){
   try{
     var hdr=document.querySelector('header.topbar'); if(!hdr) return;
+    var nav=document.querySelector('nav.bottom-nav');
     var last=window.scrollY||0, off=0, ticking=false, KEEP=2;
     function upd(){
       ticking=false;
@@ -3085,7 +3089,10 @@ document.addEventListener('visibilitychange', () => {
       off=y<=0?0:Math.min(max,Math.max(0,off+(y-last)));
       last=y;
       hdr.style.transform=off?'translate3d(0,'+(-off)+'px,0)':'';
-      hdr.style.setProperty('--dim',(1-0.85*(max?off/max:0)).toFixed(3));
+      var pr=max?off/max:0;
+      hdr.style.setProperty('--dim',(1-0.85*pr).toFixed(3));
+      // нижнее меню уменьшается так же плавно (до 85%) и возвращается при прокрутке вверх
+      if(nav) nav.style.transform=pr?'scale('+(1-0.15*pr).toFixed(3)+')':'';
     }
     window.addEventListener('scroll',function(){ if(!ticking){ticking=true;requestAnimationFrame(upd);} },{passive:true});
   }catch(e){}
