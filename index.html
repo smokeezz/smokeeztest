@@ -181,9 +181,20 @@
   /* hv-center: логотип по центру, город (короткий код) слева, корзина справа; по низу бежит неоновая линия.
      Линия двигается только через transform (идёт на видеокарте, без перерисовки страницы) и отключается
      при «уменьшить движение» в настройках телефона. Вернуть прежнюю шапку: поменяй hv-center на hv-orig у <header>. */
+  /* шапка ховається при прокрутці вниз і з'являється при прокрутці вгору (положення рахує JS) */
+  header.topbar{will-change:transform;}
+  header.topbar.hv-center .brand,header.topbar.hv-center .city-pill,header.topbar.hv-center .icon-btn{opacity:var(--dim,1);filter:brightness(calc(0.35 + 0.65*var(--dim,1)));} /* темнішає і прозорішає при ховінні */
   .topbar-run{display:none;}
   header.topbar.hv-center{
-    background:linear-gradient(180deg, rgba(11,7,18,0.94), rgba(11,7,18,0.72));
+    background:
+      radial-gradient(70% 120% at 82% 118%, rgba(168,70,225,calc(0.50*var(--dim,1))) 0%, rgba(168,70,225,calc(0.22*var(--dim,1))) 40%, transparent 75%),
+      radial-gradient(60% 110% at 18% 125%, rgba(99,52,210,calc(0.42*var(--dim,1))) 0%, rgba(99,52,210,calc(0.16*var(--dim,1))) 45%, transparent 78%),
+      radial-gradient(45% 90% at 52% 120%, rgba(139,92,246,calc(0.20*var(--dim,1))) 0%, transparent 80%),
+      linear-gradient(180deg,
+        rgba(11,7,18,calc(0.94*var(--dim,1))) 0%,
+        rgba(14,8,24,calc(0.90*var(--dim,1))) 35%,
+        rgba(30,14,54,calc(0.82*var(--dim,1))) 70%,
+        rgba(46,20,82,calc(0.76*var(--dim,1))) 100%);
     -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
     display:grid;grid-template-columns:1fr auto 1fr;justify-content:normal;
   }
@@ -191,7 +202,7 @@
   header.topbar.hv-center .topbar-actions{display:contents;}
   header.topbar.hv-center .city-pill{grid-column:1;grid-row:1;justify-self:start;}
   header.topbar.hv-center .brand{grid-column:2;grid-row:1;justify-content:center;}
-  header.topbar.hv-center .brand img{height:30px;}
+  header.topbar.hv-center .brand img{height:28px;}
   header.topbar.hv-center .icon-btn{grid-column:3;grid-row:1;justify-self:end;}
   header.topbar.hv-center .topbar-run{
     display:block;position:absolute;left:0;right:0;bottom:0;height:2px;overflow:hidden;pointer-events:none;
@@ -3060,6 +3071,24 @@ document.addEventListener('visibilitychange', () => {
   syncStockFromSheet();
   loadMe();
 });
+</script>
+<script>
+// Автоховання шапки: ховається/виїжджає пропорційно прокрутці. Внизу залишається видна неонова смужка (2px).
+(function(){
+  try{
+    var hdr=document.querySelector('header.topbar'); if(!hdr) return;
+    var last=window.scrollY||0, off=0, ticking=false, KEEP=2;
+    function upd(){
+      ticking=false;
+      var y=Math.max(0,window.scrollY||0), max=Math.max(0,hdr.offsetHeight-KEEP);
+      off=y<=0?0:Math.min(max,Math.max(0,off+(y-last)));
+      last=y;
+      hdr.style.transform=off?'translate3d(0,'+(-off)+'px,0)':'';
+      hdr.style.setProperty('--dim',(1-0.85*(max?off/max:0)).toFixed(3));
+    }
+    window.addEventListener('scroll',function(){ if(!ticking){ticking=true;requestAnimationFrame(upd);} },{passive:true});
+  }catch(e){}
+})();
 </script>
 </body>
 </html>
