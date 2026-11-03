@@ -184,6 +184,24 @@
   /* шапка ховається при прокрутці вниз і з'являється при прокрутці вгору (положення рахує JS) */
   header.topbar{will-change:transform;}
   header.topbar.hv-center .brand,header.topbar.hv-center .city-pill,header.topbar.hv-center .icon-btn{opacity:var(--dim,1);filter:brightness(calc(0.35 + 0.65*var(--dim,1)));} /* темнішає і прозорішає при ховінні */
+  .topbar-right{display:flex;align-items:center;gap:8px;}
+  .lang-pill{height:34px;min-width:34px;padding:0 9px;border-radius:99px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.07);color:var(--text);font:800 0.7rem 'Manrope',sans-serif;letter-spacing:0.04em;cursor:pointer;}
+  .lang-pill:active{transform:scale(0.92);}
+  header.topbar.hv-center{gap:6px;}
+  header.topbar.hv-center .topbar-right{grid-column:3;grid-row:1;justify-self:end;gap:4px;}
+  header.topbar.hv-center .topbar-right .icon-btn{grid-column:auto;grid-row:auto;justify-self:auto;}
+  header.topbar.hv-center .lang-pill{opacity:var(--dim,1);filter:brightness(calc(0.35 + 0.65*var(--dim,1)));}
+  .lang-menu{position:fixed;z-index:60;top:calc(var(--topbar-h) + 2px);right:12px;display:none;flex-direction:column;gap:4px;padding:6px;border-radius:16px;
+    background:rgba(20,10,32,0.92);border:1px solid rgba(255,255,255,0.16);box-shadow:0 14px 30px -10px rgba(0,0,0,0.7);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);}
+  .lang-menu.open{display:flex;animation:langIn .18s ease;}
+  @keyframes langIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:none;}}
+  .lang-menu button{display:flex;align-items:center;gap:10px;min-width:150px;padding:10px 12px;border:none;border-radius:11px;background:transparent;color:var(--text);font:700 0.82rem 'Manrope',sans-serif;cursor:pointer;text-align:left;}
+  .lang-menu button b{font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--muted-dim);width:22px;}
+  .lang-menu button.active{background:linear-gradient(135deg,rgba(227,79,239,0.35),rgba(139,92,246,0.35));}
+  .lang-row{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:6px;}
+  .lang-btn{padding:11px 10px;border-radius:14px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:700 0.85rem 'Manrope',sans-serif;cursor:pointer;}
+  .lang-btn.active{background:linear-gradient(135deg,var(--magenta),var(--violet));border-color:transparent;color:#fff;}
+  .hl{color:#a78bfa;font-weight:800;}
   .topbar-run{display:none;}
   header.topbar.hv-center{
     background:
@@ -656,7 +674,7 @@
     -webkit-backdrop-filter:blur(18px) saturate(160%);
     backdrop-filter:blur(18px) saturate(160%);
   }
-  .pd-actions .btn{padding:11px 16px;font-size:0.82rem;}
+  .pd-actions .btn{padding:11px 10px;font-size:0.76rem;white-space:nowrap;min-width:0;flex:1 1 auto;} /* подписи на sk/de/en длиннее — не вылезают за панель */
   .pd-actions .qty-stepper{flex:0 0 auto;background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.16);}
   .pd-actions .qty-stepper button{width:32px;height:32px;font-size:0.95rem;}
   .pd-actions .qty-stepper .val{min-width:22px;font-size:0.82rem;}
@@ -991,10 +1009,18 @@
   @media (min-width:640px){
     .product-grid{grid-template-columns:repeat(3, 1fr);}
   }
+  /* узкие телефоны (360px и меньше): шапка с логотипом по центру должна поместиться вместе с кнопкой языка */
+  @media (max-width:380px){
+    header.topbar{padding:0 10px;}
+    header.topbar.hv-center .city-pill{padding:0 9px;gap:3px;font-size:0.72rem;height:38px;}
+    header.topbar.hv-center .topbar-right{gap:3px;}
+    header.topbar.hv-center .topbar-right .icon-btn{width:36px;height:36px;}
+    header.topbar.hv-center .lang-pill{min-width:30px;height:32px;padding:0 6px;}
+  }
 </style>
 </head>
 <body>
-<div id="splash" aria-hidden="true"><div class="sp-glow"></div><div class="sp-word"><span style="--i:0">S</span><span style="--i:1">M</span><span style="--i:2">O</span><span style="--i:3">K</span><span style="--i:4">E</span><span style="--i:5">E</span><span style="--i:6">Z</span></div><div class="sp-age"><div class="sp-age-badge">21+</div><div class="sp-age-txt">строго для людей <b>старше 21 года</b></div></div></div>
+<div id="splash" aria-hidden="true"><div class="sp-glow"></div><div class="sp-word"><span style="--i:0">S</span><span style="--i:1">M</span><span style="--i:2">O</span><span style="--i:3">K</span><span style="--i:4">E</span><span style="--i:5">E</span><span style="--i:6">Z</span></div><div class="sp-age"><div class="sp-age-badge">21+</div><div class="sp-age-txt" data-i18n>строго для людей <b>старше 21 года</b></div></div></div>
 
 <div class="smoke-field" id="smokeField">
   <div class="sf-facet sf-f1"></div><div class="sf-facet sf-f2"></div>
@@ -1022,9 +1048,12 @@
   <div class="brand"><img src="smokeez-logo.webp" alt="SMOKEEZ"></div>
   <div class="topbar-actions">
     <button class="city-pill" id="cityPill" type="button" aria-label="Выбрать город">📍 <span id="cityPillName"></span> ▾</button>
-    <button class="icon-btn" id="topCartBtn" aria-label="Корзина">
-      🛒<span class="badge" id="topCartBadge" style="display:none;">0</span>
-    </button>
+    <div class="topbar-right">
+      <button class="lang-pill" id="langPill" type="button" aria-label="Язык" aria-haspopup="true">RU</button>
+      <button class="icon-btn" id="topCartBtn" aria-label="Корзина">
+        🛒<span class="badge" id="topCartBadge" style="display:none;">0</span>
+      </button>
+    </div>
   </div>
   <span class="topbar-run" aria-hidden="true"></span>
 </header>
@@ -1101,6 +1130,576 @@
 
 <div class="toast" id="toast"></div>
 
+<script>
+// [ru, sk, de, en]. {0},{1}… — підстановки. Ключі нормалізуються (пробіли схлопуються).
+const D = [
+// ---- навігація, шапка, загальне
+["Выбрать город","Vybrať mesto","Stadt wählen","Choose city"],
+["Город: {0}","Mesto: {0}","Stadt: {0}","City: {0}"],
+["Язык","Jazyk","Sprache","Language"],
+["Корзина","Košík","Warenkorb","Cart"],
+["Поиск товара или вкуса...","Hľadať produkt alebo príchuť...","Produkt oder Geschmack suchen...","Search product or flavor..."],
+["В наличии","Skladom","Auf Lager","In stock"],
+["Избранное","Obľúbené","Favoriten","Favorites"],
+["Оформление заказа","Dokončenie objednávky","Bestellung abschließen","Checkout"],
+["Профиль","Profil","Profil","Profile"],
+["Главная","Domov","Start","Home"],
+["Каталог","Katalóg","Katalog","Catalog"],
+["Фавориты","Obľúbené","Favoriten","Favorites"],
+["строго для людей <b>старше 21 года</b>","iba pre osoby <b>staršie ako 21 rokov</b>","nur für Personen <b>ab 21 Jahren</b>","strictly for people <b>over 21</b>"],
+["Кайзерслаутерн","Kaiserslautern","Kaiserslautern","Kaiserslautern"],
+["Саарбрюкен","Saarbrücken","Saarbrücken","Saarbrücken"],
+["📍 Выберите ваш город","📍 Vyber svoje mesto","📍 Wähle deine Stadt","📍 Choose your city"],
+["📍 Город","📍 Mesto","📍 Stadt","📍 City"],
+["От города зависят цены и наличие товаров.","Od mesta závisia ceny a dostupnosť tovaru.","Von der Stadt hängen Preise und Verfügbarkeit ab.","Prices and availability depend on the city."],
+["У каждого города свои цены, наличие и корзина.","Každé mesto má vlastné ceny, sklad a košík.","Jede Stadt hat eigene Preise, Bestand und Warenkorb.","Each city has its own prices, stock and cart."],
+["Понятно","Rozumiem","Verstanden","Got it"],
+// ---- категории
+["Жидкости","Liquidy","Liquids","Liquids"],
+["Одноразки","Jednorazovky","Einwegvapes","Disposables"],
+["POD-системы","POD systémy","Pod-Systeme","Pod systems"],
+["Картриджи","Kartuše","Kartuschen","Cartridges"],
+["Всё","Všetko","Alle","All"],
+["Одноразки скоро появятся в каталоге — следи за обновлениями.","Jednorazovky sa čoskoro objavia v katalógu – sleduj novinky.","Einwegvapes erscheinen bald im Katalog – bleib auf dem Laufenden.","Disposables will appear in the catalog soon — stay tuned."],
+["Ничего не найдено","Nič sa nenašlo","Nichts gefunden","Nothing found"],
+// ---- названия товаров (только русские)
+["Картриджи XROS","Kartuše XROS","XROS-Kartuschen","XROS cartridges"],
+["Картриджи OXVA Xlim","Kartuše OXVA Xlim","OXVA-Xlim-Kartuschen","OXVA Xlim cartridges"],
+["Снюс {0}","Snus {0}","Snus {0}","Snus {0}"],
+["Corex 3.0 XROS 3мл 0.4 Ω","Corex 3.0 XROS 3 ml 0.4 Ω","Corex 3.0 XROS 3 ml 0.4 Ω","Corex 3.0 XROS 3 ml 0.4 Ω"],
+["Corex 3.0 XROS 3мл 0.6 Ω","Corex 3.0 XROS 3 ml 0.6 Ω","Corex 3.0 XROS 3 ml 0.6 Ω","Corex 3.0 XROS 3 ml 0.6 Ω"],
+["Corex 3.0 XROS 3мл 0.8 Ω","Corex 3.0 XROS 3 ml 0.8 Ω","Corex 3.0 XROS 3 ml 0.8 Ω","Corex 3.0 XROS 3 ml 0.8 Ω"],
+["{0} · {1} × {2}","{0} · {1} × {2}","{0} · {1} × {2}","{0} · {1} × {2}"],
+["{0} ({1}) × {2}","{0} ({1}) × {2}","{0} ({1}) × {2}","{0} ({1}) × {2}"],
+["{0} — {1}","{0} – {1}","{0} – {1}","{0} — {1}"],
+// ---- единицы и подписи вариантов
+["/ флакон","/ fľaša","/ Flasche","/ bottle"],
+["/ банка","/ dóza","/ Dose","/ can"],
+["/ шт","/ ks","/ Stk.","/ pc"],
+["{0} шт","{0} ks","{0} Stk.","{0} pcs"],
+["Вкус","Príchuť","Geschmack","Flavor"],
+["Цвет","Farba","Farbe","Color"],
+["Вариант","Variant","Variante","Option"],
+["{0} · выбери один","{0} · vyber jednu","{0} · wähle eine","{0} · choose one"],
+// ---- карточки
+["Цена по запросу","Cena na požiadanie","Preis auf Anfrage","Price on request"],
+["по запросу","na požiadanie","auf Anfrage","on request"],
+["Цена по запросу — уточним в переписке","Cena na požiadanie – upresníme v konverzácii","Preis auf Anfrage – klären wir im Chat","Price on request — we'll confirm in chat"],
+["Предзаказ","Predobjednávka","Vorbestellung","Pre-order"],
+["Нет в наличии","Nie je skladom","Nicht auf Lager","Out of stock"],
+["{0}/{1} вкусов в наличии","{0}/{1} príchutí skladom","{0}/{1} Sorten auf Lager","{0}/{1} flavors in stock"],
+["+{0} предзаказ","+{0} predobjednávka","+{0} Vorbestellung","+{0} pre-order"],
+["{0} · нет","{0} · nie je","{0} · nicht da","{0} · out"],
+["фото скоро будет","fotka čoskoro","Foto folgt bald","photo coming soon"],
+["фото скоро появится","fotka sa čoskoro objaví","Foto erscheint bald","photo coming soon"],
+// ---- избранное / корзина пустые
+["Список избранного пуст","Zoznam obľúbených je prázdny","Die Favoritenliste ist leer","Your favorites list is empty"],
+["Избранное пусто","Obľúbené je prázdne","Favoriten sind leer","Favorites are empty"],
+["Нажимай на ♡ на товаре, чтобы сохранить его <b class=\"hl\">сюда</b>","Klikni na ♡ pri produkte a uložíš ho <b class=\"hl\">sem</b>","Tippe auf ♡ beim Produkt, um es <b class=\"hl\">hier</b> zu speichern","Tap ♡ on a product to save it <b class=\"hl\">here</b>"],
+["Корзина пуста","Košík je prázdny","Der Warenkorb ist leer","Your cart is empty"],
+["Загляни в каталог и выбери что-нибудь <b class=\"hl\">вкусное</b>","Pozri do katalógu a vyber si niečo <b class=\"hl\">chutné</b>","Schau in den Katalog und such dir etwas <b class=\"hl\">Leckeres</b> aus","Browse the catalog and pick something <b class=\"hl\">tasty</b>"],
+// ---- главная
+["Добро пожаловать","Vitaj","Willkommen","Welcome"],
+["в SMOKEEZ {0}","v SMOKEEZ {0}","bei SMOKEEZ {0}","to SMOKEEZ {0}"],
+["Жидкости и POD-системы с доставкой — выбирай вкус и оформляй заказ прямо здесь.","Liquidy a POD systémy s doručením – vyber si príchuť a objednaj priamo tu.","Liquids und Pod-Systeme mit Lieferung – wähle deinen Geschmack und bestelle direkt hier.","Liquids and pod systems with delivery — pick a flavor and order right here."],
+["Новости","Novinky","Neuigkeiten","News"],
+["Новости SMOKEEZ","Novinky SMOKEEZ","SMOKEEZ-Neuigkeiten","SMOKEEZ news"],
+["Баннер скоро появится","Banner sa čoskoro objaví","Banner erscheint bald","Banner coming soon"],
+["Топ продаж","Najpredávanejšie","Bestseller","Top sellers"],
+["Новинки","Novinky v ponuke","Neuheiten","New arrivals"],
+// ---- карточка товара
+["Предзаказ до {0}","Predobjednávka do {0}","Vorbestellung bis {0}","Pre-order until {0}"],
+["⏳ Предзаказ до {0}","⏳ Predobjednávka do {0}","⏳ Vorbestellung bis {0}","⏳ Pre-order until {0}"],
+["Информация о предзаказе","Informácie o predobjednávke","Infos zur Vorbestellung","Pre-order info"],
+["Этого товара пока нет в наличии, но он появится в ближайшие дни. Оформляя предзаказ сейчас, вы бронируете его за собой.","Tento produkt zatiaľ nie je skladom, ale v najbližších dňoch pribudne. Predobjednávkou si ho rezervuješ.","Dieses Produkt ist derzeit nicht auf Lager, kommt aber in den nächsten Tagen. Mit einer Vorbestellung reservierst du es dir.","This item is out of stock for now but will arrive in the next few days. By pre-ordering you reserve it for yourself."],
+["В корзину","Do košíka","In den Warenkorb","Add to cart"],
+["Оформить предзаказ","Predobjednať","Vorbestellen","Pre-order"],
+["Купить сейчас","Kúpiť teraz","Jetzt kaufen","Buy now"],
+["Добавлено в корзину","Pridané do košíka","Zum Warenkorb hinzugefügt","Added to cart"],
+["Больше нет в наличии: {0}","Viac nie je skladom: {0}","Nicht mehr auf Lager: {0}","No more in stock: {0}"],
+// ---- описания товаров (по предложениям)
+["Солевая жидкость на основе никотиновой соли — плотный пар и насыщенный вкус, не дерёт горло.","Soľný liquid na báze nikotínovej soli – hustá para a výrazná chuť, nedráždi hrdlo.","Salz-Liquid auf Basis von Nikotinsalz – dichter Dampf und intensiver Geschmack, kratzt nicht im Hals.","Nic-salt liquid — thick vapor and rich flavor, smooth on the throat."],
+["Объём флакона 30 мл, крепость 5% (50 мг/мл).","Objem fľaše 30 ml, sila 5 % (50 mg/ml).","Flaschengröße 30 ml, Stärke 5 % (50 mg/ml).","Bottle size 30 ml, strength 5% (50 mg/ml)."],
+["Фирменная линейка жидкостей Elf Bar для POD-систем и одноразок.","Značková rada liquidov Elf Bar pre POD systémy a jednorazovky.","Die hauseigene Liquid-Serie von Elf Bar für Pod-Systeme und Einwegvapes.","Elf Bar's own liquid line for pod systems and disposables."],
+["Объём 30 мл, крепость 5% (50 мг/мл), мягкая подача без першения.","Objem 30 ml, sila 5 % (50 mg/ml), jemný ťah bez škrabania v hrdle.","Inhalt 30 ml, Stärke 5 % (50 mg/ml), sanfter Zug ohne Kratzen.","30 ml, strength 5% (50 mg/ml), smooth draw with no scratchiness."],
+["Solt-жидкость Puffy — сочные вкусы и плотный пар.","Solt liquid Puffy – šťavnaté príchute a hustá para.","Puffy Salt-Liquid – saftige Geschmacksrichtungen und dichter Dampf.","Puffy salt liquid — juicy flavors and thick vapor."],
+["Puffy Strong — крепкая версия Solt-жидкости Puffy.","Puffy Strong – silná verzia Solt liquidu Puffy.","Puffy Strong – die starke Version des Puffy Salt-Liquids.","Puffy Strong — the strong version of Puffy salt liquid."],
+["Объём 30 мл, крепость 7% (70 мг/мл).","Objem 30 ml, sila 7 % (70 mg/ml).","Inhalt 30 ml, Stärke 7 % (70 mg/ml).","30 ml, strength 7% (70 mg/ml)."],
+["Chaser Black — насыщенная солевая линейка на 30 мл, 5%.","Chaser Black – výrazná soľná rada 30 ml, 5 %.","Chaser Black – intensive Salz-Serie mit 30 ml, 5 %.","Chaser Black — a rich nic-salt line, 30 ml, 5%."],
+["Яркий вкус и плотное облако пара.","Výrazná chuť a hustý oblak pary.","Kräftiger Geschmack und dichte Dampfwolke.","Bold flavor and a thick vapor cloud."],
+["Chaser Lux — премиальная линейка со сложными многослойными вкусами.","Chaser Lux – prémiová rada so zložitými viacvrstvovými príchuťami.","Chaser Lux – Premium-Serie mit komplexen, vielschichtigen Aromen.","Chaser Lux — a premium line with complex layered flavors."],
+["Объём 30 мл, крепость 5%.","Objem 30 ml, sila 5 %.","Inhalt 30 ml, Stärke 5 %.","30 ml, strength 5%."],
+["Chaser Lux — крепкая версия.","Chaser Lux – silná verzia.","Chaser Lux – die starke Version.","Chaser Lux — the strong version."],
+["Объём 30 мл, крепость 6,5% (65 мг/мл).","Objem 30 ml, sila 6,5 % (65 mg/ml).","Inhalt 30 ml, Stärke 6,5 % (65 mg/ml).","30 ml, strength 6.5% (65 mg/ml)."],
+["Лимитированная серия Chaser с необычными сочетаниями вкусов.","Limitovaná séria Chaser s netradičnými kombináciami chutí.","Limitierte Chaser-Serie mit ungewöhnlichen Geschmackskombinationen.","Limited Chaser series with unusual flavor combinations."],
+["30 мл, 5%.","30 ml, 5 %.","30 ml, 5 %.","30 ml, 5%."],
+["Chaser for Pods — облегчённая рецептура специально под POD-системы.","Chaser for Pods – ľahšia receptúra špeciálne pre POD systémy.","Chaser for Pods – leichtere Rezeptur speziell für Pod-Systeme.","Chaser for Pods — a lighter recipe made for pod systems."],
+["Chaser Special — авторская серия вкусов лимитированным тиражом.","Chaser Special – autorská séria chutí v limitovanom náklade.","Chaser Special – Signature-Serie in limitierter Auflage.","Chaser Special — a signature flavor series in limited quantities."],
+["Chaser Special — крепкая версия авторской серии.","Chaser Special – silná verzia autorskej série.","Chaser Special – die starke Version der Signature-Serie.","Chaser Special — the strong version of the signature series."],
+["Объём 30 мл, крепость 6% (60 мг/мл).","Objem 30 ml, sila 6 % (60 mg/ml).","Inhalt 30 ml, Stärke 6 % (60 mg/ml).","30 ml, strength 6% (60 mg/ml)."],
+["Chaser Mix — вкусы на основе газировок и десертов.","Chaser Mix – chute na báze sýtených nápojov a dezertov.","Chaser Mix – Geschmacksrichtungen auf Basis von Limonaden und Desserts.","Chaser Mix — flavors inspired by sodas and desserts."],
+["Chaser You&Me — линейка жидкостей Chaser.","Chaser You&Me – rada liquidov Chaser.","Chaser You&Me – Liquid-Serie von Chaser.","Chaser You&Me — a Chaser liquid line."],
+["Компактная перезаряжаемая POD-система Vaporesso XROS 4 Mini.","Kompaktný nabíjateľný POD systém Vaporesso XROS 4 Mini.","Kompaktes, wiederaufladbares Pod-System Vaporesso XROS 4 Mini.","Compact rechargeable pod system Vaporesso XROS 4 Mini."],
+["Перезаряжаемая POD-система Vaporesso XROS 5.","Nabíjateľný POD systém Vaporesso XROS 5.","Wiederaufladbares Pod-System Vaporesso XROS 5.","Rechargeable pod system Vaporesso XROS 5."],
+["Компактная POD-система Vaporesso XROS 5 Mini.","Kompaktný POD systém Vaporesso XROS 5 Mini.","Kompaktes Pod-System Vaporesso XROS 5 Mini.","Compact pod system Vaporesso XROS 5 Mini."],
+["Перезаряжаемая POD-система Vaporesso XROS Pro 2.","Nabíjateľný POD systém Vaporesso XROS Pro 2.","Wiederaufladbares Pod-System Vaporesso XROS Pro 2.","Rechargeable pod system Vaporesso XROS Pro 2."],
+["Компактная перезаряжаемая POD-система Vaporesso XROS 6 Mini.","Kompaktný nabíjateľný POD systém Vaporesso XROS 6 Mini.","Kompaktes, wiederaufladbares Pod-System Vaporesso XROS 6 Mini.","Compact rechargeable pod system Vaporesso XROS 6 Mini."],
+["Перезаряжаемая POD-система Vaporesso XROS 6.","Nabíjateľný POD systém Vaporesso XROS 6.","Wiederaufladbares Pod-System Vaporesso XROS 6.","Rechargeable pod system Vaporesso XROS 6."],
+["Сменные картриджи Corex для линейки Vaporesso XROS, 3 мл.","Výmenné kartuše Corex pre rad Vaporesso XROS, 3 ml.","Wechselkartuschen Corex für die Vaporesso-XROS-Serie, 3 ml.","Replacement Corex cartridges for the Vaporesso XROS line, 3 ml."],
+["Сменные картриджи для POD-систем OXVA Xlim, сопротивление 0,4 / 0,6 / 0,8 Ω.","Výmenné kartuše pre POD systémy OXVA Xlim, odpor 0,4 / 0,6 / 0,8 Ω.","Wechselkartuschen für OXVA-Xlim-Pod-Systeme, Widerstand 0,4 / 0,6 / 0,8 Ω.","Replacement cartridges for OXVA Xlim pod systems, resistance 0.4 / 0.6 / 0.8 Ω."],
+// ---- баллы
+["Как работают баллы?","Ako fungujú body?","Wie funktionieren Punkte?","How do points work?"],
+["Каждые потраченные <b>{0}€</b> на заказ — <b>{1} баллов</b>.","Za každých <b>{0} €</b> v objednávke – <b>{1} bodov</b>.","Für je <b>{0} €</b> Bestellwert – <b>{1} Punkte</b>.","For every <b>{0} €</b> you spend — <b>{1} points</b>."],
+["За каждого приглашённого друга, который сделал первый заказ, — <b>{0} баллов</b>.","Za každého pozvaného priateľa, ktorý urobí prvú objednávku – <b>{0} bodov</b>.","Für jeden eingeladenen Freund mit erster Bestellung – <b>{0} Punkte</b>.","For each invited friend who places a first order — <b>{0} points</b>."],
+["<b>{0} баллов</b> = купон на скидку <b>{1} €</b>.","<b>{0} bodov</b> = kupón so zľavou <b>{1} €</b>.","<b>{0} Punkte</b> = Gutschein über <b>{1} €</b> Rabatt.","<b>{0} points</b> = a coupon for <b>{1} €</b> off."],
+["Когда наберёшь {0} баллов, кнопка обмена станет активной — нажми её, и купон появится в разделе «Твои купоны».","Keď nazbieraš {0} bodov, tlačidlo výmeny sa aktivuje – stlač ho a kupón sa objaví v časti „Tvoje kupóny“.","Sobald du {0} Punkte hast, wird der Einlöse-Button aktiv – tippe darauf und der Gutschein erscheint unter „Deine Gutscheine“.","Once you have {0} points the exchange button becomes active — tap it and the coupon appears under “Your coupons”."],
+["Баланс","Zostatok","Guthaben","Balance"],
+["Обменять {0} баллов на купон {1} €","Vymeniť {0} bodov za kupón {1} €","{0} Punkte gegen {1} €-Gutschein tauschen","Exchange {0} points for a {1} € coupon"],
+["Приглашено друзей: {0}","Pozvaní priatelia: {0}","Eingeladene Freunde: {0}","Friends invited: {0}"],
+["Твои купоны","Tvoje kupóny","Deine Gutscheine","Your coupons"],
+["Нажми на купон, чтобы скопировать код.","Klikni na kupón, aby si skopíroval kód.","Tippe auf einen Gutschein, um den Code zu kopieren.","Tap a coupon to copy its code."],
+["Купон создан: {0}","Kupón vytvorený: {0}","Gutschein erstellt: {0}","Coupon created: {0}"],
+["Твой промокод","Tvoj promokód","Dein Promocode","Your promo code"],
+["Копировать","Kopírovať","Kopieren","Copy"],
+["Промокод скопирован","Promokód skopírovaný","Promocode kopiert","Promo code copied"],
+["Код купона скопирован","Kód kupónu skopírovaný","Gutscheincode kopiert","Coupon code copied"],
+["Не удалось скопировать","Nepodarilo sa skopírovať","Kopieren fehlgeschlagen","Couldn't copy"],
+["Друг получит <b class=\"hl\">скидку 10%</b> на первый заказ, ты — {0} SMOKEY-POINTS.","Priateľ dostane <b class=\"hl\">zľavu 10 %</b> na prvú objednávku, ty – {0} SMOKEY-POINTS.","Dein Freund bekommt <b class=\"hl\">10 % Rabatt</b> auf die erste Bestellung, du – {0} SMOKEY-POINTS.","Your friend gets <b class=\"hl\">10% off</b> their first order, you get {0} SMOKEY-POINTS."],
+["Гость","Hosť","Gast","Guest"],
+["Открой этот сайт как Mini App внутри Telegram-бота — тогда здесь появятся твои имя, юзернейм и фото, а профиль будет закреплён за твоим Telegram-аккаунтом.","Otvor túto stránku ako Mini App v Telegram bote – zobrazí sa tu tvoje meno, používateľské meno a fotka a profil sa viaže na tvoj Telegram účet.","Öffne diese Seite als Mini App im Telegram-Bot – dann erscheinen hier dein Name, Benutzername und Foto, und das Profil ist an dein Telegram-Konto gebunden.","Open this site as a Mini App inside the Telegram bot — then your name, username and photo will appear here and the profile will be tied to your Telegram account."],
+// ---- профиль, заказы
+["✅ Готов к выдаче","✅ Pripravená na vydanie","✅ Bereit zur Abholung","✅ Ready for pickup"],
+["📦 Выдан","📦 Vydaná","📦 Übergeben","📦 Handed over"],
+["❌ Отменён","❌ Zrušená","❌ Storniert","❌ Cancelled"],
+["Доставка","Doručenie","Lieferung","Delivery"],
+["Самовывоз","Osobný odber","Abholung","Pickup"],
+["Отменить заказ","Zrušiť objednávku","Bestellung stornieren","Cancel order"],
+["Заказов пока нет","Zatiaľ žiadne objednávky","Noch keine Bestellungen","No orders yet"],
+["История заказов","História objednávok","Bestellverlauf","Order history"],
+["Политика конфиденциальности","Zásady ochrany osobných údajov","Datenschutzerklärung","Privacy policy"],
+["Отменить заказ №{0}? Товар вернётся на склад, баллы и промокод — тоже.","Zrušiť objednávku č. {0}? Tovar sa vráti na sklad, body aj promokód tiež.","Bestellung Nr. {0} stornieren? Die Ware geht zurück ins Lager, Punkte und Promocode ebenfalls.","Cancel order #{0}? The items return to stock, and points and promo code are restored too."],
+["Заказ №{0} отменён","Objednávka č. {0} bola zrušená","Bestellung Nr. {0} storniert","Order #{0} cancelled"],
+["Не удалось отменить, попробуй позже","Nepodarilo sa zrušiť, skús neskôr","Stornierung fehlgeschlagen, versuch es später","Couldn't cancel, please try later"],
+["Не получилось, попробуй ещё раз","Nepodarilo sa, skús znova","Hat nicht geklappt, versuch es nochmal","That didn't work, please try again"],
+// ---- промокоды, корзина
+["Промокод","Promokód","Promocode","Promo code"],
+["{0} — скидка {1}","{0} – zľava {1}","{0} – Rabatt {1}","{0} — discount {1}"],
+["Убрать промокод","Odstrániť promokód","Promocode entfernen","Remove promo code"],
+["Введи промокод","Zadaj promokód","Promocode eingeben","Enter promo code"],
+["Применить","Použiť","Anwenden","Apply"],
+["Промокод применён","Promokód použitý","Promocode angewendet","Promo code applied"],
+["Товаров","Tovar","Artikel","Items"],
+["Сумма","Suma","Summe","Subtotal"],
+["Скидка по промокоду {0}","Zľava podľa promokódu {0}","Rabatt durch Promocode {0}","Promo code discount {0}"],
+["Итого","Spolu","Gesamt","Total"],
+["+ позиции с ценой по запросу — сумма уточняется в переписке","+ položky s cenou na požiadanie – suma sa upresní v konverzácii","+ Artikel mit Preis auf Anfrage – Summe wird im Chat geklärt","+ items priced on request — the total will be confirmed in chat"],
+["Оформить заказ","Prejsť k objednávke","Zur Kasse","Checkout"],
+["Не удалось проверить промокод — нет связи","Promokód sa nepodarilo overiť – chýba pripojenie","Promocode konnte nicht geprüft werden – keine Verbindung","Couldn't verify the promo code — no connection"],
+["Открой магазин через Telegram","Otvor obchod cez Telegram","Öffne den Shop über Telegram","Open the shop via Telegram"],
+["Промокод не найден","Promokód sa nenašiel","Promocode nicht gefunden","Promo code not found"],
+// ---- оформление
+["Получение","Prevzatie","Erhalt","Delivery"],
+["Данные","Údaje","Daten","Details"],
+["Связь","Kontakt","Kontakt","Contact"],
+["Оплата","Platba","Zahlung","Payment"],
+["Итог","Súhrn","Übersicht","Summary"],
+["Способ получения","Spôsob prevzatia","Erhalt der Bestellung","Delivery method"],
+["Ваши данные","Tvoje údaje","Deine Daten","Your details"],
+["Имя","Meno","Name","Name"],
+["Как к вам обращаться","Ako ťa oslovovať","Wie sollen wir dich nennen","What should we call you"],
+["Улица","Ulica","Straße","Street"],
+["Дом","Dom","Hausnr.","House no."],
+["Город","Mesto","Stadt","City"],
+["Индекс","PSČ","PLZ","ZIP"],
+["Телефон","Telefón","Telefon","Phone"],
+["Связь для оформления","Kontakt pre vybavenie","Kontakt für die Abwicklung","How to reach you"],
+["Номер телефона","Telefónne číslo","Telefonnummer","Phone number"],
+["Способ оплаты","Spôsob platby","Zahlungsart","Payment method"],
+["Оплата картой","Platba kartou","Kartenzahlung","Card payment"],
+["Оплата криптовалютой","Platba kryptomenou","Zahlung mit Kryptowährung","Crypto payment"],
+["Наличными при получении","Hotovosť pri prevzatí","Barzahlung bei Erhalt","Cash on pickup"],
+["Реквизиты для оплаты пришлём тебе в Telegram лично после подтверждения заказа.","Platobné údaje ti pošleme osobne v Telegrame po potvrdení objednávky.","Die Zahlungsdaten schicken wir dir nach der Bestätigung persönlich per Telegram.","We'll send you the payment details personally in Telegram after the order is confirmed."],
+["Подтверждение","Potvrdenie","Bestätigung","Confirmation"],
+["Подтверждаю, что мне есть 21 год","Potvrdzujem, že mám 21 rokov","Ich bestätige, dass ich mindestens 21 Jahre alt bin","I confirm that I am 21 or older"],
+["Оформляя заказ, вы соглашаетесь на обработку данных.","Odoslaním objednávky súhlasíš so spracovaním údajov.","Mit der Bestellung stimmst du der Datenverarbeitung zu.","By placing an order you agree to the processing of your data."],
+["Комментарий к заказу","Poznámka k objednávke","Kommentar zur Bestellung","Order comment"],
+["(необязательно)","(nepovinné)","(optional)","(optional)"],
+["Например: удобное время связи, пожелания по доставке","Napr.: vhodný čas kontaktu, želania k doručeniu","Z. B.: passende Kontaktzeit, Wünsche zur Lieferung","E.g.: best time to contact, delivery wishes"],
+["Ваш заказ","Tvoja objednávka","Deine Bestellung","Your order"],
+["Назад","Späť","Zurück","Back"],
+["Далее","Ďalej","Weiter","Next"],
+["Подтвердить заказ","Potvrdiť objednávku","Bestellung bestätigen","Confirm order"],
+["Проверяем наличие…","Overujeme dostupnosť…","Verfügbarkeit wird geprüft…","Checking availability…"],
+["Отправляем...","Odosielame...","Wird gesendet...","Sending..."],
+["Укажи своё имя","Zadaj svoje meno","Gib deinen Namen an","Enter your name"],
+["Укажи улицу","Zadaj ulicu","Gib die Straße an","Enter the street"],
+["Укажи номер дома","Zadaj číslo domu","Gib die Hausnummer an","Enter the house number"],
+["Укажи город","Zadaj mesto","Gib die Stadt an","Enter the city"],
+["Укажи индекс","Zadaj PSČ","Gib die Postleitzahl an","Enter the ZIP code"],
+["Укажи корректный номер телефона","Zadaj správne telefónne číslo","Gib eine gültige Telefonnummer an","Enter a valid phone number"],
+["Укажи корректный e-mail","Zadaj správny e-mail","Gib eine gültige E-Mail an","Enter a valid e-mail"],
+["Укажи контакт для связи","Zadaj kontakt","Gib einen Kontakt an","Enter a contact"],
+["Telegram-юзернейм должен начинаться с @","Telegram meno musí začínať znakom @","Der Telegram-Benutzername muss mit @ beginnen","The Telegram username must start with @"],
+["Номер телефона должен начинаться с +","Telefónne číslo musí začínať znakom +","Die Telefonnummer muss mit + beginnen","The phone number must start with +"],
+["Подтверди, что тебе есть 21 год","Potvrď, že máš 21 rokov","Bestätige, dass du mindestens 21 bist","Confirm that you are 21 or older"],
+// ---- конфликт склада и ошибки отправки
+["Наличие изменилось","Dostupnosť sa zmenila","Der Bestand hat sich geändert","Availability changed"],
+["Товар только что разобрали","Tovar práve vypredali","Die Ware ist gerade vergriffen","The item just sold out"],
+["Часть товара","Časť tovaru","Ein Teil der Ware","Some items"],
+["Мы обновили корзину:","Aktualizovali sme tvoj košík:","Wir haben deinen Warenkorb aktualisiert:","We've updated your cart:"],
+["Вернуться в корзину","Späť do košíka","Zurück zum Warenkorb","Back to cart"],
+[": осталось {0} шт. (в корзине было {1})",": zostalo {0} ks (v košíku bolo {1})",": noch {0} Stk. (im Warenkorb waren {1})",": {0} left (you had {1} in the cart)"],
+[": закончилось",": vypredané",": ausverkauft",": sold out"],
+["{0}. Промокод убран — проверь итог и подтверди заказ ещё раз.","{0}. Promokód bol odstránený – skontroluj sumu a potvrď objednávku znova.","{0}. Der Promocode wurde entfernt – prüfe die Summe und bestätige die Bestellung erneut.","{0}. The promo code was removed — check the total and confirm the order again."],
+["Не удалось проверить промокод. Нажми «Подтвердить заказ» ещё раз или убери промокод.","Promokód sa nepodarilo overiť. Stlač „Potvrdiť objednávku“ znova alebo promokód odstráň.","Promocode konnte nicht geprüft werden. Tippe erneut auf „Bestellung bestätigen“ oder entferne den Promocode.","Couldn't verify the promo code. Tap “Confirm order” again or remove the promo code."],
+["Не удалось подтвердить сессию. Закрой и снова открой магазин в Telegram.","Reláciu sa nepodarilo potvrdiť. Zavri a znova otvor obchod v Telegrame.","Sitzung konnte nicht bestätigt werden. Schließe den Shop und öffne ihn erneut in Telegram.","Couldn't confirm the session. Close and reopen the shop in Telegram."],
+["Слишком много заказов за короткое время. Подожди немного и попробуй снова — или напиши менеджеру.","Príliš veľa objednávok za krátky čas. Chvíľu počkaj a skús znova – alebo napíš manažérovi.","Zu viele Bestellungen in kurzer Zeit. Warte kurz und versuche es erneut – oder schreib dem Manager.","Too many orders in a short time. Wait a moment and try again — or message the manager."],
+["Не удалось отправить заказ ({0}). Проверь соединение и нажми «Подтвердить заказ» ещё раз.","Objednávku sa nepodarilo odoslať ({0}). Skontroluj pripojenie a stlač „Potvrdiť objednávku“ znova.","Bestellung konnte nicht gesendet werden ({0}). Prüfe die Verbindung und tippe erneut auf „Bestellung bestätigen“.","Couldn't send the order ({0}). Check your connection and tap “Confirm order” again."],
+["Заказ №{0} принят!","Objednávka č. {0} prijatá!","Bestellung Nr. {0} erhalten!","Order #{0} received!"],
+["Заказ принят!","Objednávka prijatá!","Bestellung erhalten!","Order received!"],
+["Мы свяжемся с тобой в Telegram ({0}) в ближайшее время, чтобы подтвердить заказ и прислать реквизиты для оплаты.","Čoskoro sa ti ozveme v Telegrame ({0}), aby sme potvrdili objednávku a poslali platobné údaje.","Wir melden uns in Kürze bei dir per Telegram ({0}), um die Bestellung zu bestätigen und die Zahlungsdaten zu schicken.","We'll contact you in Telegram ({0}) shortly to confirm the order and send payment details."],
+["+{0} SMOKEY-POINTS начислено на твой счёт","+{0} SMOKEY-POINTS pripísaných na tvoj účet","+{0} SMOKEY-POINTS deinem Konto gutgeschrieben","+{0} SMOKEY-POINTS added to your account"],
+["В каталог","Do katalógu","Zum Katalog","To catalog"],
+// ---- ответы сервера (ru + uk)
+["Сервер не настроен","Server nie je nastavený","Server ist nicht eingerichtet","Server isn't configured"],
+["Нет связи с сервером","Bez spojenia so serverom","Keine Verbindung zum Server","No connection to the server"],
+["Сервер отклонил запрос","Server požiadavku odmietol","Der Server hat die Anfrage abgelehnt","The server rejected the request"],
+["Слишком много заказов","Príliš veľa objednávok","Zu viele Bestellungen","Too many orders"],
+["Промокод недействителен","Promokód je neplatný","Promocode ist ungültig","Promo code is invalid"],
+["Не удалось проверить промокод","Promokód sa nepodarilo overiť","Promocode konnte nicht geprüft werden","Couldn't verify the promo code"],
+["Слишком много попыток, подожди немного","Príliš veľa pokusov, chvíľu počkaj","Zu viele Versuche, bitte kurz warten","Too many attempts, please wait a moment"],
+["Промокоды временно недоступны","Promokódy sú dočasne nedostupné","Promocodes sind vorübergehend nicht verfügbar","Promo codes are temporarily unavailable"],
+["Недоступно","Nedostupné","Nicht verfügbar","Unavailable"],
+["Открой магазин через бота своей страны","Otvor obchod cez bota svojej krajiny","Öffne den Shop über den Bot deines Landes","Open the shop via your country's bot"],
+["Заказ не найден","Objednávka sa nenašla","Bestellung nicht gefunden","Order not found"],
+["Заказ уже отменён","Objednávka je už zrušená","Bestellung ist bereits storniert","The order is already cancelled"],
+["Заказ уже готов или выдан — для отмены напиши менеджеру","Objednávka je už pripravená alebo vydaná – na zrušenie napíš manažérovi","Die Bestellung ist bereits fertig oder übergeben – zum Stornieren schreib dem Manager","The order is already ready or handed over — message the manager to cancel"],
+["Слишком много отмен за сутки — напиши менеджеру","Príliš veľa zrušení za deň – napíš manažérovi","Zu viele Stornierungen an einem Tag – schreib dem Manager","Too many cancellations today — message the manager"],
+["Заказ уже обработан менеджером — напиши ему","Objednávku už spracoval manažér – napíš mu","Die Bestellung wurde bereits vom Manager bearbeitet – schreib ihm","The order was already processed by the manager — message them"],
+["Такой промокод не найден","Takýto promokód sa nenašiel","Dieser Promocode wurde nicht gefunden","This promo code was not found"],
+["Срок действия промокода истёк","Platnosť promokódu vypršala","Der Promocode ist abgelaufen","The promo code has expired"],
+["Этот промокод уже был использован","Tento promokód už bol použitý","Dieser Promocode wurde bereits verwendet","This promo code has already been used"],
+["Промокод настроен неправильно","Promokód je nesprávne nastavený","Promocode ist falsch eingerichtet","The promo code is misconfigured"],
+["Нельзя применить свой собственный промокод","Vlastný promokód nemožno použiť","Der eigene Promocode kann nicht verwendet werden","You can't use your own promo code"],
+["Промокод друга действует только на первый заказ","Promokód priateľa platí iba na prvú objednávku","Der Promocode eines Freundes gilt nur für die erste Bestellung","A friend's promo code only works on the first order"],
+["Промокод друга уже был использован","Promokód priateľa už bol použitý","Der Promocode des Freundes wurde bereits verwendet","The friend's promo code has already been used"],
+["Недостаточно баллов","Nedostatok bodov","Nicht genug Punkte","Not enough points"],
+["Профіль недоступний","Profil nie je dostupný","Profil nicht verfügbar","Profile unavailable"],
+["Відкрий магазин через Telegram","Otvor obchod cez Telegram","Öffne den Shop über Telegram","Open the shop via Telegram"],
+["Забагато замовлень, спробуй пізніше","Príliš veľa objednávok, skús neskôr","Zu viele Bestellungen, versuche es später","Too many orders, please try later"],
+["Недостатньо товару","Nedostatok tovaru","Nicht genug Ware","Not enough stock"],
+["Не вдалося перевірити промокод","Promokód sa nepodarilo overiť","Promocode konnte nicht geprüft werden","Couldn't verify the promo code"],
+["Забагато позицій","Príliš veľa položiek","Zu viele Positionen","Too many items"],
+["Забагато одиниць в одному замовленні","Príliš veľa kusov v jednej objednávke","Zu viele Stück in einer Bestellung","Too many units in one order"],
+["Не удалось связаться с Telegram","Nepodarilo sa spojiť s Telegramom","Verbindung zu Telegram fehlgeschlagen","Couldn't reach Telegram"],
+];
+
+
+// Політика конфіденційності: окремий текст для кожної мови (юридичний текст не перекладається по шматках)
+const PRIVACY_TEXT = {
+  ru: {
+    title: 'Политика конфиденциальности', ok: 'Понятно', or: 'или', tg: 'в Telegram: @',
+    html: (shop, contact) => `
+        <p>Редакция от 16.10.2026. Оператор данных — ${shop} (далее «мы»). Эта политика объясняет, какие данные мы собираем при заказе в Mini App и что с ними делаем.</p>
+        <h4>1. Какие данные мы обрабатываем</h4>
+        <ul>
+          <li>Telegram: числовой идентификатор, имя и @username (передаются Telegram при открытии приложения).</li>
+          <li>Данные заказа: имя, телефон, e-mail и адрес (для доставки), контакт для связи, комментарий, способ оплаты, состав и сумма заказа, применённый промокод.</li>
+          <li>Бонусная программа: баллы, купоны, личный промокод, число приглашённых друзей.</li>
+          <li>Подтверждение, что вам есть 21 год.</li>
+        </ul>
+        <h4>2. Для чего</h4>
+        <ul>
+          <li>принять и выполнить заказ, связаться с вами, организовать выдачу или доставку;</li>
+          <li>вести учёт заказов, баллов и промокодов, не допускать злоупотреблений;</li>
+          <li>сообщать вам о статусе заказа (готов к выдаче, отменён, поступил товар из предзаказа).</li>
+        </ul>
+        <p>Основание — исполнение договора (ваш заказ), ваше согласие при оформлении заказа и наш законный интерес в защите магазина от мошенничества.</p>
+        <h4>3. Кому передаём</h4>
+        <p>Менеджеру города, в котором вы заказываете. Для работы сервиса используются Telegram, Cloudflare (серверная часть и база заказов) и Google (таблицы склада и журнала заказов). Эти сервисы могут обрабатывать данные за пределами ЕС на основании стандартных договорных условий. Мы не продаём данные и не передаём их для рекламы.</p>
+        <h4>4. Сколько храним</h4>
+        <ul>
+          <li>Имя, контакты, адрес и комментарий — не дольше <b>60 дней</b> после заказа, затем они автоматически стираются из нашей базы и журнала заказов.</li>
+          <li>Номер заказа, состав, сумма и баллы — дольше, пока это нужно для учёта и в пределах сроков, которые требует закон.</li>
+          <li>Сообщения в чате с ботом хранит Telegram; мы можем удалить свои копии, но не переписку на стороне Telegram.</li>
+        </ul>
+        <h4>5. Ваши права</h4>
+        <p>Вы можете запросить доступ к своим данным, их исправление, удаление, ограничение обработки или переноса, возразить против обработки и отозвать согласие. Также можно подать жалобу в орган по защите данных вашей страны. Запросы — ${contact}.</p>
+        <h4>6. Возраст</h4>
+        <p>Магазин предназначен только для лиц старше 21 года. Мы не обрабатываем сознательно данные несовершеннолетних.</p>
+        <h4>7. Изменения</h4>
+        <p>Мы можем обновлять политику; актуальная версия всегда доступна в приложении.</p>`
+  },
+  sk: {
+    title: 'Zásady ochrany osobných údajov', ok: 'Rozumiem', or: 'alebo', tg: 'cez Telegram: @',
+    html: (shop, contact) => `
+        <p>Znenie z 16. 10. 2026. Prevádzkovateľ údajov – ${shop} (ďalej „my“). Tieto zásady vysvetľujú, aké údaje zhromažďujeme pri objednávke v Mini App a čo s nimi robíme.</p>
+        <h4>1. Aké údaje spracúvame</h4>
+        <ul>
+          <li>Telegram: číselný identifikátor, meno a @username (Telegram ich odovzdáva pri otvorení aplikácie).</li>
+          <li>Údaje objednávky: meno, telefón, e-mail a adresa (pri doručení), kontakt, poznámka, spôsob platby, obsah a suma objednávky, použitý promokód.</li>
+          <li>Vernostný program: body, kupóny, osobný promokód, počet pozvaných priateľov.</li>
+          <li>Potvrdenie, že máte 21 rokov.</li>
+        </ul>
+        <h4>2. Na čo ich používame</h4>
+        <ul>
+          <li>prijať a vybaviť objednávku, kontaktovať vás, zabezpečiť odber alebo doručenie;</li>
+          <li>viesť evidenciu objednávok, bodov a promokódov, predchádzať zneužitiu;</li>
+          <li>informovať vás o stave objednávky (pripravená na vydanie, zrušená, prišiel tovar z predobjednávky).</li>
+        </ul>
+        <p>Právny základ – plnenie zmluvy (vaša objednávka), váš súhlas pri objednávke a náš oprávnený záujem chrániť obchod pred podvodmi.</p>
+        <h4>3. Komu údaje odovzdávame</h4>
+        <p>Manažérovi mesta, v ktorom objednávate. Na prevádzku služby využívame Telegram, Cloudflare (serverová časť a databáza objednávok) a Google (tabuľky skladu a denníka objednávok). Tieto služby môžu údaje spracúvať aj mimo EÚ na základe štandardných zmluvných doložiek. Údaje nepredávame a neposkytujeme na reklamu.</p>
+        <h4>4. Ako dlho ich uchovávame</h4>
+        <ul>
+          <li>Meno, kontakty, adresa a poznámka – najviac <b>60 dní</b> po objednávke, potom sa automaticky vymažú z našej databázy a denníka objednávok.</li>
+          <li>Číslo objednávky, obsah, suma a body – dlhšie, pokiaľ je to potrebné na evidenciu a v lehotách, ktoré vyžaduje zákon.</li>
+          <li>Správy v chate s botom uchováva Telegram; môžeme vymazať vlastné kópie, nie však komunikáciu na strane Telegramu.</li>
+        </ul>
+        <h4>5. Vaše práva</h4>
+        <p>Môžete požiadať o prístup k svojim údajom, ich opravu, vymazanie, obmedzenie spracúvania alebo prenos, namietať proti spracúvaniu a odvolať súhlas. Môžete tiež podať sťažnosť orgánu na ochranu údajov vo vašej krajine. Žiadosti – ${contact}.</p>
+        <h4>6. Vek</h4>
+        <p>Obchod je určený len osobám starším ako 21 rokov. Vedome nespracúvame údaje maloletých.</p>
+        <h4>7. Zmeny</h4>
+        <p>Zásady môžeme aktualizovať; aktuálna verzia je vždy dostupná v aplikácii.</p>`
+  },
+  de: {
+    title: 'Datenschutzerklärung', ok: 'Verstanden', or: 'oder', tg: 'über Telegram: @',
+    html: (shop, contact) => `
+        <p>Stand: 16.10.2026. Verantwortlicher für die Datenverarbeitung ist ${shop} (nachfolgend „wir“). Diese Erklärung beschreibt, welche Daten wir bei einer Bestellung in der Mini App erheben und wie wir sie verwenden.</p>
+        <h4>1. Welche Daten wir verarbeiten</h4>
+        <ul>
+          <li>Telegram: numerische ID, Name und @username (werden von Telegram beim Öffnen der App übermittelt).</li>
+          <li>Bestelldaten: Name, Telefonnummer, E-Mail und Adresse (bei Lieferung), Kontaktangabe, Kommentar, Zahlungsart, Inhalt und Summe der Bestellung, verwendeter Promocode.</li>
+          <li>Bonusprogramm: Punkte, Gutscheine, persönlicher Promocode, Anzahl eingeladener Freunde.</li>
+          <li>Bestätigung, dass Sie mindestens 21 Jahre alt sind.</li>
+        </ul>
+        <h4>2. Wofür</h4>
+        <ul>
+          <li>Bestellung annehmen und abwickeln, Sie kontaktieren, Abholung oder Lieferung organisieren;</li>
+          <li>Bestellungen, Punkte und Promocodes verwalten und Missbrauch verhindern;</li>
+          <li>Sie über den Bestellstatus informieren (bereit zur Abholung, storniert, Ware aus der Vorbestellung eingetroffen).</li>
+        </ul>
+        <p>Rechtsgrundlage: Vertragserfüllung (Ihre Bestellung), Ihre Einwilligung bei der Bestellung und unser berechtigtes Interesse, den Shop vor Betrug zu schützen.</p>
+        <h4>3. An wen wir Daten weitergeben</h4>
+        <p>An den Manager der Stadt, in der Sie bestellen. Für den Betrieb nutzen wir Telegram, Cloudflare (Serverteil und Bestelldatenbank) und Google (Tabellen für Lagerbestand und Bestellprotokoll). Diese Dienste können Daten auf Grundlage von Standardvertragsklauseln auch außerhalb der EU verarbeiten. Wir verkaufen keine Daten und geben sie nicht für Werbung weiter.</p>
+        <h4>4. Wie lange wir speichern</h4>
+        <ul>
+          <li>Name, Kontaktdaten, Adresse und Kommentar – höchstens <b>60 Tage</b> nach der Bestellung, danach werden sie automatisch aus unserer Datenbank und dem Bestellprotokoll gelöscht.</li>
+          <li>Bestellnummer, Inhalt, Summe und Punkte – länger, soweit für die Buchführung erforderlich und innerhalb der gesetzlichen Fristen.</li>
+          <li>Nachrichten im Chat mit dem Bot speichert Telegram; wir können unsere eigenen Kopien löschen, nicht aber den Verlauf auf Seiten von Telegram.</li>
+        </ul>
+        <h4>5. Ihre Rechte</h4>
+        <p>Sie können Auskunft über Ihre Daten, Berichtigung, Löschung, Einschränkung der Verarbeitung oder Übertragung verlangen, der Verarbeitung widersprechen und Ihre Einwilligung widerrufen. Außerdem können Sie sich bei der Datenschutzbehörde Ihres Landes beschweren. Anfragen – ${contact}.</p>
+        <h4>6. Alter</h4>
+        <p>Der Shop richtet sich ausschließlich an Personen ab 21 Jahren. Wir verarbeiten wissentlich keine Daten von Minderjährigen.</p>
+        <h4>7. Änderungen</h4>
+        <p>Wir können diese Erklärung aktualisieren; die aktuelle Fassung ist jederzeit in der App abrufbar.</p>`
+  },
+  en: {
+    title: 'Privacy policy', ok: 'Got it', or: 'or', tg: 'via Telegram: @',
+    html: (shop, contact) => `
+        <p>Version of 16.10.2026. The data controller is ${shop} (“we”). This policy explains what data we collect when you order in the Mini App and what we do with it.</p>
+        <h4>1. What data we process</h4>
+        <ul>
+          <li>Telegram: numeric ID, name and @username (passed on by Telegram when the app is opened).</li>
+          <li>Order data: name, phone, e-mail and address (for delivery), contact details, comment, payment method, items and total of the order, promo code used.</li>
+          <li>Rewards program: points, coupons, personal promo code, number of invited friends.</li>
+          <li>Confirmation that you are 21 or older.</li>
+        </ul>
+        <h4>2. Why</h4>
+        <ul>
+          <li>to accept and fulfil your order, contact you, and arrange pickup or delivery;</li>
+          <li>to keep records of orders, points and promo codes and prevent abuse;</li>
+          <li>to tell you about your order status (ready for pickup, cancelled, pre-order item arrived).</li>
+        </ul>
+        <p>Legal basis: performance of a contract (your order), your consent when placing an order, and our legitimate interest in protecting the shop from fraud.</p>
+        <h4>3. Who we share it with</h4>
+        <p>The manager of the city where you order. To run the service we use Telegram, Cloudflare (server side and order database) and Google (stock and order-log spreadsheets). These services may process data outside the EU under standard contractual clauses. We do not sell data or share it for advertising.</p>
+        <h4>4. How long we keep it</h4>
+        <ul>
+          <li>Name, contacts, address and comment — no longer than <b>60 days</b> after the order, then they are automatically erased from our database and order log.</li>
+          <li>Order number, items, total and points — longer, as needed for bookkeeping and within the periods required by law.</li>
+          <li>Messages in the chat with the bot are stored by Telegram; we can delete our own copies but not the conversation on Telegram's side.</li>
+        </ul>
+        <h4>5. Your rights</h4>
+        <p>You can request access to your data, correction, deletion, restriction of processing or portability, object to processing and withdraw your consent. You can also lodge a complaint with the data protection authority in your country. Requests — ${contact}.</p>
+        <h4>6. Age</h4>
+        <p>The shop is intended only for people over 21. We do not knowingly process data of minors.</p>
+        <h4>7. Changes</h4>
+        <p>We may update this policy; the current version is always available in the app.</p>`
+  }
+};
+
+
+// ---- движок: переводит текст на странице по словарю D (оригинал всегда русский), следит за новыми элементами
+const I18N = (function(){
+  const LANGS = ['ru','sk','de','en'];
+  const NAMES = {ru:'Русский', sk:'Slovenčina', de:'Deutsch', en:'English'};
+  const IDX = {sk:1, de:2, en:3};
+  const CYR = /[А-Яа-яЁёІіЇїЄє]/;
+  const norm = s => s.replace(/\s+/g, ' ').trim();
+  const exact = {sk:new Map(), de:new Map(), en:new Map()};
+  const pats = {sk:[], de:[], en:[]};
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  D.forEach(e => {
+    const ru = norm(e[0]);
+    ['sk','de','en'].forEach(l => {
+      const tgt = e[IDX[l] ];
+      if(/\{\d\}/.test(ru)){
+        const parts = ru.split(/(\{\d\})/);
+        const re = new RegExp('^' + parts.map(p => /^\{\d\}$/.test(p) ? '([\\s\\S]+?)' : esc(p)).join('') + '$');
+        pats[l].push({re, tgt, w: ru.replace(/\{\d\}/g,'').length, gen: ru.replace(/\{\d\}|[\s·—×()\-–:,.+\/%€]/g,'').length === 0});
+      } else exact[l].set(ru, tgt);
+    });
+  });
+  ['sk','de','en'].forEach(l => pats[l].sort((a,b) => b.w - a.w));
+
+  let lang = 'ru';
+  const cache = {sk:new Map(), de:new Map(), en:new Map()};
+
+  function trParam(v, l){ const r = exact[l].get(norm(v)); return r !== undefined ? r : v; }
+  function trCore(k, l){
+    let r = exact[l].get(k); if(r !== undefined) return r;
+    for(const p of pats[l]){
+      const m = p.re.exec(k);
+      if(m && p.gen && m.slice(1).some(v => CYR.test(v) && !exact[l].has(norm(v)))) continue; // «пустые» шаблоны ({0} — {1}) работают только для известных названий
+      if(m) return p.tgt.replace(/\{(\d)\}/g, (_, i) => trParam(m[+i + 1], l));
+    }
+    return null;
+  }
+  function translate(str, l){
+    const m = /^([\s·]*)([\s\S]*?)([\s·]*)$/.exec(str);
+    const core = m[2];
+    if(!core || !CYR.test(core)) return null;
+    const k = norm(core);
+    const c = cache[l]; if(c.has(k)){ const v = c.get(k); return v === null ? null : m[1] + v + m[3]; }
+    let r = trCore(k, l);
+    if(r === null){ // описания и длинные тексты — по предложениям
+      const sents = k.split(/(?<=[.!?])\s+(?=[А-ЯA-Z0-9])/);
+      if(sents.length > 1){
+        let any = false;
+        const outS = sents.map(s => { const t = trCore(s, l); if(t !== null){ any = true; return t; } return s; });
+        if(any) r = outS.join(' ');
+      }
+    }
+    c.set(k, r);
+    return r === null ? null : m[1] + r + m[3];
+  }
+
+  const TN = new WeakMap(); // текстовый узел -> {o: оригинал, t: перевод}
+  const AN = new WeakMap(); // элемент -> {attr: {o,t}}
+  const HN = new WeakMap(); // элемент с data-i18n -> {o,t}
+  const ATTRS = ['placeholder','aria-label','alt','title'];
+  const ATTR_SEL = ATTRS.map(a => '[' + a + ']').join(',');
+
+  function skip(node){ const el = node.nodeType === 1 ? node : node.parentElement; return !el || !!el.closest('script,style,textarea,[data-i18n-skip]'); }
+
+  function doText(node){
+    if(skip(node)) return;
+    const st = TN.get(node);
+    const mine = st && node.data === st.t;
+    const base = mine ? st.o : node.data;
+    if(lang === 'ru'){ if(mine) node.data = st.o; TN.delete(node); return; }
+    if(mine && st.l === lang) return;
+    const out = translate(base, lang);
+    if(out !== null && out !== base){ node.data = out; TN.set(node, {o:base, t:out, l:lang}); }
+    else { if(mine) node.data = base; TN.delete(node); }
+  }
+  function doAttr(el, a){
+    if(!el.hasAttribute(a) || el.closest('script,style,[data-i18n-skip]')) return;
+    let m = AN.get(el); if(!m){ m = {}; AN.set(el, m); }
+    const st = m[a], cur = el.getAttribute(a);
+    const mine = st && cur === st.t;
+    const base = mine ? st.o : cur;
+    if(lang === 'ru'){ if(mine) el.setAttribute(a, st.o); delete m[a]; return; }
+    if(mine && st.l === lang) return;
+    const out = translate(base, lang);
+    if(out !== null && out !== base){ el.setAttribute(a, out); m[a] = {o:base, t:out, l:lang}; }
+    else { if(mine) el.setAttribute(a, base); delete m[a]; }
+  }
+  function doHtml(el){
+    if(skip(el.parentNode || el)) return;
+    const st = HN.get(el);
+    const cur = el.innerHTML;
+    const mine = st && cur === st.t;
+    const base = mine ? st.o : cur;
+    if(lang === 'ru'){ if(mine) el.innerHTML = st.o; HN.delete(el); return; }
+    if(mine && st.l === lang) return;
+    const out = translate(base, lang);
+    if(out !== null && out !== base){ el.innerHTML = out; HN.set(el, {o:base, t:el.innerHTML, l:lang}); }
+    else { if(mine) el.innerHTML = base; HN.delete(el); }
+  }
+  function walk(root){
+    if(root.nodeType === 3){ doText(root); return; }
+    if(root.nodeType !== 1) return;
+    // 1) блоки с вложенной разметкой — целиком (data-i18n)
+    const hs = root.matches && root.matches('[data-i18n]') ? [root] : [];
+    root.querySelectorAll('[data-i18n]').forEach(h => hs.push(h));
+    hs.forEach(doHtml);
+    // 2) атрибуты
+    if(root.matches && root.matches(ATTR_SEL)) ATTRS.forEach(a => doAttr(root, a));
+    root.querySelectorAll(ATTR_SEL).forEach(el => ATTRS.forEach(a => doAttr(el, a)));
+    // 3) текстовые узлы
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = []; let n; while((n = w.nextNode())) nodes.push(n);
+    nodes.forEach(doText);
+  }
+
+  const mo = new MutationObserver(recs => {
+    for(const r of recs){
+      if(r.type === 'childList'){ r.addedNodes.forEach(n => { if(lang !== 'ru' || n.nodeType === 1) walk(n); }); }
+      else if(r.type === 'characterData'){ doText(r.target); }
+      else if(r.type === 'attributes'){ doAttr(r.target, r.attributeName); }
+    }
+  });
+  function observe(){ mo.observe(document.body, {childList:true, subtree:true, characterData:true, attributes:true, attributeFilter:ATTRS}); }
+
+  function detect(){
+    try{ const s = localStorage.getItem('smokeez_lang'); if(LANGS.includes(s)) return s; }catch(e){}
+    try{
+      const u = window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.user;
+      const c = ((u && u.language_code) || '').slice(0, 2).toLowerCase();
+      if(c === 'sk' || c === 'de' || c === 'en') return c;
+    }catch(e){}
+    return 'ru';
+  }
+  function set(l, persist){
+    if(!LANGS.includes(l)) return;
+    lang = l; api.lang = l;
+    if(persist){ try{ localStorage.setItem('smokeez_lang', l); }catch(e){} }
+    document.documentElement.lang = l;
+    walk(document.body);
+    mo.takeRecords();
+    const pill = document.getElementById('langPill'); if(pill) pill.textContent = l.toUpperCase();
+    document.querySelectorAll('[data-lang]').forEach(b => b.classList.toggle('active', b.dataset.lang === l));
+    document.dispatchEvent(new CustomEvent('langchange', {detail:l}));
+  }
+  const api = {
+    lang: 'ru', LANGS, NAMES,
+    t: s => { if(lang === 'ru') return s; const r = translate(String(s), lang); return r === null ? s : r; },
+    set: l => set(l, true),
+    init(){ observe(); set(detect(), false); }
+  };
+  return api;
+})();
+
+
+// ---- меню языка в шапке
+(function(){
+  const pill = document.getElementById('langPill'); if(!pill) return;
+  const menu = document.createElement('div');
+  menu.className = 'lang-menu'; menu.id = 'langMenu'; menu.setAttribute('data-i18n-skip','');
+  menu.innerHTML = I18N.LANGS.map(l => `<button type="button" data-lang="${l}"><b>${l.toUpperCase()}</b>${I18N.NAMES[l]}</button>`).join('');
+  document.body.appendChild(menu);
+  const close = () => menu.classList.remove('open');
+  pill.addEventListener('click', e => { e.stopPropagation(); menu.classList.toggle('open'); });
+  menu.addEventListener('click', e => { const b = e.target.closest('[data-lang]'); if(!b) return; I18N.set(b.dataset.lang); close(); if(document.getElementById('view-profile').classList.contains('active') && typeof renderProfile === 'function') renderProfile(); });
+  document.addEventListener('click', close);
+  window.addEventListener('scroll', close, {passive:true});
+  I18N.init();
+})();
+</script>
 <script>
 /* Клавиатура: закрывается по Enter («Готово») и по тапу на пустое место */
 (function(){
@@ -1581,6 +2180,7 @@ async function loadMe(){
 }
 // Отмена своего заказа: только пока менеджер не отметил его как готовый
 function askConfirm(text){
+  text = I18N.t(text);
   return new Promise(res => {
     if(tg && typeof tg.showConfirm === 'function'){ try{ tg.showConfirm(text, ok => res(!!ok)); return; }catch(e){} }
     res(window.confirm(text));
@@ -1907,7 +2507,7 @@ function renderFavorites(){
   if(list.length === 0){
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
       <img class="empty-fav-img" src="favorites-empty.webp" alt="Избранное пусто" draggable="false">
-      <div><span class="empty-title press-start-2p-regular">Список избранного пуст</span><br><span style="font-size:0.8rem;">Нажимай на ♡ на товаре, чтобы сохранить его <b style="color:#a78bfa;font-weight:800;">сюда</b></span></div></div>`;
+      <div><span class="empty-title press-start-2p-regular">Список избранного пуст</span><br><span style="font-size:0.8rem;" data-i18n>Нажимай на ♡ на товаре, чтобы сохранить его <b class="hl">сюда</b></span></div></div>`;
     return;
   }
   grid.innerHTML = list.map(productCardHtml).join('');
@@ -2177,9 +2777,9 @@ function showPointsInfo(){
       <img class="city-logo" src="smokeez-logo.webp" alt="SMOKEEZ">
       <h3>Как работают баллы?</h3>
       <ol class="pts-list">
-        <li>Каждые потраченные <b>${POINTS_STEP_EUR}€</b> на заказ — <b>${POINTS_PER_STEP} баллов</b>.</li>
-        <li>За каждого приглашённого друга, который сделал первый заказ, — <b>${REFERRAL_BONUS_POINTS} баллов</b>.</li>
-        <li><b>${POINTS_TO_REDEEM} баллов</b> = купон на скидку <b>${REDEEM_COUPON_AMOUNT} €</b>.</li>
+        <li data-i18n>Каждые потраченные <b>${POINTS_STEP_EUR}€</b> на заказ — <b>${POINTS_PER_STEP} баллов</b>.</li>
+        <li data-i18n>За каждого приглашённого друга, который сделал первый заказ, — <b>${REFERRAL_BONUS_POINTS} баллов</b>.</li>
+        <li data-i18n><b>${POINTS_TO_REDEEM} баллов</b> = купон на скидку <b>${REDEEM_COUPON_AMOUNT} €</b>.</li>
         <li>Когда наберёшь ${POINTS_TO_REDEEM} баллов, кнопка обмена станет активной — нажми её, и купон появится в разделе «Твои купоны».</li>
       </ol>
       <button type="button" class="btn btn-primary" id="pointsModalOk">Понятно</button>
@@ -2193,44 +2793,17 @@ function showPrivacy(){
   haptic('light');
   const old = document.getElementById('privacyModal');
   if(old) old.remove();
-  const contact = (CONFIG.PRIVACY_EMAIL ? escHtml(CONFIG.PRIVACY_EMAIL) + ' или ' : '') + 'в Telegram: @' + escHtml(CONFIG.OWNER_USERNAME);
+  const P = PRIVACY_TEXT[I18N.lang] || PRIVACY_TEXT.ru;
+  const contact = (CONFIG.PRIVACY_EMAIL ? escHtml(CONFIG.PRIVACY_EMAIL) + ' ' + P.or + ' ' : '') + P.tg + escHtml(CONFIG.OWNER_USERNAME);
   const el = document.createElement('div');
   el.id = 'privacyModal';
   el.className = 'pre-modal-bg city-bg';
+  el.setAttribute('data-i18n-skip', '');
   el.innerHTML = `<div class="pre-modal city-modal" role="dialog" aria-modal="true">
-      <h3>Политика конфиденциальности</h3>
-      <div class="privacy-body">
-        <p>Редакция от 16.10.2026. Оператор данных — ${escHtml(CONFIG.SHOP_NAME)} (далее «мы»). Эта политика объясняет, какие данные мы собираем при заказе в Mini App и что с ними делаем.</p>
-        <h4>1. Какие данные мы обрабатываем</h4>
-        <ul>
-          <li>Telegram: числовой идентификатор, имя и @username (передаются Telegram при открытии приложения).</li>
-          <li>Данные заказа: имя, телефон, e-mail и адрес (для доставки), контакт для связи, комментарий, способ оплаты, состав и сумма заказа, применённый промокод.</li>
-          <li>Бонусная программа: баллы, купоны, личный промокод, число приглашённых друзей.</li>
-          <li>Подтверждение, что вам есть 21 год.</li>
-        </ul>
-        <h4>2. Для чего</h4>
-        <ul>
-          <li>принять и выполнить заказ, связаться с вами, организовать выдачу или доставку;</li>
-          <li>вести учёт заказов, баллов и промокодов, не допускать злоупотреблений;</li>
-          <li>сообщать вам о статусе заказа (готов к выдаче, отменён, поступил товар из предзаказа).</li>
-        </ul>
-        <p>Основание — исполнение договора (ваш заказ), ваше согласие при оформлении заказа и наш законный интерес в защите магазина от мошенничества.</p>
-        <h4>3. Кому передаём</h4>
-        <p>Менеджеру города, в котором вы заказываете. Для работы сервиса используются Telegram, Cloudflare (серверная часть и база заказов) и Google (таблицы склада и журнала заказов). Эти сервисы могут обрабатывать данные за пределами ЕС на основании стандартных договорных условий. Мы не продаём данные и не передаём их для рекламы.</p>
-        <h4>4. Сколько храним</h4>
-        <ul>
-          <li>Имя, контакты, адрес и комментарий — не дольше <b>60 дней</b> после заказа, затем они автоматически стираются из нашей базы и журнала заказов.</li>
-          <li>Номер заказа, состав, сумма и баллы — дольше, пока это нужно для учёта и в пределах сроков, которые требует закон.</li>
-          <li>Сообщения в чате с ботом хранит Telegram; мы можем удалить свои копии, но не переписку на стороне Telegram.</li>
-        </ul>
-        <h4>5. Ваши права</h4>
-        <p>Вы можете запросить доступ к своим данным, их исправление, удаление, ограничение обработки или переноса, возразить против обработки и отозвать согласие. Также можно подать жалобу в орган по защите данных вашей страны. Запросы — ${contact}.</p>
-        <h4>6. Возраст</h4>
-        <p>Магазин предназначен только для лиц старше 21 года. Мы не обрабатываем сознательно данные несовершеннолетних.</p>
-        <h4>7. Изменения</h4>
-        <p>Мы можем обновлять политику; актуальная версия всегда доступна в приложении.</p>
+      <h3>${P.title}</h3>
+      <div class="privacy-body">${P.html(escHtml(CONFIG.SHOP_NAME), contact)}
       </div>
-      <button type="button" class="btn btn-primary" id="privacyOk">Понятно</button>
+      <button type="button" class="btn btn-primary" id="privacyOk">${P.ok}</button>
     </div>`;
   document.body.appendChild(el);
   el.addEventListener('click', e => { if(e.target === el) el.remove(); });
@@ -2323,7 +2896,7 @@ function renderCart(){
   if(cart.length === 0){
     body.innerHTML = `<div class="empty-state">
       <img class="empty-cart-img" src="cart-empty.webp" alt="Корзина пуста" draggable="false">
-      <div><span class="empty-title press-start-2p-regular">Корзина пуста</span><br><span style="font-size:0.8rem;">Загляни в каталог и выбери что-нибудь <b style="color:#a78bfa;font-weight:800;">вкусное</b></span></div>
+      <div><span class="empty-title press-start-2p-regular">Корзина пуста</span><br><span style="font-size:0.8rem;" data-i18n>Загляни в каталог и выбери что-нибудь <b class="hl">вкусное</b></span></div>
     </div>`;
     return;
   }
@@ -2555,7 +3128,7 @@ function renderCheckout(){
           <span class="radio" id="age21Radio"></span>
           <span>Подтверждаю, что мне есть 21 год</span>
         </label>
-        <div class="pd-note" style="margin-top:10px;">Оформляя заказ, вы соглашаетесь на обработку данных согласно <button type="button" class="privacy-link" id="privacyLinkCo">политике конфиденциальности</button>.</div>
+        <div class="pd-note" style="margin-top:10px;"><span>Оформляя заказ, вы соглашаетесь на обработку данных.</span> <button type="button" class="privacy-link" id="privacyLinkCo">Политика конфиденциальности</button></div>
       </div>
       <div class="co-step">
         <div class="field" style="margin-bottom:0;">
@@ -2928,7 +3501,7 @@ function renderProfile(){
           </div>
           <button class="btn btn-ghost copy-mini" id="copyPromoBtn">Копировать</button>
         </div>
-        <div class="pc-hint">Друг получит <b style="color:#a78bfa;font-weight:800;">скидку 10%</b> на первый заказ, ты — ${REFERRAL_BONUS_POINTS} SMOKEY-POINTS.</div>`;
+        <div class="pc-hint" data-i18n>Друг получит <b class="hl">скидку 10%</b> на первый заказ, ты — ${REFERRAL_BONUS_POINTS} SMOKEY-POINTS.</div>`;
 
   const pcBg = `<div class="pc-bg" aria-hidden="true"><div class="pc-bg-text">${Array.from({length:5}, () => `<div>${Array(5).fill('SMOKEEZ').join('&nbsp;&nbsp;&nbsp;')}</div>`).join('')}</div></div>`;
   let head;
@@ -2984,7 +3557,7 @@ function renderProfile(){
 
   // История заказов — с сервера (с номерами); пока её нет — показываем то, что осталось на этом телефоне
   const serverOrders = (ME && ME.orders) || [];
-  const fmtDate = ms => new Date(ms).toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric'});
+  const fmtDate = ms => new Date(ms).toLocaleDateString(({ru:'ru-RU',sk:'sk-SK',de:'de-DE',en:'en-GB'})[I18N.lang] || 'ru-RU', {day:'2-digit', month:'2-digit', year:'numeric'});
   const eur = n => Number(n).toFixed(2).replace('.',',') + ' €';
   const cards = serverOrders.map(o => {
     const itemsStr = (o.items || []).map(it => `${escHtml(shortName(it.product))} (${escHtml(it.flavor)}) × ${it.qty}`).join('<br>');
