@@ -371,7 +371,8 @@
   }
   .view{display:none;animation:fadeIn .22s ease;}
   .view.active{display:block;}
-  @keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+  /* только opacity: transform на .view делал его «контейнером» для position:fixed — закреплённые кнопки на миг прыгали в центр экрана */
+  @keyframes fadeIn{from{opacity:0;} to{opacity:1;}}
 
   .section-title{
     font-size:calc(1.05rem + 2px);
