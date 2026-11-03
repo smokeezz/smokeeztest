@@ -725,7 +725,18 @@
   /* ---------- блок "Ваш заказ" под каждым этапом ---------- */
   .co-order-summary{border-style:dashed;border-color:var(--card-border);background:var(--card-grad);}
   /* ---------- кнопки "Назад" / "Далее" / "Подтвердить заказ" ---------- */
-  .co-nav-buttons{display:flex;gap:10px;margin-top:6px;}
+  /* кнопки «Назад / Далее» закреплены над навигацией на всех шагах — всегда в одном месте */
+  #checkoutBody{padding-bottom:84px;}
+  .co-nav-buttons{
+    display:flex;gap:8px;
+    position:fixed;left:16px;right:16px;max-width:580px;margin:0 auto;
+    bottom:calc(var(--nav-h) + var(--safe-b) + 10px);
+    z-index:45;padding:7px;border-radius:18px;
+    background:linear-gradient(135deg, rgba(30,8,46,0.58) 0%, rgba(10,4,16,0.6) 48%, rgba(227,79,239,0.24) 100%);
+    border:1px solid rgba(255,255,255,0.12);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.14), 0 10px 26px -10px rgba(0,0,0,0.65);
+    -webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);
+  }
   .co-nav-buttons .btn-primary{flex:1;}
   .co-nav-buttons .btn-ghost{flex:0 0 auto;min-width:110px;}
   .method-toggle{display:flex;gap:8px;}
@@ -1608,7 +1619,7 @@ let currentProductId = null;
 let cart = storeGet(cartStorageKey(), []).filter(ci => productById(ci.productId)); // [{productId, flavor, qty}] — своя корзина у каждого города; убранные из каталога товары отсеиваются
 let orders = storeGet('smokeez_orders_' + UID, []);
 let favorites = new Set(storeGet('smokeez_favs_' + UID, []));
-let checkout = { method:'delivery', payment:'card', contactType:'telegram', age21:false, comment:'', promo:null };
+let checkout = { method:'pickup', payment:'card', contactType:'telegram', age21:false, comment:'', promo:null };
 let pendingFlavor = null;
 
 function productById(id){ return PRODUCTS.find(p => p.id === id); }
@@ -2428,7 +2439,7 @@ function startCheckout(){
   const keepPromo = checkout.promo; // промокод уже выбран в корзине — не сбрасываем его здесь
   const prof = loadProfile();
   checkout = {
-    method:'delivery', payment:'card',
+    method:'pickup', payment:'card', // по умолчанию — самовывоз
     contactType: prof.contactType || 'telegram',
     name: prof.name || (tgUser && tgUser.first_name) || '', // имя: сохранённое, иначе из Telegram
     street: prof.street || '', house: prof.house || '', city: prof.city || '',
