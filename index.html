@@ -579,6 +579,24 @@
     border:none;
   }
   .pd-hero img{width:100%;height:100%;object-fit:contain;padding:28px;}
+  /* «живое» фото товара: плавает, мягкое свечение и тень под ним, наклон за пальцем. Только transform/opacity — идёт на GPU */
+  .pd-hero{perspective:800px;touch-action:pan-y;}
+  .pd-hero::before{content:'';position:absolute;left:50%;top:46%;width:78%;aspect-ratio:1/1;transform:translate(-50%,-50%);border-radius:50%;
+    background:radial-gradient(circle, rgba(227,79,239,0.30) 0%, rgba(139,92,246,0.16) 42%, transparent 70%);animation:heroGlow 5s ease-in-out infinite alternate;animation-delay:var(--pd-delay,0s);pointer-events:none;}
+  .pd-hero::after{content:'';position:absolute;left:50%;bottom:7%;width:46%;height:14px;margin-left:-23%;border-radius:50%;
+    background:radial-gradient(ellipse, rgba(0,0,0,0.55) 0%, transparent 70%);animation:heroShadow 5s ease-in-out infinite alternate;animation-delay:var(--pd-delay,0s);pointer-events:none;}
+  .pd-tilt{width:100%;height:100%;display:flex;align-items:center;justify-content:center;transform-style:preserve-3d;transition:transform .45s cubic-bezier(.22,1,.36,1);will-change:transform;position:relative;z-index:1;}
+  .pd-tilt.drag{transition:transform .08s linear;}
+  .pd-hero .pd-tilt img{animation:heroFloat 5s ease-in-out infinite alternate;animation-delay:var(--pd-delay,0s);will-change:transform;filter:drop-shadow(0 14px 18px rgba(0,0,0,0.4));}
+  .pd-hero.enter .pd-tilt{animation:heroIn .7s cubic-bezier(.34,1.4,.64,1);}
+  @keyframes heroFloat{from{transform:translateY(5px) rotate(-1.4deg);}to{transform:translateY(-9px) rotate(1.4deg);}}
+  @keyframes heroGlow{from{opacity:.55;transform:translate(-50%,-50%) scale(.94);}to{opacity:1;transform:translate(-50%,-50%) scale(1.06);}}
+  @keyframes heroShadow{from{opacity:.9;transform:scale(1.05);}to{opacity:.5;transform:scale(.78);}}
+  @keyframes heroIn{from{opacity:0;transform:translateY(24px) scale(.86);}to{opacity:1;transform:none;}}
+  @media (prefers-reduced-motion: reduce){
+    .pd-hero::before,.pd-hero::after,.pd-hero .pd-tilt img,.pd-hero.enter .pd-tilt{animation:none;}
+    .pd-tilt{transition:none;}
+  }
   .pd-hero .placeholder{display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--muted-dim);text-align:center;padding:20px;background:linear-gradient(150deg, var(--panel2), var(--panel3));}
   .pd-hero .placeholder svg{width:52px;height:52px;opacity:0.5;}
   .pd-hero .placeholder span{font-size:0.72rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;}
@@ -593,6 +611,26 @@
     padding:9px 14px;border-radius:999px;border:1px solid var(--line);
     background:var(--panel);color:var(--text);font-size:0.82rem;font-weight:600;
     cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .12s ease;
+  }
+  .flavor-chip:not(.out):active{transform:scale(0.93);}
+  .flavor-chip{transition:transform .18s cubic-bezier(.34,1.56,.64,1), background .12s ease, border-color .12s ease, color .12s ease, box-shadow .25s ease;}
+  .flavor-chip.selected{box-shadow:0 6px 18px -6px rgba(227,79,239,0.7);}
+  /* появление чипов при открытии товара — по очереди, снизу вверх */
+  .flavor-grid.enter .flavor-chip{opacity:0;animation:chipIn .45s cubic-bezier(.22,1,.36,1) forwards;animation-delay:calc(var(--i,0) * 28ms);}
+  @keyframes chipIn{from{opacity:0;transform:translateY(12px) scale(.92);}to{opacity:1;transform:none;}}
+  .flavor-grid.enter .flavor-chip.out{animation-name:chipInOut;}
+  @keyframes chipInOut{from{opacity:0;transform:translateY(12px) scale(.92);}to{opacity:.4;transform:none;}}
+  /* выбранный вкус «пружинит» и пускает кольцо */
+  .flavor-chip.pop{animation:chipPop .5s cubic-bezier(.34,1.56,.64,1);position:relative;}
+  .flavor-chip.pop::after{content:'';position:absolute;inset:-1px;border-radius:999px;border:2px solid rgba(255,160,245,0.85);pointer-events:none;animation:chipRing .6s ease-out forwards;}
+  @keyframes chipPop{0%{transform:scale(.88);}55%{transform:scale(1.08);}100%{transform:scale(1);}}
+  @keyframes chipRing{from{opacity:.9;transform:scale(1);}to{opacity:0;transform:scale(1.35,1.7);}}
+  .flavor-chip.pop .dot{animation:dotBlink .5s ease-out;}
+  @keyframes dotBlink{0%{transform:scale(.4);}60%{transform:scale(1.6);}100%{transform:scale(1);}}
+  @media (prefers-reduced-motion: reduce){
+    .flavor-grid.enter .flavor-chip{animation:none;opacity:1;}
+    .flavor-grid.enter .flavor-chip.out{opacity:.4;}
+    .flavor-chip.pop,.flavor-chip.pop::after,.flavor-chip.pop .dot{animation:none;}
   }
   .flavor-chip .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;}
   .flavor-chip.selected{background:linear-gradient(135deg, var(--magenta), var(--violet));border-color:transparent;color:#fff;}
@@ -1948,6 +1986,8 @@ document.getElementById('stockOnlyToggle').addEventListener('change', (e) => {
    ====================================================================== */
 let pdQty = 1;
 
+const HERO_T0 = performance.now(); // общая точка отсчёта, чтобы покачивание не «перезапускалось» при выборе вкуса
+let pdEnter = false, pdPop = false; // pdEnter — проиграть появление чипов (только при открытии), pdPop — «пружина» на только что выбранном вкусе
 function openProduct(id){
   currentProductId = id;
   const p = productById(id);
@@ -1955,6 +1995,7 @@ function openProduct(id){
   const firstAvail = shownItems(p).find(i => isAvailable(p.id, i) && !isPreorderItem(i, p.id)) || shownItems(p).find(i => isAvailable(p.id, i));
   pendingFlavor = firstAvail ? firstAvail.n : null;
   pdQty = 1;
+  pdEnter = true; pdPop = false;
   renderProductDetail();
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-product').classList.add('active');
@@ -1974,13 +2015,13 @@ function renderProductDetail(){
   const priceHtml = p.price
     ? `<div class="pd-price">${p.price.toFixed(2).replace('.',',')} € <span style="font-size:0.65em;color:var(--muted-dim);font-family:'Manrope',sans-serif;font-style:normal;">/ ${p.unit}</span></div>`
     : `<div class="pd-price ask">Цена по запросу — уточним в переписке</div>`;
-  const flavorChips = [...shownItems(p)].sort((a, b) => (isAvailable(p.id, b) ? 1 : 0) - (isAvailable(p.id, a) ? 1 : 0)).map(item => {
+  const flavorChips = [...shownItems(p)].sort((a, b) => (isAvailable(p.id, b) ? 1 : 0) - (isAvailable(p.id, a) ? 1 : 0)).map((item, idx) => {
     const ok = isAvailable(p.id, item);
     const isSel = pendingFlavor === item.n;
     const hue = hueFor(item.n);
     const dotColor = ok ? `hsl(${hue}, 78%, 62%)` : 'var(--muted-dim)';
     const pre = ok && isPreorderItem(item, p.id);
-    return `<div class="flavor-chip ${ok ? '' : 'out'} ${pre ? 'pre' : ''} ${isSel ? 'selected' : ''}" data-flavor="${encodeURIComponent(item.n)}" data-ok="${ok}">
+    return `<div class="flavor-chip ${ok ? '' : 'out'} ${pre ? 'pre' : ''} ${isSel ? 'selected' : ''} ${isSel && pdPop ? 'pop' : ''}" style="--i:${Math.min(idx, 14)}" data-flavor="${encodeURIComponent(item.n)}" data-ok="${ok}">
         <span class="dot" style="background:${isSel ? '#fff' : dotColor}"></span>${item.n}${ok ? (pre ? '<span class="pre-badge">Предзаказ</span>' : '') : ' · нет'}
       </div>`;
   }).join('');
@@ -1990,13 +2031,13 @@ function renderProductDetail(){
   const preBanner = selPre ? `<div class="pre-banner"><span class="pre-pill">⏳ Предзаказ до ${preUntilLabel(selItem)}</span><button type="button" class="pre-info" data-until="${preUntilLabel(selItem)}" aria-label="Информация о предзаказе">i</button></div>` : '';
   const favActive = isFavorite(p.id);
   body.innerHTML = `
-    <div class="pd-hero">${thumbHtml(p, 'lg').replace('фото скоро будет', 'фото скоро появится')}<button type="button" class="fav-btn ${favActive?'active':''}" id="pdFavBtn">${favActive ? '♥\uFE0E' : '♡'}</button></div>
+    <div class="pd-hero ${pdEnter ? 'enter' : ''}" style="--pd-delay:${-((performance.now() - HERO_T0) / 1000 % 10).toFixed(2)}s"><div class="pd-tilt" id="pdTilt">${thumbHtml(p, 'lg').replace('фото скоро будет', 'фото скоро появится')}</div><button type="button" class="fav-btn ${favActive?'active':''}" id="pdFavBtn">${favActive ? '♥\uFE0E' : '♡'}</button></div>
     <h1 class="pd-title">${p.title || p.name}</h1>
     ${priceHtml}
     ${p.desc ? `<p class="pd-desc">${p.desc}</p>` : ''}
     <div class="pd-block">
       <div class="lbl">${p.variantLabel} · выбери один</div>
-      <div class="flavor-grid" id="pdFlavorGrid">${flavorChips}</div>
+      <div class="flavor-grid ${pdEnter ? 'enter' : ''}" id="pdFlavorGrid">${flavorChips}</div>
       ${preBanner}
     </div>
     <div class="pd-actions">
@@ -2010,9 +2051,11 @@ function renderProductDetail(){
     </div>
     ${p.note ? `<div class="pd-note">${p.note}</div>` : ''}
   `;
+  pdEnter = false; pdPop = false;
   body.querySelectorAll('.flavor-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       if(chip.dataset.ok !== 'true') return;
+      pdPop = decodeURIComponent(chip.dataset.flavor) !== pendingFlavor;
       pendingFlavor = decodeURIComponent(chip.dataset.flavor);
       const r = remainingQty(p.id, pendingFlavor);
       if(r !== null) pdQty = Math.min(pdQty, r);
@@ -2021,6 +2064,21 @@ function renderProductDetail(){
     });
   });
   body.querySelectorAll('.pre-info').forEach(b => b.addEventListener('click', showPreorderInfo));
+  (function(){ // наклон фото за пальцем/мышью
+    const hero = body.querySelector('.pd-hero'), tilt = document.getElementById('pdTilt');
+    if(!hero || !tilt || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    let raf = 0;
+    function move(e){
+      const r = hero.getBoundingClientRect();
+      const nx = (e.clientX - r.left) / r.width - 0.5, ny = (e.clientY - r.top) / r.height - 0.5;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => { tilt.style.transform = `rotateY(${(nx*26).toFixed(1)}deg) rotateX(${(-ny*26).toFixed(1)}deg) scale(1.04)`; });
+    }
+    hero.addEventListener('pointerdown', e => { if(e.target.closest('.fav-btn')) return; tilt.classList.add('drag'); move(e); });
+    hero.addEventListener('pointermove', e => { if(tilt.classList.contains('drag')) move(e); });
+    const end = () => { cancelAnimationFrame(raf); tilt.classList.remove('drag'); tilt.style.transform = ''; };
+    ['pointerup','pointercancel','pointerleave'].forEach(ev => hero.addEventListener(ev, end));
+  })();
   const favBtn = document.getElementById('pdFavBtn');
   if(favBtn) favBtn.addEventListener('click', () => {
     toggleFavorite(p.id);
