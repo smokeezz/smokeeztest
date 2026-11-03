@@ -374,7 +374,7 @@
   @keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
 
   .section-title{
-    font-size:1.05rem;
+    font-size:calc(1.05rem + 2px);
     color:var(--text);
     margin:18px 2px 12px;
     display:flex;align-items:center;gap:8px;
@@ -589,7 +589,7 @@
   .pd-tilt.drag{transition:transform .08s linear;}
   .pd-hero .pd-tilt img{animation:heroFloat 5s ease-in-out infinite alternate;animation-delay:var(--pd-delay,0s);will-change:transform;filter:drop-shadow(0 14px 18px rgba(0,0,0,0.4));}
   .pd-hero.enter .pd-tilt{animation:heroIn .7s cubic-bezier(.34,1.4,.64,1);}
-  @keyframes heroFloat{from{transform:translateY(5px) rotate(-1.4deg);}to{transform:translateY(-9px) rotate(1.4deg);}}
+  @keyframes heroFloat{from{transform:translateY(8px) rotate(-2.2deg);}to{transform:translateY(-15px) rotate(2.2deg);}}
   @keyframes heroGlow{from{opacity:.55;transform:translate(-50%,-50%) scale(.94);}to{opacity:1;transform:translate(-50%,-50%) scale(1.06);}}
   @keyframes heroShadow{from{opacity:.9;transform:scale(1.05);}to{opacity:.5;transform:scale(.78);}}
   @keyframes heroIn{from{opacity:0;transform:translateY(24px) scale(.86);}to{opacity:1;transform:none;}}
@@ -612,24 +612,18 @@
     background:var(--panel);color:var(--text);font-size:0.82rem;font-weight:600;
     cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .12s ease;
   }
+  .flavor-grid.await .flavor-chip{opacity:0;} /* смаки сховані, поки не доскролили до списку; знімає playFlavorEnter */
   .flavor-chip:not(.out):active{transform:scale(0.93);}
   .flavor-chip{transition:transform .18s cubic-bezier(.34,1.56,.64,1), background .12s ease, border-color .12s ease, color .12s ease, box-shadow .25s ease;}
   .flavor-chip.selected{box-shadow:0 6px 18px -6px rgba(227,79,239,0.7);}
-  /* появление чипов при открытии товара — по очереди, снизу вверх */
-  .flavor-grid.enter .flavor-chip{opacity:0;animation:chipIn .45s cubic-bezier(.22,1,.36,1) forwards;animation-delay:calc(var(--i,0) * 28ms);}
-  @keyframes chipIn{from{opacity:0;transform:translateY(12px) scale(.92);}to{opacity:1;transform:none;}}
-  .flavor-grid.enter .flavor-chip.out{animation-name:chipInOut;}
-  @keyframes chipInOut{from{opacity:0;transform:translateY(12px) scale(.92);}to{opacity:.4;transform:none;}}
   /* выбранный вкус «пружинит» и пускает кольцо */
   .flavor-chip.pop{animation:chipPop .5s cubic-bezier(.34,1.56,.64,1);position:relative;}
-  .flavor-chip.pop::after{content:'';position:absolute;inset:-1px;border-radius:999px;border:2px solid rgba(255,160,245,0.85);pointer-events:none;animation:chipRing .6s ease-out forwards;}
-  @keyframes chipPop{0%{transform:scale(.88);}55%{transform:scale(1.08);}100%{transform:scale(1);}}
-  @keyframes chipRing{from{opacity:.9;transform:scale(1);}to{opacity:0;transform:scale(1.35,1.7);}}
+  .flavor-chip.pop::after{content:'';position:absolute;inset:-1px;border-radius:999px;border:1.5px solid rgba(255,160,245,0.55);pointer-events:none;animation:chipRing .55s ease-out forwards;}
+  @keyframes chipPop{0%{transform:scale(.9);}55%{transform:scale(1.05);}100%{transform:scale(1);}}
+  @keyframes chipRing{from{opacity:.6;transform:scale(1);}to{opacity:0;transform:scale(1.06,1.22);}}
   .flavor-chip.pop .dot{animation:dotBlink .5s ease-out;}
   @keyframes dotBlink{0%{transform:scale(.4);}60%{transform:scale(1.6);}100%{transform:scale(1);}}
   @media (prefers-reduced-motion: reduce){
-    .flavor-grid.enter .flavor-chip{animation:none;opacity:1;}
-    .flavor-grid.enter .flavor-chip.out{opacity:.4;}
     .flavor-chip.pop,.flavor-chip.pop::after,.flavor-chip.pop .dot{animation:none;}
   }
   .flavor-chip .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;}
@@ -1088,7 +1082,7 @@
   <div class="nav-lens" id="navLens"></div>
   <button data-view="home" class="active"><span class="ic"></span><span class="lbl">Главная</span></button>
   <button data-view="catalog"><span class="ic"></span><span class="lbl">Каталог</span></button>
-  <button data-view="favorites"><span class="ic"></span><span class="lbl">Фавориты</span></button>
+  <button data-view="favorites"><span class="ic"></span><span class="lbl">Фавориты</span><span class="nav-badge" id="navFavBadge" style="display:none;">0</span></button>
   <button data-view="cart"><span class="ic"></span><span class="lbl">Корзина</span><span class="nav-badge" id="navCartBadge" style="display:none;">0</span></button>
   <button data-view="profile"><span class="ic"></span><span class="lbl">Профиль</span></button>
 </nav>
@@ -1634,6 +1628,7 @@ function isFavorite(id){ return favorites.has(id); }
 function toggleFavorite(id){
   if(favorites.has(id)) favorites.delete(id); else favorites.add(id);
   storeSet('smokeez_favs_' + UID, [...favorites]);
+  if(typeof refreshFavBadge === 'function') refreshFavBadge();
 }
 
 /* ======================================================================
@@ -1728,7 +1723,6 @@ window.addEventListener('resize', syncLensToActive);
     navDidMove = false;
     navRecalcTrack();
     navPreviewView = navCurrentActiveView();
-    try{ navEl.setPointerCapture(e.pointerId); }catch(err){}
     // лишь готовим трек — не двигаем линзу здесь: обычный тап не должен
     // телепортировать её под палец, иначе при отпускании она «дёргается»
     // (прыжок без анимации + отдельная анимация к центру кнопки). Линза
@@ -1738,6 +1732,7 @@ window.addEventListener('resize', syncLensToActive);
 
   navEl.addEventListener('pointermove', (e) => {
     if(!navDragging) return;
+    if(!navDidMove){ try{ navEl.setPointerCapture(e.pointerId); }catch(err){} } // захват только при настоящем перетаскивании — иначе клик мышью не доходит до кнопки
     navDidMove = true;
     const navRect = navEl.getBoundingClientRect();
     const sc = navEl.offsetWidth ? navRect.width / navEl.offsetWidth : 1;
@@ -1769,7 +1764,13 @@ document.querySelectorAll('[data-back]').forEach(btn => {
   btn.addEventListener('click', () => goto(btn.dataset.back));
 });
 
+function refreshFavBadge(){
+  const el = document.getElementById('navFavBadge'); if(!el) return;
+  const n = PRODUCTS.filter(p => favorites.has(p.id)).length; // считаем только товары, которые реально есть в каталоге
+  if(n > 0){ el.style.display = 'flex'; el.textContent = n; } else { el.style.display = 'none'; }
+}
 function refreshCartBadges(){
+  refreshFavBadge();
   const n = cartCount();
   const top = document.getElementById('topCartBadge');
   const nav = document.getElementById('navCartBadge');
@@ -2000,6 +2001,33 @@ function openProduct(id){
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-product').classList.add('active');
   window.scrollTo(0,0);
+  playFlavorEnter();
+}
+// Поява смаків по черзі (Web Animations API — запускається вже після показу сторінки; без прихованого стану в CSS, тому смаки ніколи не «зникають»)
+function playFlavorEnter(){
+  const grid = document.getElementById('pdFlavorGrid');
+  if(!grid) return;
+  const run = () => {
+    try{
+      const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      grid.classList.remove('await');
+      if(reduce) return;
+      grid.querySelectorAll('.flavor-chip').forEach((c, i) => {
+        if(!c.animate) return;
+        const to = c.classList.contains('out') ? 0.4 : 1;
+        c.animate(
+          [{opacity:0, transform:'translateY(18px) scale(.88)'}, {opacity:to, transform:'none'}],
+          {duration:520, delay:60 + Math.min(i, 14) * 45, easing:'cubic-bezier(.22,1,.36,1)', fill:'backwards'}
+        );
+      });
+    }catch(e){ grid.classList.remove('await'); }
+  };
+  // Запускаємо, коли список смаків реально з'являється на екрані (а не при відкритті сторінки, коли його ще не видно).
+  if(!('IntersectionObserver' in window)){ run(); return; }
+  pdIO = new IntersectionObserver((entries) => {
+    if(entries.some(e => e.isIntersecting)){ pdIO.disconnect(); pdIO = null; run(); }
+  }, {threshold:0.2});
+  pdIO.observe(grid);
 }
 
 function hueFor(str){
@@ -2008,7 +2036,9 @@ function hueFor(str){
   return h;
 }
 
+let pdIO = null;
 function renderProductDetail(){
+  if(pdIO){ pdIO.disconnect(); pdIO = null; }
   const p = productById(currentProductId);
   if(!p) return;
   const body = document.getElementById('productDetailBody');
@@ -2037,7 +2067,7 @@ function renderProductDetail(){
     ${p.desc ? `<p class="pd-desc">${p.desc}</p>` : ''}
     <div class="pd-block">
       <div class="lbl">${p.variantLabel} · выбери один</div>
-      <div class="flavor-grid ${pdEnter ? 'enter' : ''}" id="pdFlavorGrid">${flavorChips}</div>
+      <div class="flavor-grid ${pdEnter ? 'await' : ''}" id="pdFlavorGrid">${flavorChips}</div>
       ${preBanner}
     </div>
     <div class="pd-actions">
