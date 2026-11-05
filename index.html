@@ -1959,6 +1959,7 @@ function skPrice(line){
   const n = line.name || '';
   if(line.category === 'liquid'){
     if(/^(Vozol Prime|ElfLiq|Puffy)/i.test(n)) return 11.00;
+    if(/^Chaser Special/i.test(n)) return 13.00;
     if(/^Chaser/i.test(n)) return 12.00;
   }
   if(line.category === 'pod'){
