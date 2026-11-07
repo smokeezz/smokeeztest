@@ -546,7 +546,7 @@
   .pre-pill.sm{padding:3px 9px;font-size:0.58rem;}
   .pre-banner,.ci-pre{display:flex;align-items:center;gap:8px;margin-top:10px;}
   .ci-pre{margin-top:6px;}
-  .pre-info{flex:0 0 auto;width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,140,235,0.6);background:rgba(227,79,239,0.15);color:#fff;font-family:'Manrope',sans-serif;font-style:italic;font-weight:800;font-size:0.8rem;line-height:1;cursor:pointer;padding:0;}
+  .pre-info{flex:0 0 auto;width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,140,235,0.6);background:rgba(227,79,239,0.15);color:#fff;font-family:'Manrope',sans-serif;font-style:italic;font-weight:800;font-size:0.8rem;line-height:1;cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:center;}
   .pre-modal-bg{position:fixed;inset:0;z-index:10000;background:rgba(5,2,10,0.72);display:flex;align-items:center;justify-content:center;padding:24px;}
   .pre-modal{width:100%;max-width:340px;padding:22px 20px;border-radius:20px;text-align:center;background:linear-gradient(150deg,rgba(227,79,239,0.28) 0%,rgba(150,35,170,0.26) 45%,rgba(30,8,46,0.95) 100%);border:1px solid rgba(255,140,235,0.4);}
   .pre-modal-ic{font-size:2rem;}
@@ -602,15 +602,12 @@
   .pd-hero{perspective:800px;touch-action:pan-y;}
   .pd-hero::before{content:'';position:absolute;left:50%;top:46%;width:78%;aspect-ratio:1/1;transform:translate(-50%,-50%);border-radius:50%;
     background:radial-gradient(circle, rgba(227,79,239,0.30) 0%, rgba(139,92,246,0.16) 42%, transparent 70%);animation:heroGlow 5s ease-in-out infinite alternate;animation-delay:var(--pd-delay,0s);pointer-events:none;}
-  .pd-hero::after{content:'';position:absolute;left:50%;bottom:7%;width:46%;height:14px;margin-left:-23%;border-radius:50%;
-    background:radial-gradient(ellipse, rgba(0,0,0,0.55) 0%, transparent 70%);animation:heroShadow 5s ease-in-out infinite alternate;animation-delay:var(--pd-delay,0s);pointer-events:none;}
   .pd-tilt{width:100%;height:100%;display:flex;align-items:center;justify-content:center;transform-style:preserve-3d;transition:transform .45s cubic-bezier(.22,1,.36,1);will-change:transform;position:relative;z-index:1;}
   .pd-tilt.drag{transition:transform .08s linear;}
   .pd-hero .pd-tilt img{animation:heroFloat 5s ease-in-out infinite alternate;animation-delay:var(--pd-delay,0s);will-change:transform;filter:drop-shadow(0 14px 18px rgba(0,0,0,0.4));}
   .pd-hero.enter .pd-tilt{animation:heroIn .7s cubic-bezier(.34,1.4,.64,1);}
   @keyframes heroFloat{from{transform:translateY(8px) rotate(-2.2deg);}to{transform:translateY(-15px) rotate(2.2deg);}}
   @keyframes heroGlow{from{opacity:.55;transform:translate(-50%,-50%) scale(.94);}to{opacity:1;transform:translate(-50%,-50%) scale(1.06);}}
-  @keyframes heroShadow{from{opacity:.9;transform:scale(1.05);}to{opacity:.5;transform:scale(.78);}}
   @keyframes heroIn{from{opacity:0;transform:translateY(24px) scale(.86);}to{opacity:1;transform:none;}}
   @media (prefers-reduced-motion: reduce){
     .pd-hero::before,.pd-hero::after,.pd-hero .pd-tilt img,.pd-hero.enter .pd-tilt{animation:none;}
@@ -851,6 +848,12 @@
   }
   .pc-bg-text div{color:rgba(255,226,140,0.16);}
   .pc-bg-text div:nth-child(even){color:transparent;-webkit-text-stroke:1px rgba(255,230,160,0.34);margin-left:-60px;}
+  /* Своя картинка вместо жёлтого фона: положи файл profile-bg.webp рядом с index.html — подхватится сама.
+     Нет файла — остаётся жёлтый фон с надписью. Затемнение сверху нужно, чтобы читались имя и промокод. */
+  html.pf-img .profile-card.compact{background:#1a0f24 url('profile-bg.webp') center/cover no-repeat;border-color:rgba(255,255,255,0.22);box-shadow:inset 0 1px 0 rgba(255,255,255,0.18), 0 10px 24px -14px rgba(0,0,0,0.7);}
+  html.pf-img .profile-card.compact::before{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(8,4,14,0.45) 0%,rgba(8,4,14,0.25) 45%,rgba(8,4,14,0.55) 100%);}
+  html.pf-img .pc-bg{display:none;}
+  html.pf-img .profile-card.compact .promo-box{border-color:rgba(255,255,255,0.35);}
   .profile-card.compact > *:not(.pc-bg){position:relative;z-index:1;}
   .profile-card.compact .profile-avatar{box-shadow:0 0 0 2px rgba(255,255,255,0.4);}
   .profile-card.compact .profile-username{color:rgba(255,246,225,0.85);}
@@ -2650,6 +2653,11 @@ function hueFor(str){
 }
 
 let pdIO = null;
+// порядок смаків: наявні → предзамовлення → немає; усередині кожної групи за алфавітом
+function flavorRank(pid, item){
+  if(!isAvailable(pid, item)) return 2;
+  return isPreorderItem(item, pid) ? 1 : 0;
+}
 function renderProductDetail(){
   if(pdIO){ pdIO.disconnect(); pdIO = null; }
   const p = productById(currentProductId);
@@ -2658,7 +2666,7 @@ function renderProductDetail(){
   const priceHtml = p.price
     ? `<div class="pd-price">${p.price.toFixed(2).replace('.',',')} € <span style="font-size:0.65em;color:var(--muted-dim);font-family:'Manrope',sans-serif;font-style:normal;">/ ${p.unit}</span></div>`
     : `<div class="pd-price ask">Цена по запросу — уточним в переписке</div>`;
-  const flavorChips = [...shownItems(p)].sort((a, b) => (isAvailable(p.id, b) ? 1 : 0) - (isAvailable(p.id, a) ? 1 : 0)).map((item, idx) => {
+  const flavorChips = [...shownItems(p)].sort((a, b) => flavorRank(p.id, a) - flavorRank(p.id, b) || a.n.localeCompare(b.n, 'en', {sensitivity:'base', numeric:true})).map((item, idx) => {
     const ok = isAvailable(p.id, item);
     const isSel = pendingFlavor === item.n;
     const hue = hueFor(item.n);
@@ -3783,6 +3791,10 @@ document.addEventListener('visibilitychange', () => {
     },{passive:true});
   }catch(e){}
 })();
+</script>
+<script>
+// Своя картинка для блока профиля: если рядом лежит profile-bg.webp — включаем её (см. CSS html.pf-img)
+(function(){ try{ var im = new Image(); im.onload = function(){ document.documentElement.classList.add('pf-img'); }; im.src = 'profile-bg.webp'; }catch(e){} })();
 </script>
 </body>
 </html>
