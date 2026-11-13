@@ -538,8 +538,13 @@
     letter-spacing:0.03em;
     /* без backdrop-filter — тег повторяется на каждой карточке, блюр на них тормозит скролл */
   }
-  .thumb .tags{position:absolute;top:8px;left:8px;z-index:2;display:flex;flex-direction:column;align-items:flex-start;gap:4px;pointer-events:none;}
+  /* плашки лежат ПОД картинкой товара (картинка перекрывает их), кнопка избранного — поверх всего */
+  .thumb .tags{position:absolute;top:8px;left:8px;z-index:0;display:flex;flex-direction:column;align-items:flex-start;gap:4px;pointer-events:none;}
   .thumb .tags .tag{position:static;}
+  .thumb img{position:relative;z-index:1;}
+  .thumb .tag.drop{position:absolute;top:8px;right:8px;left:auto;z-index:0;}
+  .thumb .tag.strong{position:absolute;bottom:8px;left:8px;top:auto;z-index:0;}
+  .thumb.has-drop .fav-btn{top:38px;}
   .tag.top{background:linear-gradient(135deg,#ff9a3d,#ff4d8d);color:#fff;border:1px solid rgba(255,255,255,0.28);box-shadow:inset 0 1px 0 rgba(255,255,255,0.35);}
   .tag.drop{background:linear-gradient(135deg,#34d399,#10b981);color:#04210f;border:1px solid rgba(255,255,255,0.3);box-shadow:inset 0 1px 0 rgba(255,255,255,0.45);}
   .tag.strong{background:rgba(32,8,16,0.82);color:#ff6b81;border:1px solid rgba(255,107,129,0.55);}
@@ -2453,20 +2458,36 @@ function buildCatFilters(){
 //   top:true  — плашка «Топ продаж»
 //   drop:15   — плашка «−15%» (процент считаешь сам; чтобы убрать — удали строку или поставь 0)
 //   strong:false — отключить автоматическую плашку «Strong» у товара
+// Города и страны: top и drop можно задать только для части городов (ключи городов kl, sb, bb, zv, za, ba или страны de, sk):
+//   drop:{ kl:10 }              — скидка −10% только в Кайзерслаутерне
+//   drop:{ sk:15, sb:5 }        — −15% во всей Словакии и −5% в Саарбрюккене
+//   top:['kl','bb']             — «Топ продаж» только в этих городах   (top:{sk:true} — во всей Словакии)
 // Плашка «Strong» ставится САМА всем жидкостям крепче 5% (6%, 6,5%, 7% …).
 const BADGES = {
-  // 'Chaser Lux 30ml 5%':  { top:true },
-  // 'Vozol Prime 30ml 5%': { drop:10 },
+  // 'Chaser Lux 30ml 5%': { drop: { kl: 12.5, bb: 12.5 } },
+  'Vozol Prime 30ml 5%': { drop: { kl: 14, bb: 14 }, { top: true } },
+  'ElfLiq 30ml 5%': { drop: { kl: 14, bb: 14 }, { top: true } },
+  'Puffy 30ml 5%': { drop: { kl: 14, bb: 14 } },
+  'Vaporesso Xros 6': { top: true },
 };
-function badgesHtml(p){
-  const b = BADGES[p.name] || {};
-  const out = [];
-  if(b.top) out.push('<span class="tag top">Топ продаж</span>');
+// Раскладка: «Топ продаж» — слева сверху под плашкой статуса (Предзаказ и т.п.), «−N%» — справа сверху, «Strong» — внизу слева над названием
+function badgeFor(v){ // значение для текущего города: число/true для всех, объект {город|страна:значение}, массив городов/стран
+  if(v === undefined || v === null || v === false) return undefined;
+  const ck = cityKey(), rg = CITIES[ck] ? CITIES[ck].region : REGION;
+  if(Array.isArray(v)) return (v.includes(ck) || v.includes(rg) || v.includes('all')) ? true : undefined;
+  if(typeof v === 'object'){ if(v[ck] !== undefined) return v[ck]; if(v[rg] !== undefined) return v[rg]; return v.all; }
+  return v;
+}
+function badgesInfo(p){
+  const b0 = BADGES[p.name] || {};
+  const b = { top: badgeFor(b0.top), drop: badgeFor(b0.drop), strong: b0.strong };
   const d = Math.round(Number(b.drop));
-  if(d > 0 && d < 100) out.push(`<span class="tag drop">−${d}%</span>`);
   const m = String(p.name || '').match(/(\d+(?:[.,]\d+)?)\s*%\s*$/);
-  if(p.category === 'liquid' && m && parseFloat(m[1].replace(',', '.')) > 5 && b.strong !== false) out.push('<span class="tag strong">Strong</span>');
-  return out.join('');
+  return {
+    top: b.top ? '<span class="tag top">Топ продаж</span>' : '',
+    drop: (d > 0 && d < 100) ? `<span class="tag drop">−${d}%</span>` : '',
+    strong: (p.category === 'liquid' && m && parseFloat(m[1].replace(',', '.')) > 5 && b.strong !== false) ? '<span class="tag strong">Strong</span>' : ''
+  };
 }
 
 function productCardHtml(p){
@@ -2483,8 +2504,9 @@ function productCardHtml(p){
     : (preCount && inStockCount === 0 ? `<span class="tag pre">Предзаказ</span>`
     : (allOut ? `<span class="tag out">Нет в наличии</span>` : ''));
   const fav = isFavorite(p.id);
+  const bd = badgesInfo(p);
   return `<div class="product-card ${allOut ? 'is-out' : ''}" data-id="${p.id}">
-      <div class="thumb"><div class="tags">${tag}${badgesHtml(p)}</div><button type="button" class="fav-btn ${fav?'active':''}" data-fav="${p.id}">${fav ? '♥\uFE0E' : '♡'}</button>${thumbHtml(p)}</div>
+      <div class="thumb${bd.drop ? ' has-drop' : ''}"><div class="tags">${tag}${bd.top}</div>${bd.drop}${bd.strong}<button type="button" class="fav-btn ${fav?'active':''}" data-fav="${p.id}">${fav ? '♥\uFE0E' : '♡'}</button>${thumbHtml(p)}</div>
       <div class="card-body">
         <div class="name">${p.title || p.name}</div>
         <div class="meta">${inStockCount}/${shown.length} вкусов в наличии${preCount ? ` · <span class="pre-meta">+${preCount} предзаказ</span>` : ''}</div>
