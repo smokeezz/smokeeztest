@@ -538,6 +538,11 @@
     letter-spacing:0.03em;
     /* без backdrop-filter — тег повторяется на каждой карточке, блюр на них тормозит скролл */
   }
+  .thumb .tags{position:absolute;top:8px;left:8px;z-index:2;display:flex;flex-direction:column;align-items:flex-start;gap:4px;pointer-events:none;}
+  .thumb .tags .tag{position:static;}
+  .tag.top{background:linear-gradient(135deg,#ff9a3d,#ff4d8d);color:#fff;border:1px solid rgba(255,255,255,0.28);box-shadow:inset 0 1px 0 rgba(255,255,255,0.35);}
+  .tag.drop{background:linear-gradient(135deg,#34d399,#10b981);color:#04210f;border:1px solid rgba(255,255,255,0.3);box-shadow:inset 0 1px 0 rgba(255,255,255,0.45);}
+  .tag.strong{background:rgba(32,8,16,0.82);color:#ff6b81;border:1px solid rgba(255,107,129,0.55);}
   .tag.promo{background:linear-gradient(135deg,#ffe07a,#ffb938);color:#1a1305;box-shadow:inset 0 1px 0 rgba(255,255,255,0.6);}
   .tag.out{background:rgba(30,10,20,0.75);color:var(--no);border:1px solid rgba(251,113,133,0.4);}
   .tag.pre{background:linear-gradient(135deg,var(--magenta),var(--violet));color:#fff;border:1px solid rgba(255,255,255,0.28);box-shadow:inset 0 1px 0 rgba(255,255,255,0.35);}
@@ -1271,6 +1276,8 @@ const D = [
 ["Гость","Hosť","Gast","Guest"],
 ["Открой этот сайт как Mini App внутри Telegram-бота — тогда здесь появятся твои имя, юзернейм и фото, а профиль будет закреплён за твоим Telegram-аккаунтом.","Otvor túto stránku ako Mini App v Telegram bote – zobrazí sa tu tvoje meno, používateľské meno a fotka a profil sa viaže na tvoj Telegram účet.","Öffne diese Seite als Mini App im Telegram-Bot – dann erscheinen hier dein Name, Benutzername und Foto, und das Profil ist an dein Telegram-Konto gebunden.","Open this site as a Mini App inside the Telegram bot — then your name, username and photo will appear here and the profile will be tied to your Telegram account."],
 // ---- профиль, заказы
+["Топ продаж","Top predaj","Bestseller","Best seller"],
+["👌 Принят","👌 Prijatá","👌 Angenommen","👌 Accepted"],
 ["✅ Готов к выдаче","✅ Pripravená na vydanie","✅ Bereit zur Abholung","✅ Ready for pickup"],
 ["📦 Выдан","📦 Vydaná","📦 Übergeben","📦 Handed over"],
 ["❌ Отменён","❌ Zrušená","❌ Storniert","❌ Cancelled"],
@@ -1664,7 +1671,11 @@ const I18N = (function(){
       const u = window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.user;
       const c = ((u && u.language_code) || '').slice(0, 2).toLowerCase();
       if(c === 'sk' || c === 'de' || c === 'en') return c;
+      if(c === 'cs') return 'sk';
+      if(c === 'ru' || c === 'uk' || c === 'be' || c === 'kk') return 'ru';
     }catch(e){}
+    // язык Telegram неизвестен или «чужой» (например, tr, pl) — берём язык страны, в которой открыт магазин
+    try{ return new URLSearchParams(location.search).get('region') === 'sk' ? 'sk' : 'de'; }catch(e){}
     return 'ru';
   }
   function set(l, persist){
@@ -1973,8 +1984,8 @@ function skPrice(line){
   return null;
 }
 const CITIES = {
-  kl: { key:'kl', short:'KL', region:'de', name:'Кайзерслаутерн', price:null },
-  sb: { key:'sb', short:'SB', region:'de', name:'Саарбрюкен',
+  kl: { key:'kl', short:'KL', region:'de', name:'Kaiserslautern', price:null },
+  sb: { key:'sb', short:'SB', region:'de', name:'Saarbrücken',
         // жидкости Vozol / ElfLiq / Puffy — 11 €, остальное как в базовом прайсе
         price: line => (line.category === 'liquid' && /^(Vozol Prime|ElfLiq|Puffy)/i.test(line.name)) ? 11.00 : null },
   // Словакия: отдельный бот и свой прайс (см. skPrice)
@@ -2437,6 +2448,27 @@ function buildCatFilters(){
   });
 }
 
+// ---- Плашки каталога --------------------------------------------------------------
+// Вписывай ТОЧНОЕ имя товара (как в списке выше):
+//   top:true  — плашка «Топ продаж»
+//   drop:15   — плашка «−15%» (процент считаешь сам; чтобы убрать — удали строку или поставь 0)
+//   strong:false — отключить автоматическую плашку «Strong» у товара
+// Плашка «Strong» ставится САМА всем жидкостям крепче 5% (6%, 6,5%, 7% …).
+const BADGES = {
+  // 'Chaser Lux 30ml 5%':  { top:true },
+  // 'Vozol Prime 30ml 5%': { drop:10 },
+};
+function badgesHtml(p){
+  const b = BADGES[p.name] || {};
+  const out = [];
+  if(b.top) out.push('<span class="tag top">Топ продаж</span>');
+  const d = Math.round(Number(b.drop));
+  if(d > 0 && d < 100) out.push(`<span class="tag drop">−${d}%</span>`);
+  const m = String(p.name || '').match(/(\d+(?:[.,]\d+)?)\s*%\s*$/);
+  if(p.category === 'liquid' && m && parseFloat(m[1].replace(',', '.')) > 5 && b.strong !== false) out.push('<span class="tag strong">Strong</span>');
+  return out.join('');
+}
+
 function productCardHtml(p){
   const shown = shownItems(p);
   const availCount = shown.filter(i => isAvailable(p.id, i)).length;
@@ -2452,7 +2484,7 @@ function productCardHtml(p){
     : (allOut ? `<span class="tag out">Нет в наличии</span>` : ''));
   const fav = isFavorite(p.id);
   return `<div class="product-card ${allOut ? 'is-out' : ''}" data-id="${p.id}">
-      <div class="thumb">${tag}<button type="button" class="fav-btn ${fav?'active':''}" data-fav="${p.id}">${fav ? '♥\uFE0E' : '♡'}</button>${thumbHtml(p)}</div>
+      <div class="thumb"><div class="tags">${tag}${badgesHtml(p)}</div><button type="button" class="fav-btn ${fav?'active':''}" data-fav="${p.id}">${fav ? '♥\uFE0E' : '♡'}</button>${thumbHtml(p)}</div>
       <div class="card-body">
         <div class="name">${p.title || p.name}</div>
         <div class="meta">${inStockCount}/${shown.length} вкусов в наличии${preCount ? ` · <span class="pre-meta">+${preCount} предзаказ</span>` : ''}</div>
@@ -3570,13 +3602,13 @@ function renderProfile(){
   const eur = n => Number(n).toFixed(2).replace('.',',') + ' €';
   const cards = serverOrders.map(o => {
     const itemsStr = (o.items || []).map(it => `${escHtml(shortName(it.product))} (${escHtml(it.flavor)}) × ${it.qty}`).join('<br>');
-    const st = ({ready:['✅ Готов к выдаче','ready'], done:['📦 Выдан','ready'], cancelled:['❌ Отменён','cancelled']})[o.status];
+    const st = ({accepted:['👌 Принят','ready'], ready:['✅ Готов к выдаче','ready'], done:['📦 Выдан','ready'], cancelled:['❌ Отменён','cancelled']})[o.status];
     return `<div class="order-card${o.status === 'cancelled' ? ' cancelled' : ''}">
           <div class="oc-top"><span>№${o.no} · ${fmtDate(o.date)}</span><span>${o.method === 'delivery' ? 'Доставка' : 'Самовывоз'}</span></div>
           ${st ? `<div class="oc-status ${st[1]}">${st[0]}</div>` : ''}
           <div class="oc-items">${itemsStr}</div>
           <div class="oc-total">${eur(o.total)}${o.promo ? ` · ${escHtml(o.promo)}` : ''}${o.pointsEarned ? ` · +${o.pointsEarned} SP` : ''}</div>
-          ${o.status === 'delivered' ? `<button type="button" class="btn btn-ghost oc-cancel" data-cancel="${o.no}">Отменить заказ</button>` : ''}
+          ${(o.status === 'delivered' || o.status === 'accepted') ? `<button type="button" class="btn btn-ghost oc-cancel" data-cancel="${o.no}">Отменить заказ</button>` : ''}
         </div>`;
   });
   if(!cards.length){
