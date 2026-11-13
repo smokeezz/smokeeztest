@@ -2464,11 +2464,8 @@ function buildCatFilters(){
 //   top:['kl','bb']             — «Топ продаж» только в этих городах   (top:{sk:true} — во всей Словакии)
 // Плашка «Strong» ставится САМА всем жидкостям крепче 5% (6%, 6,5%, 7% …).
 const BADGES = {
-  // 'Chaser Lux 30ml 5%': { drop: { kl: 12.5, bb: 12.5 } },
-  'Vozol Prime 30ml 5%': { drop: { kl: 14, bb: 14 }, { top: true } },
-  'ElfLiq 30ml 5%': { drop: { kl: 14, bb: 14 }, { top: true } },
-  'Puffy 30ml 5%': { drop: { kl: 14, bb: 14 } },
-  'Vaporesso Xros 6': { top: true },
+  // 'Chaser Lux 30ml 5%':  { top:true },
+  // 'Vozol Prime 30ml 5%': { drop:10 },
 };
 // Раскладка: «Топ продаж» — слева сверху под плашкой статуса (Предзаказ и т.п.), «−N%» — справа сверху, «Strong» — внизу слева над названием
 function badgeFor(v){ // значение для текущего города: число/true для всех, объект {город|страна:значение}, массив городов/стран
@@ -2479,13 +2476,13 @@ function badgeFor(v){ // значение для текущего города: 
   return v;
 }
 function badgesInfo(p){
-  const b0 = BADGES[p.name] || {};
+  const b0 = BADGES[p.name] || BADGES[Object.keys(BADGES).find(k => k.trim().toLowerCase() === String(p.name).trim().toLowerCase())] || {}; // регистр в названии не важен
   const b = { top: badgeFor(b0.top), drop: badgeFor(b0.drop), strong: b0.strong };
-  const d = Math.round(Number(b.drop));
+  const d = Math.round(Number(b.drop) * 10) / 10; // допускается одна цифра после запятой (12.5 → «−12,5%»)
   const m = String(p.name || '').match(/(\d+(?:[.,]\d+)?)\s*%\s*$/);
   return {
     top: b.top ? '<span class="tag top">Топ продаж</span>' : '',
-    drop: (d > 0 && d < 100) ? `<span class="tag drop">−${d}%</span>` : '',
+    drop: (d > 0 && d < 100) ? `<span class="tag drop">−${String(d).replace('.', ',')}%</span>` : '',
     strong: (p.category === 'liquid' && m && parseFloat(m[1].replace(',', '.')) > 5 && b.strong !== false) ? '<span class="tag strong">Strong</span>' : ''
   };
 }
