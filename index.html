@@ -577,7 +577,6 @@
   }
   .fav-btn:active{transform:scale(0.82);}
   .fav-btn.active{color:var(--magenta);text-shadow:0 0 10px rgba(227,79,239,0.8);}
-  .pd-hero .fav-btn{top:14px;right:14px;width:38px;height:38px;font-size:1.2rem;}
   .card-body{padding:10px 11px 12px;display:flex;flex-direction:column;gap:4px;flex:1;}
   .card-body .name{font-size:0.84rem;font-weight:700;line-height:1.25;color:var(--text);}
   .card-body .meta{font-size:0.68rem;color:var(--muted-dim);font-family:'JetBrains Mono',monospace;}
@@ -594,7 +593,8 @@
   @media (prefers-reduced-motion: reduce){ .empty-state .empty-cart-img, .empty-state .empty-fav-img{animation:none;} }
 
   /* ---------- product detail ---------- */
-  .back-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .back-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;}
+  .back-row .fav-btn{position:static;width:36px;height:36px;font-size:1.1rem;}
   .back-btn{
     width:36px;height:36px;border-radius:50%;
     border:1px solid var(--line);background:var(--panel);color:var(--text);
@@ -635,7 +635,13 @@
   .pd-spec{display:flex;flex-direction:column;gap:1px;padding:7px 14px;border-radius:14px;border:1px solid var(--line);background:var(--panel);}
   .pd-spec .k{font-family:'JetBrains Mono',monospace;font-size:0.58rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted-dim);}
   .pd-spec .v{font-family:'Oswald',sans-serif;font-style:italic;font-weight:600;font-size:1.05rem;color:var(--text);}
-  .pd-spec.hot .v{color:var(--magenta);}
+  .pd-spec.vol{border-color:rgba(139,92,246,0.55);background:linear-gradient(135deg,rgba(139,92,246,0.22),rgba(60,30,110,0.35));box-shadow:0 0 14px -4px rgba(139,92,246,0.55), inset 0 1px 0 rgba(255,255,255,0.12);}
+  .pd-spec.vol .k{color:rgba(200,180,255,0.8);}
+  .pd-spec.str{border-color:rgba(227,79,239,0.6);background:linear-gradient(135deg,rgba(227,79,239,0.26),rgba(139,92,246,0.22));box-shadow:0 0 14px -4px rgba(227,79,239,0.65), inset 0 1px 0 rgba(255,255,255,0.14);}
+  .pd-spec.str .k{color:rgba(255,190,248,0.85);}
+  .pd-spec.str .v{color:#fff;text-shadow:0 0 10px rgba(227,79,239,0.9);}
+  .pd-spec.str.hi{border-color:rgba(255,120,150,0.75);background:linear-gradient(135deg,rgba(255,90,130,0.3),rgba(227,79,239,0.26));box-shadow:0 0 16px -3px rgba(255,90,130,0.7), inset 0 1px 0 rgba(255,255,255,0.16);}
+  .pd-spec.hot:not(.str) .v{color:var(--magenta);}
   .pd-block{margin-top:20px;}
   .pd-block .lbl{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted-dim);font-family:'JetBrains Mono',monospace;margin-bottom:10px;}
   .flavor-grid{display:flex;flex-wrap:wrap;gap:8px;}
@@ -936,7 +942,8 @@
     -webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 2px 10px;
   }
   .hscroll::-webkit-scrollbar{display:none;}
-  .hscroll .product-card{width:222px;flex:0 0 222px;scroll-snap-align:start;}
+  .hscroll .product-card{width:auto;flex:0 0 calc((100% - 12px) / 2);scroll-snap-align:start;}
+  @media (min-width:640px){.hscroll .product-card{flex-basis:calc((100% - 24px) / 3);}}
 
   /* ---------- bottom nav (Liquid Glass — плавающая капсула) ---------- */
   nav.bottom-nav{
@@ -2476,9 +2483,9 @@ function buildCatFilters(){
 // Плашка «Strong» ставится САМА всем жидкостям крепче 5% (6%, 6,5%, 7% …).
 const BADGES = {
   // 'Chaser Lux 30ml 5%': { drop: { kl: 12.5, bb: 12.5 } },
-  'Vozol Prime 30ml 5%': { drop: { kl: 14 }, top: true },
-  'ElfLiq 30ml 5%': { drop: { kl: 14 }, top: true },
-  'Puffy 30ml 5%': { drop: { kl: 14 } },
+  'Vozol Prime 30ml 5%': { drop: { kl: 14, bb: 14 }, top: true },
+  'ElfLiq 30ml 5%': { drop: { kl: 14, bb: 14 }, top: true },
+  'Puffy 30ml 5%': { drop: { kl: 14, bb: 14 } },
   'Vaporesso XROS 6': { top: true },
 };
 // Раскладка: «ТОП» — слева сверху под плашкой статуса (Предзаказ и т.п.), «−N%» — справа от цены, «Strong» — внизу слева над названием
@@ -2698,7 +2705,7 @@ function playFlavorEnter(){
         const to = c.classList.contains('out') ? 0.4 : 1;
         c.animate(
           [{opacity:0, transform:'translateY(18px) scale(.88)'}, {opacity:to, transform:'none'}],
-          {duration:560, delay:60 + Math.min(i, 14) * 70, easing:'cubic-bezier(.22,1,.36,1)', fill:'backwards'}
+          {duration:560, delay:60 + Math.min(i, 14) * 45, easing:'cubic-bezier(.22,1,.36,1)', fill:'backwards'}
         );
       });
     }catch(e){ grid.classList.remove('await'); }
@@ -2733,16 +2740,18 @@ function flavorRank(pid, item){
 function pdSpecsHtml(p){
   const src = ((p.name || '') + ' ' + (p.title || '') + ' ' + (p.desc || '')).replace(/\s+/g, ' ');
   const out = [];
-  const add = (k, v, hot) => out.push(`<div class="pd-spec${hot ? ' hot' : ''}"><span class="k">${k}</span><span class="v">${v}</span></div>`);
+  const add = (k, v, hot, cls) => out.push(`<div class="pd-spec${hot ? ' hot' : ''}${cls ? ' ' + cls : ''}"><span class="k">${k}</span><span class="v">${v}</span></div>`);
   let m;
-  if((m = src.match(/(\d+(?:[.,]\d+)?)\s*(?:мл|ml)\b/i))) add('Объём', m[1].replace('.', ',') + ' ml');
+  if(p.category === 'cartridge') return '';
+  if((m = src.match(/(\d+(?:[.,]\d+)?)\s*(?:мл|ml)\b/i))) add('Объём', m[1].replace('.', ',') + ' ml', false, 'vol');
   if((m = src.match(/(\d+(?:[.,]\d+)?)\s*%/))){
     const mg = src.match(/(\d+)\s*(?:мг|mg)\s*\/\s*(?:мл|ml)/i);
-    add('Крепость', m[1].replace('.', ',') + '%' + (mg ? ' · ' + mg[1] + ' mg/ml' : ''), true);
+    const mgv = mg ? mg[1] : String(Math.round(parseFloat(m[1].replace(',', '.')) * 10));
+    const lvl = parseFloat(m[1].replace(',', '.'));
+    add('Крепость', mgv + ' mg', true, lvl >= 6 ? 'str hi' : 'str');
   }
   if((m = src.match(/(\d[\d\s]{2,6})\s*(?:затяж|puffs|тяг)/i))) add('Затяжек', m[1].replace(/\s/g, ''));
   if((m = src.match(/(\d{3,5})\s*(?:mAh|мАч)/i))) add('Батарея', m[1] + ' mAh');
-  if((m = src.match(/(\d(?:[.,]\d)?(?:\s*\/\s*\d(?:[.,]\d)?)*)\s*Ω/))) add('Сопротивление', m[1].replace(/\s/g, '') + ' Ω');
   if(out.length) return `<div class="pd-specs">${out.join('')}</div>`;
   return p.desc ? `<p class="pd-desc">${p.desc}</p>` : '';
 }
@@ -2819,6 +2828,13 @@ function renderProductDetail(){
     const end = () => { cancelAnimationFrame(raf); tilt.classList.remove('drag'); tilt.style.transform = ''; };
     ['pointerup','pointercancel','pointerleave'].forEach(ev => hero.addEventListener(ev, end));
   })();
+  // сердце — в одном ряду со стрелкой «назад»
+  const backRow = document.querySelector('#view-product .back-row');
+  if(backRow){
+    backRow.querySelectorAll('.fav-btn').forEach(b => b.remove());
+    const fb = document.getElementById('pdFavBtn');
+    if(fb) backRow.appendChild(fb);
+  }
   const favBtn = document.getElementById('pdFavBtn');
   if(favBtn) favBtn.addEventListener('click', () => {
     toggleFavorite(p.id);
