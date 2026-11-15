@@ -545,7 +545,7 @@
   .thumb .tag.strong{position:absolute;bottom:8px;left:8px;top:auto;z-index:0;}
   .price-row{margin-top:auto;display:flex;align-items:center;gap:8px;padding-top:4px;}
   .card-body .price-row .price{margin-top:0;padding-top:0;}
-  .price-row .tag.drop{position:static;padding:3px 8px;font-size:0.7rem;white-space:nowrap;}
+  .price-row .old-price{font-size:0.78rem;font-weight:600;color:var(--muted-dim);text-decoration:line-through;text-decoration-color:rgba(255,110,150,0.85);text-decoration-thickness:1.5px;white-space:nowrap;}
   .thumb .tag.top{padding:3px 11px 3px 9px;font-family:'Oswald',sans-serif;font-style:italic;font-weight:700;font-size:0.8rem;letter-spacing:0.1em;line-height:1.25;color:#fff;background:linear-gradient(135deg,rgba(227,79,239,0.28),rgba(139,92,246,0.28)),rgba(18,8,30,0.82);border:1px solid var(--magenta);text-shadow:0 0 8px rgba(227,79,239,0.95);box-shadow:0 0 12px rgba(227,79,239,0.55),inset 0 0 8px rgba(227,79,239,0.25);}
   .tag.drop{background:linear-gradient(135deg,#34d399,#10b981);color:#04210f;border:1px solid rgba(255,255,255,0.3);box-shadow:inset 0 1px 0 rgba(255,255,255,0.45);}
   .tag.strong{background:rgba(32,8,16,0.82);color:#ff6b81;border:1px solid rgba(255,107,129,0.55);}
@@ -2482,10 +2482,10 @@ function buildCatFilters(){
 //   top:['kl','bb']             — «ТОП» только в этих городах   (top:{sk:true} — во всей Словакии)
 // Плашка «Strong» ставится САМА всем жидкостям крепче 5% (6%, 6,5%, 7% …).
 const BADGES = {
-  // 'Chaser Lux 30ml 5%': { drop: { kl: 12.5, bb: 12.5 } },
-  'Vozol Prime 30ml 5%': { drop: { kl: 14, bb: 14 }, top: true },
-  'ElfLiq 30ml 5%': { drop: { kl: 14, bb: 14 }, top: true },
-  'Puffy 30ml 5%': { drop: { kl: 14, bb: 14 } },
+  //'Chaser Lux 30ml 5%': { drop: { kl: '12€' } },
+  'Vozol Prime 30ml 5%': { drop: { kl: '11€'} }, top: true },
+  'ElfLiq 30ml 5%': { drop: { kl: '11€'} }, top: true },
+  'Puffy 30ml 5%': { drop: { kl: '11€'} } },
   'Vaporesso XROS 6': { top: true },
 };
 // Раскладка: «ТОП» — слева сверху под плашкой статуса (Предзаказ и т.п.), «−N%» — справа от цены, «Strong» — внизу слева над названием
@@ -2496,6 +2496,15 @@ function badgeFor(v){ // значение для текущего города: 
   if(typeof v === 'object'){ if(v[ck] !== undefined) return v[ck]; if(v[rg] !== undefined) return v[rg]; return v.all; }
   return v;
 }
+// Снижение цены: рядом с ценой — старая зачёркнутая цена. drop:14 → старая считается от текущей цены города (цена ÷ (1−14%)); drop:'12.50€' → старая цена задана явно
+function oldPriceHtml(p, raw, d){
+  if(!p.price) return '';
+  let old = 0;
+  if(typeof raw === 'string' && /€/.test(raw)) old = parseFloat(raw.replace(',', '.'));
+  else if(d > 0 && d < 100) old = p.price / (1 - d / 100);
+  if(!(old > p.price)) return '';
+  return `<span class="old-price">${(Math.round(old * 20) / 20).toFixed(2).replace('.', ',')} €</span>`;
+}
 function badgesInfo(p){
   const b0 = BADGES[p.name] || BADGES[Object.keys(BADGES).find(k => k.trim().toLowerCase() === String(p.name).trim().toLowerCase())] || {}; // регистр в названии не важен
   const b = { top: badgeFor(b0.top), drop: badgeFor(b0.drop), strong: b0.strong };
@@ -2503,7 +2512,7 @@ function badgesInfo(p){
   const m = String(p.name || '').match(/(\d+(?:[.,]\d+)?)\s*%\s*$/);
   return {
     top: b.top ? '<span class="tag top">ТОП</span>' : '',
-    drop: (d > 0 && d < 100) ? `<span class="tag drop">−${String(d).replace('.', ',')}%</span>` : '',
+    drop: oldPriceHtml(p, b.drop, d),
     strong: (p.category === 'liquid' && m && parseFloat(m[1].replace(',', '.')) > 5 && b.strong !== false) ? '<span class="tag strong">Strong</span>' : ''
   };
 }
@@ -2720,8 +2729,10 @@ function playFlavorEnter(){
       const wait = Math.max(0, 750 - (performance.now() - t0));
       pdIOTimer = setTimeout(run, wait);
     }
-  }, {threshold:0.2});
+  }, {threshold:0.01, rootMargin:'0px 0px -32% 0px'}); // старт, когда список смаков заходит в верхние ~2/3 экрана, т.е. после прокрутки
   pdIO.observe(grid);
+  // запасной вариант: если человек не прокручивает (или страница не прокручивается), смаки всё равно покажутся
+  pdIOFallback = setTimeout(() => { if(pdIO){ pdIO.disconnect(); pdIO = null; run(); } }, 2600);
 }
 
 function hueFor(str){
@@ -2730,7 +2741,7 @@ function hueFor(str){
   return h;
 }
 
-let pdIO = null, pdIOTimer = null;
+let pdIO = null, pdIOTimer = null, pdIOFallback = null;
 // порядок смаків: наявні → предзамовлення → немає; усередині кожної групи за алфавітом
 function flavorRank(pid, item){
   if(!isAvailable(pid, item)) return 2;
@@ -2758,6 +2769,7 @@ function pdSpecsHtml(p){
 function renderProductDetail(){
   if(pdIO){ pdIO.disconnect(); pdIO = null; }
   if(pdIOTimer){ clearTimeout(pdIOTimer); pdIOTimer = null; }
+  if(pdIOFallback){ clearTimeout(pdIOFallback); pdIOFallback = null; }
   const p = productById(currentProductId);
   if(!p) return;
   const body = document.getElementById('productDetailBody');
