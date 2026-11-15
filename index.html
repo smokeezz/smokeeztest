@@ -601,24 +601,24 @@
     display:flex;align-items:center;justify-content:center;cursor:pointer;
   }
   .pd-hero{
-    width:100%;height:min(200px, 27vh);
+    width:100%;height:min(236px, 31vh);
     border-radius:var(--radius);
     background:transparent;
     display:flex;align-items:center;justify-content:center;
     overflow:hidden;position:relative;
     border:none;
   }
-  .pd-hero img{width:auto;height:88%;max-width:100%;aspect-ratio:auto;object-fit:contain;}
+  .pd-hero img{width:auto;height:82%;max-width:100%;aspect-ratio:auto;object-fit:contain;}
   /* «живое» фото товара: плавает, мягкое свечение и тень под ним, наклон за пальцем. Только transform/opacity — идёт на GPU */
   .pd-hero{perspective:800px;touch-action:pan-y;}
-  .pd-hero::before{content:'';position:absolute;left:50%;top:46%;width:78%;aspect-ratio:1/1;transform:translate(-50%,-50%);border-radius:50%;
+  .pd-hero::before{content:'';position:absolute;left:50%;top:50%;height:86%;width:auto;aspect-ratio:1/1;transform:translate(-50%,-50%);border-radius:50%;
     background:radial-gradient(circle, rgba(227,79,239,0.30) 0%, rgba(139,92,246,0.16) 42%, transparent 70%);animation:heroGlow 5s ease-in-out infinite alternate;animation-delay:var(--pd-delay,0s);pointer-events:none;}
   .pd-tilt{width:100%;height:100%;display:flex;align-items:center;justify-content:center;transform-style:preserve-3d;transition:transform .45s cubic-bezier(.22,1,.36,1);will-change:transform;position:relative;z-index:1;}
   .pd-tilt.drag{transition:transform .08s linear;}
   .pd-hero .pd-tilt img{animation:heroFloat 5s ease-in-out infinite alternate;animation-delay:var(--pd-delay,0s);will-change:transform;filter:drop-shadow(0 14px 18px rgba(0,0,0,0.4));}
   .pd-hero.enter .pd-tilt{animation:heroIn .7s cubic-bezier(.34,1.4,.64,1);}
   @keyframes heroFloat{from{transform:translateY(8px) rotate(-2.2deg);}to{transform:translateY(-15px) rotate(2.2deg);}}
-  @keyframes heroGlow{from{opacity:.55;transform:translate(-50%,-50%) scale(.94);}to{opacity:1;transform:translate(-50%,-50%) scale(1.06);}}
+  @keyframes heroGlow{from{opacity:.55;transform:translate(-50%,-50%) scale(.92);}to{opacity:1;transform:translate(-50%,-50%) scale(1.0);}}
   @keyframes heroIn{from{opacity:0;transform:translateY(24px) scale(.86);}to{opacity:1;transform:none;}}
   @media (prefers-reduced-motion: reduce){
     .pd-hero::before,.pd-hero::after,.pd-hero .pd-tilt img,.pd-hero.enter .pd-tilt{animation:none;}
@@ -630,7 +630,11 @@
   .pd-title{margin-top:10px;font-size:1.5rem;color:var(--text);}
   .pd-price{margin-top:6px;font-family:'Oswald',sans-serif;font-style:italic;font-size:1.3rem;color:var(--magenta);}
   .pd-price.ask{font-family:'Manrope',sans-serif;font-style:normal;font-size:0.95rem;color:var(--muted);}
-  .pd-desc{margin-top:8px;color:var(--muted);font-size:0.84rem;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .pd-desc{margin-top:8px;color:var(--muted);font-size:0.84rem;line-height:1.45;}
+  .pd-desc.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .pd-more::after{content:' ▾';}
+  .pd-more.opened::after{content:' ▴';}
+  .pd-more{margin-top:4px;padding:2px 0;background:none;border:none;color:var(--magenta);font:inherit;font-size:0.8rem;font-weight:700;cursor:pointer;}
   .pd-block{margin-top:20px;}
   .pd-block .lbl{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted-dim);font-family:'JetBrains Mono',monospace;margin-bottom:10px;}
   .flavor-grid{display:flex;flex-wrap:wrap;gap:8px;}
@@ -1220,6 +1224,8 @@ const D = [
 ["Новости SMOKEEZ","Novinky SMOKEEZ","SMOKEEZ-Neuigkeiten","SMOKEEZ news"],
 ["Баннер скоро появится","Banner sa čoskoro objaví","Banner erscheint bald","Banner coming soon"],
 ["Топ продаж","Najpredávanejšie","Bestseller","Top sellers"],
+["Ещё","Viac","Mehr","More"],
+["Свернуть","Zbaliť","Weniger","Less"],
 ["Новинки","Novinky v ponuke","Neuheiten","New arrivals"],
 // ---- карточка товара
 ["Предзаказ до {0}","Predobjednávka do {0}","Vorbestellung bis {0}","Pre-order until {0}"],
@@ -2685,15 +2691,21 @@ function playFlavorEnter(){
         const to = c.classList.contains('out') ? 0.4 : 1;
         c.animate(
           [{opacity:0, transform:'translateY(18px) scale(.88)'}, {opacity:to, transform:'none'}],
-          {duration:520, delay:60 + Math.min(i, 14) * 45, easing:'cubic-bezier(.22,1,.36,1)', fill:'backwards'}
+          {duration:560, delay:60 + Math.min(i, 14) * 70, easing:'cubic-bezier(.22,1,.36,1)', fill:'backwards'}
         );
       });
     }catch(e){ grid.classList.remove('await'); }
   };
   // Запускаємо, коли список смаків реально з'являється на екрані (а не при відкритті сторінки, коли його ще не видно).
   if(!('IntersectionObserver' in window)){ run(); return; }
+  // не раньше, чем закончится появление фото (~0.75 с), иначе смаки вылетают одновременно с ним
+  const t0 = performance.now();
   pdIO = new IntersectionObserver((entries) => {
-    if(entries.some(e => e.isIntersecting)){ pdIO.disconnect(); pdIO = null; run(); }
+    if(entries.some(e => e.isIntersecting)){
+      pdIO.disconnect(); pdIO = null;
+      const wait = Math.max(0, 750 - (performance.now() - t0));
+      pdIOTimer = setTimeout(run, wait);
+    }
   }, {threshold:0.2});
   pdIO.observe(grid);
 }
@@ -2704,7 +2716,7 @@ function hueFor(str){
   return h;
 }
 
-let pdIO = null;
+let pdIO = null, pdIOTimer = null;
 // порядок смаків: наявні → предзамовлення → немає; усередині кожної групи за алфавітом
 function flavorRank(pid, item){
   if(!isAvailable(pid, item)) return 2;
@@ -2712,6 +2724,7 @@ function flavorRank(pid, item){
 }
 function renderProductDetail(){
   if(pdIO){ pdIO.disconnect(); pdIO = null; }
+  if(pdIOTimer){ clearTimeout(pdIOTimer); pdIOTimer = null; }
   const p = productById(currentProductId);
   if(!p) return;
   const body = document.getElementById('productDetailBody');
@@ -2737,7 +2750,7 @@ function renderProductDetail(){
     <div class="pd-hero ${pdEnter ? 'enter' : ''}" style="--pd-delay:${-((performance.now() - HERO_T0) / 1000 % 10).toFixed(2)}s"><div class="pd-tilt" id="pdTilt">${thumbHtml(p, 'lg').replace('фото скоро будет', 'фото скоро появится')}</div><button type="button" class="fav-btn ${favActive?'active':''}" id="pdFavBtn">${favActive ? '♥\uFE0E' : '♡'}</button></div>
     <h1 class="pd-title">${p.title || p.name}</h1>
     ${priceHtml}
-    ${p.desc ? `<p class="pd-desc">${p.desc}</p>` : ''}
+    ${p.desc ? `<p class="pd-desc clamp" id="pdDesc">${p.desc}</p>` : ''}
     <div class="pd-block">
       <div class="lbl">${p.variantLabel} · выбери один</div>
       <div class="flavor-grid ${pdEnter ? 'await' : ''}" id="pdFlavorGrid">${flavorChips}</div>
@@ -2755,6 +2768,15 @@ function renderProductDetail(){
     ${p.note ? `<div class="pd-note">${p.note}</div>` : ''}
   `;
   pdEnter = false; pdPop = false;
+  (function(){
+    const d = document.getElementById('pdDesc'); if(!d) return;
+    requestAnimationFrame(() => {
+      if(d.scrollHeight <= d.clientHeight + 1) { d.classList.remove('clamp'); return; }
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'pd-more'; b.textContent = 'Ещё';
+      b.onclick = () => { const open = d.classList.toggle('clamp'); b.textContent = open ? 'Ещё' : 'Свернуть'; b.classList.toggle('opened', !open); };
+      d.after(b);
+    });
+  })();
   body.querySelectorAll('.flavor-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       if(chip.dataset.ok !== 'true') return;
