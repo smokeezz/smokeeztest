@@ -601,7 +601,7 @@
     display:flex;align-items:center;justify-content:center;cursor:pointer;
   }
   .pd-hero{
-    width:100%;height:min(236px, 31vh);
+    width:100%;height:min(290px, 38vh);
     border-radius:var(--radius);
     background:transparent;
     display:flex;align-items:center;justify-content:center;
@@ -631,10 +631,11 @@
   .pd-price{margin-top:6px;font-family:'Oswald',sans-serif;font-style:italic;font-size:1.3rem;color:var(--magenta);}
   .pd-price.ask{font-family:'Manrope',sans-serif;font-style:normal;font-size:0.95rem;color:var(--muted);}
   .pd-desc{margin-top:8px;color:var(--muted);font-size:0.84rem;line-height:1.45;}
-  .pd-desc.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-  .pd-more::after{content:' ▾';}
-  .pd-more.opened::after{content:' ▴';}
-  .pd-more{margin-top:4px;padding:2px 0;background:none;border:none;color:var(--magenta);font:inherit;font-size:0.8rem;font-weight:700;cursor:pointer;}
+  .pd-specs{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;}
+  .pd-spec{display:flex;flex-direction:column;gap:1px;padding:7px 14px;border-radius:14px;border:1px solid var(--line);background:var(--panel);}
+  .pd-spec .k{font-family:'JetBrains Mono',monospace;font-size:0.58rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted-dim);}
+  .pd-spec .v{font-family:'Oswald',sans-serif;font-style:italic;font-weight:600;font-size:1.05rem;color:var(--text);}
+  .pd-spec.hot .v{color:var(--magenta);}
   .pd-block{margin-top:20px;}
   .pd-block .lbl{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted-dim);font-family:'JetBrains Mono',monospace;margin-bottom:10px;}
   .flavor-grid{display:flex;flex-wrap:wrap;gap:8px;}
@@ -1224,8 +1225,11 @@ const D = [
 ["Новости SMOKEEZ","Novinky SMOKEEZ","SMOKEEZ-Neuigkeiten","SMOKEEZ news"],
 ["Баннер скоро появится","Banner sa čoskoro objaví","Banner erscheint bald","Banner coming soon"],
 ["Топ продаж","Najpredávanejšie","Bestseller","Top sellers"],
-["Ещё","Viac","Mehr","More"],
-["Свернуть","Zbaliť","Weniger","Less"],
+["Объём","Objem","Inhalt","Volume"],
+["Крепость","Sila","Stärke","Strength"],
+["Затяжек","Ťahov","Züge","Puffs"],
+["Батарея","Batéria","Akku","Battery"],
+["Сопротивление","Odpor","Widerstand","Resistance"],
 ["Новинки","Novinky v ponuke","Neuheiten","New arrivals"],
 // ---- карточка товара
 ["Предзаказ до {0}","Predobjednávka do {0}","Vorbestellung bis {0}","Pre-order until {0}"],
@@ -2471,8 +2475,11 @@ function buildCatFilters(){
 //   top:['kl','bb']             — «ТОП» только в этих городах   (top:{sk:true} — во всей Словакии)
 // Плашка «Strong» ставится САМА всем жидкостям крепче 5% (6%, 6,5%, 7% …).
 const BADGES = {
-  // 'Chaser Lux 30ml 5%':  { top:true },
-  // 'Vozol Prime 30ml 5%': { drop:10 },
+  // 'Chaser Lux 30ml 5%': { drop: { kl: 12.5, bb: 12.5 } },
+  'Vozol Prime 30ml 5%': { drop: { kl: 14 }, top: true },
+  'ElfLiq 30ml 5%': { drop: { kl: 14 }, top: true },
+  'Puffy 30ml 5%': { drop: { kl: 14 } },
+  'Vaporesso XROS 6': { top: true },
 };
 // Раскладка: «ТОП» — слева сверху под плашкой статуса (Предзаказ и т.п.), «−N%» — справа от цены, «Strong» — внизу слева над названием
 function badgeFor(v){ // значение для текущего города: число/true для всех, объект {город|страна:значение}, массив городов/стран
@@ -2722,6 +2729,23 @@ function flavorRank(pid, item){
   if(!isAvailable(pid, item)) return 2;
   return isPreorderItem(item, pid) ? 1 : 0;
 }
+// Ключевые характеристики вместо длинного описания: объём, крепость, сопротивление, ёмкость, затяжки — вытаскиваем из текста описания/названия
+function pdSpecsHtml(p){
+  const src = ((p.name || '') + ' ' + (p.title || '') + ' ' + (p.desc || '')).replace(/\s+/g, ' ');
+  const out = [];
+  const add = (k, v, hot) => out.push(`<div class="pd-spec${hot ? ' hot' : ''}"><span class="k">${k}</span><span class="v">${v}</span></div>`);
+  let m;
+  if((m = src.match(/(\d+(?:[.,]\d+)?)\s*(?:мл|ml)\b/i))) add('Объём', m[1].replace('.', ',') + ' ml');
+  if((m = src.match(/(\d+(?:[.,]\d+)?)\s*%/))){
+    const mg = src.match(/(\d+)\s*(?:мг|mg)\s*\/\s*(?:мл|ml)/i);
+    add('Крепость', m[1].replace('.', ',') + '%' + (mg ? ' · ' + mg[1] + ' mg/ml' : ''), true);
+  }
+  if((m = src.match(/(\d[\d\s]{2,6})\s*(?:затяж|puffs|тяг)/i))) add('Затяжек', m[1].replace(/\s/g, ''));
+  if((m = src.match(/(\d{3,5})\s*(?:mAh|мАч)/i))) add('Батарея', m[1] + ' mAh');
+  if((m = src.match(/(\d(?:[.,]\d)?(?:\s*\/\s*\d(?:[.,]\d)?)*)\s*Ω/))) add('Сопротивление', m[1].replace(/\s/g, '') + ' Ω');
+  if(out.length) return `<div class="pd-specs">${out.join('')}</div>`;
+  return p.desc ? `<p class="pd-desc">${p.desc}</p>` : '';
+}
 function renderProductDetail(){
   if(pdIO){ pdIO.disconnect(); pdIO = null; }
   if(pdIOTimer){ clearTimeout(pdIOTimer); pdIOTimer = null; }
@@ -2750,7 +2774,7 @@ function renderProductDetail(){
     <div class="pd-hero ${pdEnter ? 'enter' : ''}" style="--pd-delay:${-((performance.now() - HERO_T0) / 1000 % 10).toFixed(2)}s"><div class="pd-tilt" id="pdTilt">${thumbHtml(p, 'lg').replace('фото скоро будет', 'фото скоро появится')}</div><button type="button" class="fav-btn ${favActive?'active':''}" id="pdFavBtn">${favActive ? '♥\uFE0E' : '♡'}</button></div>
     <h1 class="pd-title">${p.title || p.name}</h1>
     ${priceHtml}
-    ${p.desc ? `<p class="pd-desc clamp" id="pdDesc">${p.desc}</p>` : ''}
+    ${pdSpecsHtml(p)}
     <div class="pd-block">
       <div class="lbl">${p.variantLabel} · выбери один</div>
       <div class="flavor-grid ${pdEnter ? 'await' : ''}" id="pdFlavorGrid">${flavorChips}</div>
@@ -2768,15 +2792,6 @@ function renderProductDetail(){
     ${p.note ? `<div class="pd-note">${p.note}</div>` : ''}
   `;
   pdEnter = false; pdPop = false;
-  (function(){
-    const d = document.getElementById('pdDesc'); if(!d) return;
-    requestAnimationFrame(() => {
-      if(d.scrollHeight <= d.clientHeight + 1) { d.classList.remove('clamp'); return; }
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'pd-more'; b.textContent = 'Ещё';
-      b.onclick = () => { const open = d.classList.toggle('clamp'); b.textContent = open ? 'Ещё' : 'Свернуть'; b.classList.toggle('opened', !open); };
-      d.after(b);
-    });
-  })();
   body.querySelectorAll('.flavor-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       if(chip.dataset.ok !== 'true') return;
