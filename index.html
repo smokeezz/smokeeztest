@@ -601,14 +601,14 @@
     display:flex;align-items:center;justify-content:center;cursor:pointer;
   }
   .pd-hero{
-    width:100%;aspect-ratio:1/1;max-height:min(250px, 34vh);
+    width:100%;aspect-ratio:1/1;max-height:min(190px, 25vh);
     border-radius:var(--radius);
     background:transparent;
     display:flex;align-items:center;justify-content:center;
     overflow:hidden;position:relative;
     border:none;
   }
-  .pd-hero img{width:100%;height:100%;object-fit:contain;padding:18px;}
+  .pd-hero img{width:100%;height:100%;object-fit:contain;padding:10px;}
   /* «живое» фото товара: плавает, мягкое свечение и тень под ним, наклон за пальцем. Только transform/opacity — идёт на GPU */
   .pd-hero{perspective:800px;touch-action:pan-y;}
   .pd-hero::before{content:'';position:absolute;left:50%;top:46%;width:78%;aspect-ratio:1/1;transform:translate(-50%,-50%);border-radius:50%;
@@ -627,10 +627,10 @@
   .pd-hero .placeholder{display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--muted-dim);text-align:center;padding:20px;background:linear-gradient(150deg, var(--panel2), var(--panel3));}
   .pd-hero .placeholder svg{width:52px;height:52px;opacity:0.5;}
   .pd-hero .placeholder span{font-size:0.72rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;}
-  .pd-title{margin-top:16px;font-size:1.5rem;color:var(--text);}
+  .pd-title{margin-top:10px;font-size:1.5rem;color:var(--text);}
   .pd-price{margin-top:6px;font-family:'Oswald',sans-serif;font-style:italic;font-size:1.3rem;color:var(--magenta);}
   .pd-price.ask{font-family:'Manrope',sans-serif;font-style:normal;font-size:0.95rem;color:var(--muted);}
-  .pd-desc{margin-top:12px;color:var(--muted);font-size:0.88rem;line-height:1.55;}
+  .pd-desc{margin-top:8px;color:var(--muted);font-size:0.84rem;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   .pd-block{margin-top:20px;}
   .pd-block .lbl{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted-dim);font-family:'JetBrains Mono',monospace;margin-bottom:10px;}
   .flavor-grid{display:flex;flex-wrap:wrap;gap:8px;}
