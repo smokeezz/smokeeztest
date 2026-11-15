@@ -542,10 +542,11 @@
   .thumb .tags{position:absolute;top:8px;left:8px;z-index:0;display:flex;flex-direction:column;align-items:flex-start;gap:4px;pointer-events:none;}
   .thumb .tags .tag{position:static;}
   .thumb img{position:relative;z-index:1;}
-  .thumb .tag.drop{position:absolute;top:8px;right:8px;left:auto;z-index:0;}
   .thumb .tag.strong{position:absolute;bottom:8px;left:8px;top:auto;z-index:0;}
-  .thumb.has-drop .fav-btn{top:38px;}
-  .tag.top{background:linear-gradient(135deg,#ff9a3d,#ff4d8d);color:#fff;border:1px solid rgba(255,255,255,0.28);box-shadow:inset 0 1px 0 rgba(255,255,255,0.35);}
+  .price-row{margin-top:auto;display:flex;align-items:center;gap:8px;padding-top:4px;}
+  .card-body .price-row .price{margin-top:0;padding-top:0;}
+  .price-row .tag.drop{position:static;padding:3px 8px;font-size:0.7rem;white-space:nowrap;}
+  .thumb .tag.top{padding:3px 11px 3px 9px;font-family:'Oswald',sans-serif;font-style:italic;font-weight:700;font-size:0.8rem;letter-spacing:0.1em;line-height:1.25;color:#fff;background:linear-gradient(135deg,rgba(227,79,239,0.28),rgba(139,92,246,0.28)),rgba(18,8,30,0.82);border:1px solid var(--magenta);text-shadow:0 0 8px rgba(227,79,239,0.95);box-shadow:0 0 12px rgba(227,79,239,0.55),inset 0 0 8px rgba(227,79,239,0.25);}
   .tag.drop{background:linear-gradient(135deg,#34d399,#10b981);color:#04210f;border:1px solid rgba(255,255,255,0.3);box-shadow:inset 0 1px 0 rgba(255,255,255,0.45);}
   .tag.strong{background:rgba(32,8,16,0.82);color:#ff6b81;border:1px solid rgba(255,107,129,0.55);}
   .tag.promo{background:linear-gradient(135deg,#ffe07a,#ffb938);color:#1a1305;box-shadow:inset 0 1px 0 rgba(255,255,255,0.6);}
@@ -600,14 +601,14 @@
     display:flex;align-items:center;justify-content:center;cursor:pointer;
   }
   .pd-hero{
-    width:100%;aspect-ratio:1/1;max-height:340px;
+    width:100%;aspect-ratio:1/1;max-height:min(250px, 34vh);
     border-radius:var(--radius);
     background:transparent;
     display:flex;align-items:center;justify-content:center;
     overflow:hidden;position:relative;
     border:none;
   }
-  .pd-hero img{width:100%;height:100%;object-fit:contain;padding:28px;}
+  .pd-hero img{width:100%;height:100%;object-fit:contain;padding:18px;}
   /* «живое» фото товара: плавает, мягкое свечение и тень под ним, наклон за пальцем. Только transform/opacity — идёт на GPU */
   .pd-hero{perspective:800px;touch-action:pan-y;}
   .pd-hero::before{content:'';position:absolute;left:50%;top:46%;width:78%;aspect-ratio:1/1;transform:translate(-50%,-50%);border-radius:50%;
@@ -1281,7 +1282,7 @@ const D = [
 ["Гость","Hosť","Gast","Guest"],
 ["Открой этот сайт как Mini App внутри Telegram-бота — тогда здесь появятся твои имя, юзернейм и фото, а профиль будет закреплён за твоим Telegram-аккаунтом.","Otvor túto stránku ako Mini App v Telegram bote – zobrazí sa tu tvoje meno, používateľské meno a fotka a profil sa viaže na tvoj Telegram účet.","Öffne diese Seite als Mini App im Telegram-Bot – dann erscheinen hier dein Name, Benutzername und Foto, und das Profil ist an dein Telegram-Konto gebunden.","Open this site as a Mini App inside the Telegram bot — then your name, username and photo will appear here and the profile will be tied to your Telegram account."],
 // ---- профиль, заказы
-["Топ продаж","Top predaj","Bestseller","Best seller"],
+["ТОП","TOP","TOP","TOP"],
 ["👌 Принят","👌 Prijatá","👌 Angenommen","👌 Accepted"],
 ["✅ Готов к выдаче","✅ Pripravená na vydanie","✅ Bereit zur Abholung","✅ Ready for pickup"],
 ["📦 Выдан","📦 Vydaná","📦 Übergeben","📦 Handed over"],
@@ -2455,22 +2456,19 @@ function buildCatFilters(){
 
 // ---- Плашки каталога --------------------------------------------------------------
 // Вписывай ТОЧНОЕ имя товара (как в списке выше):
-//   top:true  — плашка «Топ продаж»
+//   top:true  — плашка «ТОП»
 //   drop:15   — плашка «−15%» (процент считаешь сам; чтобы убрать — удали строку или поставь 0)
 //   strong:false — отключить автоматическую плашку «Strong» у товара
 // Города и страны: top и drop можно задать только для части городов (ключи городов kl, sb, bb, zv, za, ba или страны de, sk):
 //   drop:{ kl:10 }              — скидка −10% только в Кайзерслаутерне
 //   drop:{ sk:15, sb:5 }        — −15% во всей Словакии и −5% в Саарбрюккене
-//   top:['kl','bb']             — «Топ продаж» только в этих городах   (top:{sk:true} — во всей Словакии)
+//   top:['kl','bb']             — «ТОП» только в этих городах   (top:{sk:true} — во всей Словакии)
 // Плашка «Strong» ставится САМА всем жидкостям крепче 5% (6%, 6,5%, 7% …).
 const BADGES = {
-  // 'Chaser Lux 30ml 5%': { drop: { kl: 12.5, bb: 12.5 } },
-  'Vozol Prime 30ml 5%': { drop: { kl: 14 }, top: true },
-  'ElfLiq 30ml 5%': { drop: { kl: 14 }, top: true },
-  'Puffy 30ml 5%': { drop: { kl: 14 } },
-  'Vaporesso XROS 6': { top: true },
+  // 'Chaser Lux 30ml 5%':  { top:true },
+  // 'Vozol Prime 30ml 5%': { drop:10 },
 };
-// Раскладка: «Топ продаж» — слева сверху под плашкой статуса (Предзаказ и т.п.), «−N%» — справа сверху, «Strong» — внизу слева над названием
+// Раскладка: «ТОП» — слева сверху под плашкой статуса (Предзаказ и т.п.), «−N%» — справа от цены, «Strong» — внизу слева над названием
 function badgeFor(v){ // значение для текущего города: число/true для всех, объект {город|страна:значение}, массив городов/стран
   if(v === undefined || v === null || v === false) return undefined;
   const ck = cityKey(), rg = CITIES[ck] ? CITIES[ck].region : REGION;
@@ -2484,7 +2482,7 @@ function badgesInfo(p){
   const d = Math.round(Number(b.drop) * 10) / 10; // допускается одна цифра после запятой (12.5 → «−12,5%»)
   const m = String(p.name || '').match(/(\d+(?:[.,]\d+)?)\s*%\s*$/);
   return {
-    top: b.top ? '<span class="tag top">Топ продаж</span>' : '',
+    top: b.top ? '<span class="tag top">ТОП</span>' : '',
     drop: (d > 0 && d < 100) ? `<span class="tag drop">−${String(d).replace('.', ',')}%</span>` : '',
     strong: (p.category === 'liquid' && m && parseFloat(m[1].replace(',', '.')) > 5 && b.strong !== false) ? '<span class="tag strong">Strong</span>' : ''
   };
@@ -2494,8 +2492,9 @@ function productCardHtml(p){
   const shown = shownItems(p);
   const availCount = shown.filter(i => isAvailable(p.id, i)).length;
   const allOut = availCount === 0;
+  const bd = badgesInfo(p);
   const priceHtml = p.price
-    ? `<div class="price">${p.price.toFixed(2).replace('.',',')} €</div>`
+    ? `<div class="price-row"><div class="price">${p.price.toFixed(2).replace('.',',')} €</div>${bd.drop}</div>`
     : `<div class="price ask">Цена по запросу</div>`;
   const preCount = shown.filter(i => isPreorderItem(i, p.id) && isAvailable(p.id, i)).length;
   const inStockCount = availCount - preCount;
@@ -2504,9 +2503,8 @@ function productCardHtml(p){
     : (preCount && inStockCount === 0 ? `<span class="tag pre">Предзаказ</span>`
     : (allOut ? `<span class="tag out">Нет в наличии</span>` : ''));
   const fav = isFavorite(p.id);
-  const bd = badgesInfo(p);
   return `<div class="product-card ${allOut ? 'is-out' : ''}" data-id="${p.id}">
-      <div class="thumb${bd.drop ? ' has-drop' : ''}"><div class="tags">${tag}${bd.top}</div>${bd.drop}${bd.strong}<button type="button" class="fav-btn ${fav?'active':''}" data-fav="${p.id}">${fav ? '♥\uFE0E' : '♡'}</button>${thumbHtml(p)}</div>
+      <div class="thumb"><div class="tags">${tag}${bd.top}</div>${bd.strong}<button type="button" class="fav-btn ${fav?'active':''}" data-fav="${p.id}">${fav ? '♥\uFE0E' : '♡'}</button>${thumbHtml(p)}</div>
       <div class="card-body">
         <div class="name">${p.title || p.name}</div>
         <div class="meta">${inStockCount}/${shown.length} вкусов в наличии${preCount ? ` · <span class="pre-meta">+${preCount} предзаказ</span>` : ''}</div>
