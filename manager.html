@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>SMOKEEZ · Менеджер</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:ital,wght@1,600;1,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0612;--panel:rgba(255,255,255,.05);--panel2:rgba(255,255,255,.08);--line:rgba(255,255,255,.12);--text:#f4effc;--muted:#a79bc0;--dim:#7d7396;--mag:#e34fef;--vio:#8b5cf6;--ok:#4ade80;--warn:#fbbf24;--bad:#fb7185;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:15px}
+body{min-height:100vh;padding-bottom:calc(76px + env(safe-area-inset-bottom));background:radial-gradient(120% 60% at 50% -10%,rgba(139,92,246,.28),transparent 60%),var(--bg)}
+button,input,select,textarea{font:inherit;color:inherit}
+.top{position:sticky;top:0;z-index:20;padding:12px 14px 10px;background:linear-gradient(var(--bg),rgba(10,6,18,.92));backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top .row{display:flex;align-items:center;gap:10px}
+.brand{font-family:'Oswald',sans-serif;font-style:italic;font-weight:700;font-size:1.25rem;letter-spacing:.02em;flex:1}
+.brand b{color:var(--mag)}
+.who{font-size:.75rem;color:var(--muted)}
+select.sel,input.inp,textarea.inp{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:9px 12px;outline:none;min-width:0}
+select.sel option{background:#1a1030}
+input.inp:focus,textarea.inp:focus,select.sel:focus{border-color:var(--vio)}
+.wrap{padding:12px 14px}
+.seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:3px;gap:3px;margin-bottom:10px}
+.seg button{flex:1;border:0;background:none;padding:8px 6px;border-radius:11px;color:var(--muted);font-weight:600;cursor:pointer}
+.seg button.on{background:linear-gradient(135deg,rgba(227,79,239,.35),rgba(139,92,246,.35));color:#fff;box-shadow:0 0 14px -4px var(--mag)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px}
+.chip{flex:0 0 auto;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 12px;font-size:.8rem;color:var(--muted);cursor:pointer}
+.chip.on{color:#fff;border-color:var(--mag);background:rgba(227,79,239,.18)}
+.filters{display:flex;gap:8px;margin-bottom:10px}
+.filters .inp{flex:1}
+.card{border:1px solid var(--line);background:var(--panel);border-radius:18px;padding:12px 13px;margin-bottom:10px;position:relative}
+.card.new{border-color:rgba(251,113,133,.6);box-shadow:0 0 0 1px rgba(251,113,133,.25),0 0 22px -6px rgba(251,113,133,.5)}
+.card.new.late{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 1px rgba(251,113,133,.6),0 0 30px -2px rgba(251,113,133,.85)}}
+.card .h{display:flex;align-items:center;gap:8px;cursor:pointer}
+.no{font-family:'Oswald',sans-serif;font-style:italic;font-weight:700;font-size:1.15rem}
+.city{font-size:.68rem;font-weight:700;letter-spacing:.06em;padding:2px 8px;border-radius:999px;background:rgba(139,92,246,.25);border:1px solid rgba(139,92,246,.5)}
+.st{margin-left:auto;font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid var(--line)}
+.st.s-new{color:var(--bad);border-color:rgba(251,113,133,.6);background:rgba(251,113,133,.12)}
+.st.s-acc{color:var(--warn);border-color:rgba(251,191,36,.5);background:rgba(251,191,36,.1)}
+.st.s-rdy{color:#7dd3fc;border-color:rgba(125,211,252,.5);background:rgba(125,211,252,.1)}
+.st.s-done{color:var(--ok);border-color:rgba(74,222,128,.5);background:rgba(74,222,128,.1)}
+.st.s-cx{color:var(--dim)}
+.sub{font-size:.76rem;color:var(--muted);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap}
+.timer{color:var(--bad);font-weight:700}
+.items{margin:9px 0 6px;font-size:.88rem}
+.items div{display:flex;gap:8px;padding:3px 0;border-bottom:1px dashed rgba(255,255,255,.08)}
+.items div:last-child{border:0}
+.items .q{margin-left:auto;font-weight:700;white-space:nowrap}
+.pre{color:var(--warn);font-size:.68rem;font-weight:700}
+.sum{display:flex;gap:10px;align-items:baseline;font-size:.82rem;color:var(--muted)}
+.sum b{color:#fff;font-family:'Oswald',sans-serif;font-style:italic;font-size:1.1rem}
+.client{margin-top:8px;padding:9px 10px;border-radius:12px;background:rgba(0,0,0,.25);font-size:.82rem;line-height:1.5;color:var(--muted)}
+.client b{color:var(--text);font-weight:600}
+.client a{color:#c4b5fd}
+.acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--panel2);border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
+.btn.main{flex:1;background:linear-gradient(135deg,#e34fef,#8b5cf6);border:0;color:#fff;box-shadow:0 6px 18px -8px var(--mag)}
+.btn.bad{color:var(--bad);border-color:rgba(251,113,133,.4)}
+.btn.sm{padding:6px 10px;font-size:.78rem;font-weight:600}
+.btn:disabled{opacity:.5}
+.self{display:flex;align-items:center;gap:8px;margin-top:9px;font-size:.8rem;color:var(--muted)}
+.empty{text-align:center;color:var(--dim);padding:40px 10px}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:4px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:rgba(10,6,18,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line)}
+.tabs button{flex:1;border:0;background:none;color:var(--dim);padding:8px 4px;border-radius:14px;font-size:.72rem;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+.tabs button span{font-size:1.2rem;line-height:1}
+.tabs button.on{color:#fff;background:linear-gradient(135deg,rgba(227,79,239,.3),rgba(139,92,246,.3))}
+.badge{position:absolute;margin-left:18px;margin-top:-6px;background:var(--bad);color:#fff;border-radius:999px;font-size:.62rem;min-width:17px;padding:1px 5px;text-align:center}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.kpi{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:11px 12px}
+.kpi .k{font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;color:var(--dim)}
+.kpi .v{font-family:'Oswald',sans-serif;font-style:italic;font-weight:700;font-size:1.45rem;margin-top:2px}
+.kpi .v small{font-size:.8rem;color:var(--muted);font-weight:600}
+.kpi.hot .v{color:var(--mag);text-shadow:0 0 12px rgba(227,79,239,.6)}
+h3{margin:16px 2px 8px;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tbl{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--panel)}
+.tbl .r{display:grid;grid-template-columns:1.6fr .7fr .8fr .8fr;gap:6px;padding:9px 11px;border-bottom:1px solid rgba(255,255,255,.07);font-size:.8rem;align-items:center}
+.tbl .r:last-child{border:0}
+.tbl .r.hd{font-size:.64rem;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);background:rgba(0,0,0,.2)}
+.tbl .r div:not(:first-child){text-align:right}
+.tbl .sm{display:block;color:var(--dim);font-size:.68rem}
+.bar{height:7px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;display:flex;margin:8px 0 4px}
+.bar i{display:block;height:100%}
+.legend{display:flex;gap:12px;font-size:.72rem;color:var(--muted);flex-wrap:wrap}
+.legend b{color:var(--text)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+.modal{position:fixed;inset:0;z-index:50;background:rgba(5,2,10,.78);display:none;align-items:flex-end;justify-content:center}
+.modal.on{display:flex}
+.sheet{width:100%;max-width:560px;max-height:92vh;overflow:auto;background:#150d26;border:1px solid var(--line);border-radius:22px 22px 0 0;padding:16px 14px calc(18px + env(safe-area-inset-bottom))}
+.sheet h2{margin:0 0 12px;font-family:'Oswald',sans-serif;font-style:italic;font-size:1.2rem}
+.fr{display:grid;grid-template-columns:1.5fr 1.2fr .6fr .6fr auto;gap:5px;margin-bottom:6px}
+.fr .inp{padding:8px 8px;font-size:.8rem;width:100%}
+.lbl{font-size:.7rem;color:var(--dim);margin:8px 0 4px}
+.toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:80;background:#241638;border:1px solid var(--line);border-radius:14px;padding:10px 16px;font-size:.85rem;display:none;max-width:90vw}
+.toast.on{display:block}
+.toast.err{border-color:rgba(251,113,133,.6)}
+.more{width:100%;margin:4px 0 10px}
+@media(min-width:700px){.wrap,.top .row{max-width:720px;margin-left:auto;margin-right:auto}}
+</style>
+</head>
+<body>
+<div class="top"><div class="row"><div class="brand">SMOKEEZ <b>·</b> менеджер</div><div><div class="who" id="who"></div></div><select class="sel" id="citySel" style="display:none"></select></div></div>
+<div class="toast" id="toast"></div>
+
+<div class="wrap" id="v-orders">
+  <div class="seg" id="ordSeg"><button class="on" data-v="open">Активные</button><button data-v="history">История</button></div>
+  <div class="filters"><input class="inp" id="q" type="search" placeholder="Поиск: № заказа, имя, телефон, товар"></div>
+  <div id="histFilters" style="display:none">
+    <div class="chips" id="hStatus"><span class="chip on" data-v="">Все</span><span class="chip" data-v="done">Выданные</span><span class="chip" data-v="cancelled">Отменённые</span></div>
+    <div class="chips" id="hPeriod"><span class="chip on" data-p="all">Всё время</span><span class="chip" data-p="today">Сегодня</span><span class="chip" data-p="7">7 дней</span><span class="chip" data-p="30">30 дней</span><span class="chip" data-p="custom">Период…</span></div>
+    <div class="filters" id="hCustom" style="display:none"><input class="inp" type="date" id="hFrom"><input class="inp" type="date" id="hTo"></div>
+  </div>
+  <div id="ordList"></div>
+  <button class="btn more" id="moreBtn" style="display:none">Показать ещё</button>
+</div>
+
+<div class="wrap" id="v-stats" style="display:none">
+  <div class="chips" id="sPeriod"><span class="chip on" data-p="today">Сегодня</span><span class="chip" data-p="yest">Вчера</span><span class="chip" data-p="7">7 дней</span><span class="chip" data-p="month">Этот месяц</span><span class="chip" data-p="pmonth">Прошлый месяц</span><span class="chip" data-p="30">30 дней</span><span class="chip" data-p="custom">Период…</span></div>
+  <div class="filters" id="sCustom" style="display:none"><input class="inp" type="date" id="sFrom"><input class="inp" type="date" id="sTo"></div>
+  <div id="statsBody"></div>
+</div>
+
+<div class="wrap" id="v-batches" style="display:none">
+  <div class="seg" id="regSeg" style="display:none"><button data-r="de" class="on">🇩🇪 Германия</button><button data-r="sk">🇸🇰 Словакия</button></div>
+  <div id="batchBody"></div>
+</div>
+
+<nav class="tabs">
+  <button data-t="orders" class="on"><span>📋</span>Заказы<i class="badge" id="newBadge" style="display:none"></i></button>
+  <button data-t="stats"><span>📊</span>Бухгалтерия</button>
+  <button data-t="batches"><span>📦</span>Поставки</button>
+</nav>
+
+<div class="modal" id="batchModal"><div class="sheet">
+  <h2 id="bmTitle">Новая поставка</h2>
+  <div class="filters"><input class="inp" type="date" id="bmDate"><input class="inp" id="bmNote" placeholder="Заметка (напр. «Заказ от 12.11»)"></div>
+  <div class="lbl">Позиции: товар · вкус · кол-во · закупка € за шт. (необязательно)</div>
+  <div id="bmRows"></div>
+  <button class="btn sm" id="bmAdd">+ позиция</button>
+  <div class="lbl" style="margin-top:14px">Или вставь списком из таблицы (товар ⇥ вкус ⇥ кол-во ⇥ цена): каждая строка — одна позиция</div>
+  <textarea class="inp" id="bmPaste" rows="4" style="width:100%" placeholder="ElfLiq 30ml 5%&#9;Mango&#9;10&#9;5,5"></textarea>
+  <button class="btn sm" id="bmPasteBtn" style="margin-top:6px">Добавить из списка</button>
+  <div class="acts"><button class="btn" id="bmCancel">Отмена</button><button class="btn main" id="bmSave">Сохранить</button></div>
+</div></div>
+
+<datalist id="dlProd"></datalist><datalist id="dlFlav"></datalist>
+
+<script>
+const API = 'https://smokeez-orders.hchpfckj6h.workers.dev/';
+const PRODUCT_LIST = `Vozol Prime 30ml 5%	Berry
+Vozol Prime 30ml 5%	Blueberry Ice
+Vozol Prime 30ml 5%	Blue Raspberry
+Vozol Prime 30ml 5%	LavaFire
+Vozol Prime 30ml 5%	Love 777
+Vozol Prime 30ml 5%	Lemon Lime
+Vozol Prime 30ml 5%	Mint Ice
+Vozol Prime 30ml 5%	Mixed Berries
+Vozol Prime 30ml 5%	Peach Ice
+Vozol Prime 30ml 5%	Pineapple Passion Fruit Lime
+Vozol Prime 30ml 5%	Pomegranate Lemonade
+Vozol Prime 30ml 5%	Strawberry Ice Cream
+Vozol Prime 30ml 5%	Watermelon Bubblegum
+Vozol Prime 30ml 5%	Berry Peach
+Vozol Prime 30ml 5%	Blueberry Watermelon
+Vozol Prime 30ml 5%	Dragon Fruit Banana Cherry
+Vozol Prime 30ml 5%	Kiwi Passion Fruit Guava
+Vozol Prime 30ml 5%	Grape Ice
+Vozol Prime 30ml 5%	Cola Gummies
+Vozol Prime 30ml 5%	Perfume Lemon
+Vozol Prime 30ml 5%	Cherry Cola
+ElfLiq 30ml 5%	Blackberry Lemon
+ElfLiq 30ml 5%	Blueberry Sour Raspberry
+ElfLiq 30ml 5%	Cherry
+ElfLiq 30ml 5%	Cool Mint
+ElfLiq 30ml 5%	Grape
+ElfLiq 30ml 5%	Pink Lemonade
+ElfLiq 30ml 5%	Pineapple Ice
+ElfLiq 30ml 5%	Pink Grapefruit
+ElfLiq 30ml 5%	Sour Watermelon Gummy
+ElfLiq 30ml 5%	Strawberry Cherry Lemon
+ElfLiq 30ml 5%	Apple Peach
+ElfLiq 30ml 5%	Double Apple
+ElfLiq 30ml 5%	Peach Ice
+ElfLiq 30ml 5%	Sour Apple
+ElfLiq 30ml 5%	Cherry Lemon Peach
+ElfLiq 30ml 5%	Grape Cherry
+ElfLiq 30ml 5%	Elf Jack
+ElfLiq 30ml 5%	Pineapple Colada
+Puffy 30ml 5%	Cherry Ice
+Puffy 30ml 5%	Energy Drink
+Puffy 30ml 5%	Gummy Bear
+Puffy 30ml 5%	Grape
+Puffy 30ml 5%	Turbo Mint
+Chaser Black 30ml 5%	Bali
+Chaser Black 30ml 5%	Banana Apple
+Chaser Black 30ml 5%	Blackberry Sour Raspberry
+Chaser Black 30ml 5%	Blackcurrant Peach Apple
+Chaser Black 30ml 5%	Blackcurrant Rose
+Chaser Black 30ml 5%	Bubblegum
+Chaser Black 30ml 5%	Energy Grape
+Chaser Black 30ml 5%	Energy Raspberry
+Chaser Black 30ml 5%	Flirt
+Chaser Black 30ml 5%	Forest Mix
+Chaser Black 30ml 5%	Kiwi Wild Strawberry
+Chaser Black 30ml 5%	Lemon Mint
+Chaser Black 30ml 5%	Mojito
+Chaser Black 30ml 5%	Multifruit
+Chaser Black 30ml 5%	Peach Lemonade
+Chaser Black 30ml 5%	Pink Lemonade
+Chaser Black 30ml 5%	Sherbet
+Chaser Black 30ml 5%	Strawberry Blueberry
+Chaser Black 30ml 5%	Triple Berry
+Chaser Black 30ml 5%	Triple Raspberry
+Chaser Black 30ml 5%	Triple Sour Apple
+Chaser Black 30ml 5%	Watermelon Lemon
+Chaser Lux 30ml 5%	Berry Lemonade
+Chaser Lux 30ml 5%	Blackberry Lemonade
+Chaser Lux 30ml 5%	Blackberry Pink Guava
+Chaser Lux 30ml 5%	Blueberry Mint
+Chaser Lux 30ml 5%	Blueberry Raspberry
+Chaser Lux 30ml 5%	Cherry Lemon
+Chaser Lux 30ml 5%	Coconut Melon
+Chaser Lux 30ml 5%	Energetic
+Chaser Lux 30ml 5%	Grape Mint
+Chaser Lux 30ml 5%	Kiwi Passion Fruit Guava
+Chaser Lux 30ml 5%	Mango Nectar
+Chaser Lux 30ml 5%	Sangria
+Chaser Lux 30ml 5%	Sour Apple
+Chaser Lux 30ml 5%	Strawberry Cream
+Chaser Lux 30ml 5%	Peach Tea
+Chaser Lux 30ml 5%	Tropic Punch
+Chaser Lux 30ml 5%	Turbo Mint
+Chaser Lux 30ml 5%	Vitamin
+Chaser Lux 30ml 5%	Watermelon Raspberry
+Chaser Lux 30ml 5%	Peach Yogurt
+Chaser Lux 30ml 5%	Watermelon Lime
+Chaser Lux 30ml 5%	Berry Needles
+Chaser Lux 30ml 5%	Ice Latte
+Chaser Limitini Editini 30ml 5%	Ballerina Capuccino
+Chaser Limitini Editini 30ml 5%	Glorbo Fruttodrillo
+Chaser Limitini Editini 30ml 5%	Tung Tung Tung Sahur
+Chaser for Pods 30ml 5%	Apple
+Chaser for Pods 30ml 5%	Apple Mint
+Chaser for Pods 30ml 5%	Banana
+Chaser for Pods 30ml 5%	Berries
+Chaser for Pods 30ml 5%	Blackcurrant Menthol
+Chaser for Pods 30ml 5%	Blue Raspberry
+Chaser for Pods 30ml 5%	Blueberry Menthol
+Chaser for Pods 30ml 5%	Cherry
+Chaser for Pods 30ml 5%	Cherry Menthol
+Chaser for Pods 30ml 5%	Grape
+Chaser for Pods 30ml 5%	Kiwi
+Chaser for Pods 30ml 5%	Mint
+Chaser for Pods 30ml 5%	Peach
+Chaser for Pods 30ml 5%	Pineapple
+Chaser for Pods 30ml 5%	Pomegranate
+Chaser for Pods 30ml 5%	Red Currant
+Chaser for Pods 30ml 5%	Strawberry
+Chaser for Pods 30ml 5%	Watermelon
+Chaser for Pods 30ml 5%	Watermelon Menthol
+Chaser for Pods 30ml 5%	Yellow Cherry
+Chaser for Pods 30ml 5%	Wild Strawberry
+Chaser for Pods 30ml 5%	Yellow Raspberry
+Chaser for Pods 30ml 5%	Yellow Dragonfruit
+Chaser Special 30ml 5%	Berry Candy
+Chaser Special 30ml 5%	Berry Needles
+Chaser Special 30ml 5%	Bilberry Mint
+Chaser Special 30ml 5%	Blackberry
+Chaser Special 30ml 5%	Blueberry Lemon
+Chaser Special 30ml 5%	Cherries
+Chaser Special 30ml 5%	Cranberry Mint
+Chaser Special 30ml 5%	Energy Cherry
+Chaser Special 30ml 5%	Fall Tea
+Chaser Special 30ml 5%	Mystery One
+Chaser Special 30ml 5%	Punch
+Chaser Special 30ml 5%	Strawberry Jelly
+Chaser Mix 30ml 5%	Cherry Tobacco
+Chaser Mix 30ml 5%	Cherry Watermelon
+Chaser Mix 30ml 5%	Cola
+Chaser Mix 30ml 5%	Basil Mint
+Chaser Mix 30ml 5%	Blackberry Jam
+Chaser Mix 30ml 5%	Fanta
+Chaser Mix 30ml 5%	Guava Peach
+Chaser Mix 30ml 5%	Orbit
+Chaser Mix 30ml 5%	Smoothie
+Chaser Mix 30ml 5%	Strawberry Grape
+Chaser Mix 30ml 5%	Strawberry Kvass
+Chaser Mix 30ml 5%	Watermelon Apple
+Chaser Mix 30ml 5%	Banana Aloe
+Chaser Mix 30ml 5%	Strawberry Banana
+Chaser Mix 30ml 5%	Rum Cola
+Chaser Mix 30ml 5%	Cranberry Cactus
+Chaser Mix 30ml 5%	Blue Raspberry Lemonade
+Vaporesso XROS 4 Mini	Black
+Vaporesso XROS 4 Mini	Space Grey
+Vaporesso XROS 4 Mini	Ice Purple
+Vaporesso XROS 4 Mini	Ice Green
+Vaporesso XROS 4 Mini	Ice Blue
+Vaporesso XROS 4 Mini	Champagne Gold
+Vaporesso XROS 4 Mini	Camo Yellow
+Vaporesso XROS 4 Mini	Camo Red
+Vaporesso XROS 4 Mini	Camo Silver
+Vaporesso XROS 4 Mini	Ice Pink
+Vaporesso XROS 5	Blue Silk
+Vaporesso XROS 5	Carbon Stripe
+Vaporesso XROS 5	Coral Red
+Vaporesso XROS 5	Cosmic Black
+Vaporesso XROS 5	Grey Silk
+Vaporesso XROS 5	Jade Green
+Vaporesso XROS 5	Lavender Purple
+Vaporesso XROS 5	Opal Pink
+Vaporesso XROS 5	Opal White
+Vaporesso XROS 5	Violet Silk
+Vaporesso XROS 5 Mini	Black
+Vaporesso XROS 5 Mini	Carbon Black
+Vaporesso XROS 5 Mini	Flowing Blue
+Vaporesso XROS 5 Mini	Flowing Green
+Vaporesso XROS 5 Mini	Flowing Pink
+Vaporesso XROS 5 Mini	Pastel Crystal
+Vaporesso XROS 5 Mini	Purple
+Vaporesso XROS 5 Mini	Rose Red
+Vaporesso XROS 5 Mini	Sky Blue
+Vaporesso XROS 5 Mini	Titanium Silver
+Vaporesso XROS Pro 2	Dawn Purple
+Vaporesso XROS Pro 2	Gem Green
+Vaporesso XROS Pro 2	Glittering Black
+Vaporesso XROS Pro 2	Glittering Gold
+Vaporesso XROS Pro 2	Glittering Silver
+Vaporesso XROS Pro 2	Moonlit Pink
+Vaporesso XROS Pro 2	Storm Blue
+Vaporesso XROS 6 Mini	Titanium Black
+Vaporesso XROS 6 Mini	Jelly Pink
+Vaporesso XROS 6	Carbon Fiber Gray
+Vaporesso XROS 6	Scorching Cloud
+Картриджи XROS	Corex 3.0 XROS 3мл 0.4 Ω
+Картриджи XROS	Corex 3.0 XROS 3мл 0.6 Ω
+Картриджи XROS	Corex 3.0 XROS 3мл 0.8 Ω
+Картриджи OXVA Xlim	OXVA Xlim 0.4 Ω
+Картриджи OXVA Xlim	OXVA Xlim 0.6 Ω
+Картриджи OXVA Xlim	OXVA Xlim 0.8 Ω`.trim().split('\n').map(l => l.split('\t'));
+const tg = window.Telegram && Telegram.WebApp;
+if(tg){ try{ tg.ready(); tg.expand(); tg.disableVerticalSwipes && tg.disableVerticalSwipes(); }catch(e){} }
+const INIT = tg ? tg.initData : '';
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const eur = n => (Math.round((Number(n) || 0) * 100) / 100).toFixed(2).replace('.', ',') + ' €';
+const TZ = 'Europe/Berlin';
+const fmtDT = ts => new Date(ts).toLocaleString('ru-RU', {timeZone: TZ, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'});
+let ME = null, SKEW = 0, CITY = '', TAB = 'orders', VIEW = 'open', HSTATUS = '', HPERIOD = 'all', ORDERS = [], MORE = false, OPENED = {};
+
+function toast(t, err){ const e = $('toast'); e.textContent = t; e.className = 'toast on' + (err ? ' err' : ''); clearTimeout(toast.t); toast.t = setTimeout(() => e.className = 'toast', 2600); }
+async function api(action, params, body){
+  const qs = new URLSearchParams({mgr: action, ...(params || {})});
+  const r = await fetch(API + '?' + qs, {method: body ? 'POST' : 'GET', headers: {'X-Telegram-Init-Data': INIT, ...(body ? {'Content-Type': 'text/plain'} : {})}, body: body ? JSON.stringify(body) : undefined});
+  let j = {}; try { j = await r.json(); } catch(e){}
+  if(!r.ok && !j.error) j.error = 'Ошибка ' + r.status;
+  return j;
+}
+const cityName = k => (ME && ME.cityNames && ME.cityNames[k]) || String(k).toUpperCase();
+const CITY_FULL = {kl:'Kaiserslautern', sb:'Saarbrücken', ld:'Landau', bb:'Banská Bystrica', zv:'Zvolen', za:'Žilina', ba:'Bratislava'};
+
+// ---------- день / период ----------
+function dayStart(offset){ const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + (offset || 0)); return d.getTime(); }
+function periodRange(p, fromEl, toEl){
+  if(p === 'today') return [dayStart(0), dayStart(1)];
+  if(p === 'yest') return [dayStart(-1), dayStart(0)];
+  if(p === '7') return [dayStart(-6), dayStart(1)];
+  if(p === '30') return [dayStart(-29), dayStart(1)];
+  if(p === 'month'){ const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); const n = new Date(d); n.setMonth(n.getMonth() + 1); return [d.getTime(), n.getTime()]; }
+  if(p === 'pmonth'){ const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); const pr = new Date(d); pr.setMonth(pr.getMonth() - 1); return [pr.getTime(), d.getTime()]; }
+  if(p === 'custom'){ const f = $(fromEl).value, t = $(toEl).value; return [f ? new Date(f + 'T00:00:00').getTime() : 0, t ? new Date(t + 'T00:00:00').getTime() + 86400000 : 0]; }
+  return [0, 0];
+}
+
+// ---------- заказы ----------
+const STAT = {delivered:['НОВЫЙ','s-new'], reserved:['НОВЫЙ','s-new'], accepted:['ПРИНЯТ','s-acc'], ready:['ГОТОВ','s-rdy'], done:['ВЫДАН','s-done'], cancelled:['ОТМЕНЁН','s-cx']};
+function ago(ts){ const m = Math.max(0, Math.round((Date.now() + SKEW - ts) / 60000)); return m < 60 ? m + ' мин' : m < 1440 ? Math.floor(m / 60) + ' ч ' + (m % 60) + ' мин' : Math.floor(m / 1440) + ' дн'; }
+function orderHtml(o){
+  const isNew = o.status === 'delivered' || o.status === 'reserved';
+  const late = isNew && (Date.now() + SKEW - o.created_at) > 15 * 60000;
+  const open = OPENED[o.no] !== undefined ? OPENED[o.no] : isNew;
+  const [stT, stC] = STAT[o.status] || [o.status, ''];
+  const c = o.contact;
+  const items = o.items.map(l => `<div><span>${esc(l.product)} — <b>${esc(l.flavor)}</b>${l.mode === 'preorder' ? ' <span class="pre">ПРЕДЗАКАЗ</span>' : ''}</span><span class="q">× ${l.qty}</span></div>`).join('');
+  let client = '';
+  if(c){
+    const rows = [['Имя', c.name], ['Телефон', c.phone], ['Связь', c.contact], ['Telegram', c.telegram], ['Email', c.email], ['Способ', c.method], ['Адрес', c.address], ['Оплата', c.payment], ['Комментарий', c.comment]].filter(r => r[1]);
+    client = '<div class="client">' + rows.map(r => `<div>${r[0]}: <b>${esc(r[1])}</b></div>`).join('') + (o.user_id ? `<div><a href="tg://user?id=${esc(o.user_id)}">Открыть чат с клиентом</a></div>` : '') + '</div>';
+  } else if(o.status === 'done' || o.status === 'cancelled' || !c){
+    client = '<div class="client">Контакты клиента удалены по сроку хранения или недоступны.' + (o.user_id ? ` <a href="tg://user?id=${esc(o.user_id)}">Чат</a>` : '') + '</div>';
+  }
+  const by = [o.accepted_name ? 'принял ' + esc(o.accepted_name) : '', o.done_name ? 'выдал ' + esc(o.done_name) : ''].filter(Boolean).join(' · ');
+  let acts = '';
+  if(isNew) acts = `<button class="btn main" data-a="acc">👌 Принять</button><button class="btn bad" data-a="cx">Отменить</button>`;
+  else if(o.status === 'accepted') acts = `<button class="btn main" data-a="rdy">✅ Готов к выдаче</button><button class="btn bad" data-a="cx">Отменить</button>`;
+  else if(o.status === 'ready') acts = `<button class="btn main" data-a="done">📦 Выдан</button><button class="btn bad" data-a="cx">Отменить</button>`;
+  const self = (o.status !== 'cancelled') ? `<label class="self"><input type="checkbox" data-self ${o.for_self ? 'checked' : ''}> 🏷 Взял себе (не продажа — в учёте «взято собой»)</label>` : '';
+  return `<div class="card ${isNew ? 'new' : ''} ${late ? 'late' : ''}" data-no="${o.no}">
+    <div class="h" data-toggle><span class="no">№${o.no}</span><span class="city">${esc(cityName(o.city))}</span><span class="st ${stC}">${stT}</span></div>
+    <div class="sub"><span>${fmtDT(o.created_at)}</span>${isNew ? `<span class="timer">⏱ ждёт ${ago(o.created_at)}</span>` : ''}${by ? `<span>${by}</span>` : ''}${o.for_self ? '<span style="color:var(--warn)">🏷 себе</span>' : ''}</div>
+    <div class="items">${items}</div>
+    <div class="sum"><b>${eur(o.total)}</b>${o.discount > 0 ? `<span>скидка −${eur(o.discount)}${o.promo ? ' · ' + esc(o.promo) : ''}</span>` : ''}</div>
+    ${open ? client + self : ''}
+    ${open && acts ? `<div class="acts">${acts}</div>` : ''}
+  </div>`;
+}
+function renderOrders(){
+  const box = $('ordList');
+  if(!ORDERS.length){ box.innerHTML = `<div class="empty">${VIEW === 'open' ? '🎉 Активных заказов нет' : 'Ничего не найдено'}</div>`; }
+  else box.innerHTML = ORDERS.map(orderHtml).join('');
+  $('moreBtn').style.display = MORE ? '' : 'none';
+}
+async function loadOrders(append){
+  const p = {view: VIEW, q: $('q').value.trim()};
+  if(CITY) p.city = CITY;
+  if(VIEW === 'history'){
+    if(HSTATUS) p.status = HSTATUS;
+    const [f, t] = periodRange(HPERIOD, 'hFrom', 'hTo'); if(f) p.from = f; if(t) p.to = t;
+    if(append && ORDERS.length) p.before = ORDERS[ORDERS.length - 1].created_at;
+  }
+  const j = await api('orders', p);
+  if(!j.ok){ if(!append) $('ordList').innerHTML = `<div class="empty">${esc(j.error || 'Ошибка загрузки')}</div>`; return; }
+  SKEW = j.now - Date.now();
+  ORDERS = append ? ORDERS.concat(j.orders) : j.orders; MORE = j.more;
+  renderOrders();
+  if(VIEW === 'open'){ const n = j.orders.filter(o => o.status === 'delivered' || o.status === 'reserved').length; $('newBadge').style.display = n ? '' : 'none'; $('newBadge').textContent = n; }
+}
+$('ordList').addEventListener('click', async e => {
+  const card = e.target.closest('.card'); if(!card) return;
+  const no = Number(card.dataset.no), o = ORDERS.find(x => x.no === no); if(!o) return;
+  if(e.target.closest('[data-toggle]')){ const isNew = o.status === 'delivered' || o.status === 'reserved'; OPENED[no] = !(OPENED[no] !== undefined ? OPENED[no] : isNew); renderOrders(); return; }
+  const a = e.target.closest('[data-a]');
+  if(a){
+    const act = a.dataset.a;
+    if(act === 'cx' && !confirm('Отменить заказ №' + no + '?\nСклад и баллы клиента вернутся, клиент получит уведомление.')) return;
+    a.disabled = true;
+    const j = await api('status', {}, {no, act});
+    if(j.ok){ toast(act === 'cx' ? 'Заказ отменён' : 'Готово'); if(j.notes && j.notes.length) toast(j.notes.join('\n'), true); }
+    else toast(j.error || 'Не удалось', true);
+    loadOrders(); return;
+  }
+  if(e.target.matches('[data-self]')){
+    const j = await api('forself', {}, {no, value: e.target.checked ? 1 : 0});
+    if(j.ok){ o.for_self = e.target.checked ? 1 : 0; toast(o.for_self ? 'Отмечено: взял себе' : 'Снята отметка'); } else { toast(j.error || 'Ошибка', true); e.target.checked = !e.target.checked; }
+  }
+});
+$('ordSeg').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; VIEW = b.dataset.v; [...$('ordSeg').children].forEach(x => x.classList.toggle('on', x === b)); $('histFilters').style.display = VIEW === 'history' ? '' : 'none'; ORDERS = []; renderOrders(); loadOrders(); });
+$('hStatus').addEventListener('click', e => { const c = e.target.closest('.chip'); if(!c) return; HSTATUS = c.dataset.v; [...$('hStatus').children].forEach(x => x.classList.toggle('on', x === c)); loadOrders(); });
+$('hPeriod').addEventListener('click', e => { const c = e.target.closest('.chip'); if(!c) return; HPERIOD = c.dataset.p; [...$('hPeriod').children].forEach(x => x.classList.toggle('on', x === c)); $('hCustom').style.display = HPERIOD === 'custom' ? '' : 'none'; loadOrders(); });
+['hFrom', 'hTo'].forEach(id => $(id).addEventListener('change', () => loadOrders()));
+$('moreBtn').addEventListener('click', () => loadOrders(true));
+let qT; $('q').addEventListener('input', () => { clearTimeout(qT); qT = setTimeout(() => loadOrders(), 350); });
+
+// ---------- бухгалтерия ----------
+let SPERIOD = 'today';
+async function loadStats(){
+  const [f, t] = periodRange(SPERIOD, 'sFrom', 'sTo');
+  const p = {from: f || 1, to: t || Date.now() + 86400000}; if(CITY) p.city = CITY;
+  $('statsBody').innerHTML = '<div class="empty">Считаю…</div>';
+  const j = await api('stats', p);
+  if(!j.ok){ $('statsBody').innerHTML = `<div class="empty">${esc(j.error || 'Ошибка')}</div>`; return; }
+  const T = j.total;
+  const kpi = (k, v, hot) => `<div class="kpi ${hot ? 'hot' : ''}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  let h = '<div class="kpis">' + kpi('Выручка', eur(T.revenue), 1) + kpi('Продано, шт', T.units + ' <small>· ' + T.orders + ' зак.</small>') + kpi('Скидки', eur(T.discount)) + kpi('Взято себе', T.selfUnits + ' шт <small>· ' + eur(T.selfValue) + '</small>') + '</div>';
+  h += `<div class="legend" style="margin-bottom:6px"><span>В работе сейчас: <b>${j.open.count}</b> (${eur(j.open.sum)})</span><span>Отменено: <b>${T.cancelled}</b></span></div>`;
+  const tbl = (title, head, rows) => rows.length ? `<h3>${title}</h3><div class="tbl"><div class="r hd">${head.map(x => `<div>${x}</div>`).join('')}</div>${rows.join('')}</div>` : '';
+  h += tbl('По менеджерам', ['Менеджер', 'Шт', 'Выручка', 'Скидки'], j.byManager.map(m => `<div class="r"><div>${esc(m.manager)}<span class="sm">${esc(CITY_FULL[m.city] || m.city)} · ${m.orders} зак.${m.selfUnits ? ' · себе ' + m.selfUnits + ' шт / ' + eur(m.selfValue) : ''}</span></div><div>${m.units}</div><div>${eur(m.revenue)}</div><div>${eur(m.discount)}</div></div>`));
+  h += tbl('По городам', ['Город', 'Шт', 'Выручка', 'Скидки'], j.byCity.map(m => `<div class="r"><div>${esc(CITY_FULL[m.city] || m.city)}<span class="sm">${m.orders} зак.${m.selfUnits ? ' · себе ' + m.selfUnits + ' шт / ' + eur(m.selfValue) : ''}</span></div><div>${m.units}</div><div>${eur(m.revenue)}</div><div>${eur(m.discount)}</div></div>`));
+  h += tbl('По товарам', ['Товар', 'Шт', 'Выручка', 'Себе'], j.byProduct.map(m => `<div class="r"><div>${esc(m.product)}</div><div>${m.units}</div><div>${eur(m.revenue)}</div><div>${m.selfUnits || '—'}</div></div>`));
+  if(!j.byManager.length) h += '<div class="empty">За этот период продаж нет</div>';
+  h += '<div class="lbl" style="margin-top:14px">Продажа — заказ со статусом «Выдан» (по дате выдачи). «Взял себе» — отмеченные заказы, они не входят в выручку. Менеджер — тот, кто нажал «Выдан» (если нет — «Принять»).</div>';
+  $('statsBody').innerHTML = h;
+}
+$('sPeriod').addEventListener('click', e => { const c = e.target.closest('.chip'); if(!c) return; SPERIOD = c.dataset.p; [...$('sPeriod').children].forEach(x => x.classList.toggle('on', x === c)); $('sCustom').style.display = SPERIOD === 'custom' ? '' : 'none'; loadStats(); });
+['sFrom', 'sTo'].forEach(id => $(id).addEventListener('change', loadStats));
+
+// ---------- поставки ----------
+let REGION = 'de', BATCHES = {}, EDIT = null;
+async function loadBatches(){
+  $('batchBody').innerHTML = '<div class="empty">Загружаю…</div>';
+  const j = await api('batches', {});
+  if(!j.ok){ $('batchBody').innerHTML = `<div class="empty">${esc(j.error || 'Ошибка')}</div>`; return; }
+  BATCHES = {}; j.regions.forEach(r => BATCHES[r.region] = r);
+  const regs = j.regions.map(r => r.region);
+  $('regSeg').style.display = regs.length > 1 ? '' : 'none';
+  if(!regs.includes(REGION)) REGION = regs[0];
+  [...$('regSeg').children].forEach(x => x.classList.toggle('on', x.dataset.r === REGION));
+  const R = BATCHES[REGION]; if(!R){ $('batchBody').innerHTML = '<div class="empty">Нет данных</div>'; return; }
+  let h = j.canEdit ? '<button class="btn main" style="width:100%;margin-bottom:10px" id="newBatch">+ Записать поставку</button>' : '';
+  if(!R.batches.length) h += '<div class="empty">Поставок пока нет.<br>Запиши первую — и увидишь, сколько продано из каждой.</div>';
+  R.batches.forEach(b => {
+    const tot = b.received || 1, ps = b.sold / tot * 100, pf = b.self / tot * 100;
+    const profit = b.cost ? b.revenue - b.soldCost : null;
+    h += `<div class="card" data-b="${b.id}"><div class="h" data-tb><span class="no">${esc(b.date.split('-').reverse().join('.'))}</span><span class="st ${b.left <= 0 ? 's-done' : 's-acc'}">${b.left <= 0 ? 'ПРОДАНА' : 'ОСТАЛОСЬ ' + b.left}</span></div>
+      <div class="sub"><span>${esc(b.note || 'без заметки')}</span><span>всего ${b.received} шт</span></div>
+      <div class="bar"><i style="width:${ps}%;background:linear-gradient(90deg,#e34fef,#8b5cf6)"></i><i style="width:${pf}%;background:var(--warn)"></i></div>
+      <div class="legend"><span><span class="dot" style="background:#c653f0"></span>продано <b>${b.sold}</b></span><span><span class="dot" style="background:var(--warn)"></span>себе <b>${b.self}</b></span><span>остаток <b>${b.left}</b></span></div>
+      <div class="sub" style="margin-top:6px"><span>Выручка: <b style="color:#fff">${eur(b.revenue)}</b></span>${b.cost ? `<span>Закупка: <b style="color:#fff">${eur(b.cost)}</b></span><span>Прибыль по проданному: <b style="color:${profit >= 0 ? 'var(--ok)' : 'var(--bad)'}">${eur(profit)}</b></span>` : ''}</div>
+      <div class="bitems" style="display:none"><div class="tbl" style="margin-top:8px"><div class="r hd" style="grid-template-columns:1.8fr .5fr .5fr .5fr"><div>Товар · вкус</div><div>Пришло</div><div>Продано</div><div>Остаток</div></div>${b.items.map(i => `<div class="r" style="grid-template-columns:1.8fr .5fr .5fr .5fr"><div>${esc(i.product)}<span class="sm">${esc(i.flavor)}${i.cost != null ? ' · ' + eur(i.cost) + '/шт' : ''}</span></div><div>${i.qty}</div><div>${i.sold}${i.self ? ' +' + i.self + '🏷' : ''}</div><div>${i.qty - i.sold - i.self}</div></div>`).join('')}</div>
+        ${j.canEdit ? '<div class="acts"><button class="btn sm" data-edit>✏️ Изменить</button><button class="btn sm bad" data-del>Удалить</button></div>' : ''}</div></div>`;
+  });
+  if(R.unassigned.length) h += `<h3>Продано не из записанных поставок</h3><div class="tbl">${R.unassigned.map(u => `<div class="r" style="grid-template-columns:1.8fr .5fr .5fr"><div>${esc(u.product)}<span class="sm">${esc(u.flavor)}</span></div><div>${u.sold}</div><div>${u.self ? u.self + '🏷' : ''}</div></div>`).join('')}</div><div class="lbl">Это продажи товара, которого нет ни в одной поставке на тот момент (остатки до учёта или поставка ещё не записана). Расчёт идёт по принципу «первая пришла — первая продана».</div>`;
+  $('batchBody').innerHTML = h;
+}
+$('regSeg').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; REGION = b.dataset.r; loadBatches(); });
+$('batchBody').addEventListener('click', async e => {
+  if(e.target.id === 'newBatch') return openBatch(null);
+  const card = e.target.closest('[data-b]'); if(!card) return;
+  const b = (BATCHES[REGION].batches || []).find(x => x.id === Number(card.dataset.b));
+  if(e.target.closest('[data-tb]')){ const el = card.querySelector('.bitems'); el.style.display = el.style.display === 'none' ? '' : 'none'; return; }
+  if(e.target.closest('[data-edit]')) return openBatch(b);
+  if(e.target.closest('[data-del]')){ if(!confirm('Удалить поставку от ' + b.date + '? Продажи пересчитаются.')) return; const j = await api('batch_delete', {}, {id: b.id}); toast(j.ok ? 'Удалено' : (j.error || 'Ошибка'), !j.ok); loadBatches(); }
+});
+function fillDatalists(){ const prods = [...new Set(PRODUCT_LIST.map(r => r[0]))]; $('dlProd').innerHTML = prods.map(p => `<option value="${esc(p)}">`).join(''); }
+fillDatalists();
+function rowHtml(i){ i = i || {}; return `<div class="fr"><input class="inp" list="dlProd" data-f="product" placeholder="Товар" value="${esc(i.product || '')}"><input class="inp" list="dlFlav" data-f="flavor" placeholder="Вкус" value="${esc(i.flavor || '')}"><input class="inp" data-f="qty" inputmode="numeric" placeholder="шт" value="${i.qty || ''}"><input class="inp" data-f="cost" inputmode="decimal" placeholder="€" value="${i.cost != null ? i.cost : ''}"><button class="btn sm" data-rm>✕</button></div>`; }
+function openBatch(b){
+  EDIT = b;
+  $('bmTitle').textContent = b ? 'Изменить поставку' : 'Новая поставка';
+  $('bmDate').value = b ? b.date : new Date().toISOString().slice(0, 10);
+  $('bmNote').value = b ? b.note : '';
+  $('bmRows').innerHTML = (b && b.items.length ? b.items : [null]).map(rowHtml).join('');
+  $('bmPaste').value = '';
+  $('batchModal').classList.add('on');
+}
+$('bmRows').addEventListener('click', e => { if(e.target.matches('[data-rm]')) e.target.closest('.fr').remove(); });
+$('bmRows').addEventListener('focusin', e => { if(e.target.dataset.f === 'flavor'){ const p = e.target.closest('.fr').querySelector('[data-f=product]').value.trim().toLowerCase(); $('dlFlav').innerHTML = PRODUCT_LIST.filter(r => r[0].toLowerCase() === p).map(r => `<option value="${esc(r[1])}">`).join(''); } });
+$('bmAdd').onclick = () => $('bmRows').insertAdjacentHTML('beforeend', rowHtml());
+$('bmPasteBtn').onclick = () => {
+  const lines = $('bmPaste').value.split('\n').map(l => l.split('\t').map(x => x.trim())).filter(r => r.length >= 3 && r[0] && r[1]);
+  if(!lines.length){ toast('Нужны колонки: товар, вкус, кол-во (через Tab)', true); return; }
+  const first = $('bmRows').querySelector('.fr [data-f=product]'); if(first && !first.value && $('bmRows').children.length === 1) $('bmRows').innerHTML = '';
+  $('bmRows').insertAdjacentHTML('beforeend', lines.map(r => rowHtml({product: r[0], flavor: r[1], qty: parseInt(r[2], 10) || '', cost: r[3] ? r[3].replace(',', '.') : ''})).join(''));
+  $('bmPaste').value = '';
+};
+$('bmCancel').onclick = () => $('batchModal').classList.remove('on');
+$('bmSave').onclick = async () => {
+  const items = [...$('bmRows').querySelectorAll('.fr')].map(r => { const g = f => r.querySelector(`[data-f=${f}]`).value.trim(); return {product: g('product'), flavor: g('flavor'), qty: parseInt(g('qty'), 10), cost: g('cost') === '' ? null : parseFloat(g('cost').replace(',', '.'))}; }).filter(i => i.product && i.flavor && i.qty > 0);
+  if(!items.length){ toast('Добавь хотя бы одну позицию', true); return; }
+  $('bmSave').disabled = true;
+  const j = await api('batch_save', {}, {id: EDIT ? EDIT.id : 0, region: REGION, date: $('bmDate').value, note: $('bmNote').value, items});
+  $('bmSave').disabled = false;
+  if(j.ok){ $('batchModal').classList.remove('on'); toast('Поставка сохранена'); loadBatches(); } else toast(j.error || 'Ошибка', true);
+};
+
+// ---------- навигация / запуск ----------
+function setTab(t){
+  TAB = t;
+  ['orders', 'stats', 'batches'].forEach(x => $('v-' + x).style.display = x === t ? '' : 'none');
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  if(t === 'orders') loadOrders(); if(t === 'stats') loadStats(); if(t === 'batches') loadBatches();
+}
+document.querySelector('.tabs').addEventListener('click', e => { const b = e.target.closest('button'); if(b) setTab(b.dataset.t); });
+$('citySel').addEventListener('change', () => { CITY = $('citySel').value; ORDERS = []; setTab(TAB); });
+async function boot(){
+  const j = await api('me');
+  if(!j.ok){ document.body.innerHTML = `<div class="empty" style="padding-top:30vh">🔒 ${esc(j.error || 'Нет доступа')}<br><br>Открой приложение из менеджерского бота.</div>`; return; }
+  ME = j.me; SKEW = j.now - Date.now();
+  $('who').textContent = ME.name + (ME.admin ? ' · админ' : '');
+  if(ME.cities.length > 1){ $('citySel').style.display = ''; $('citySel').innerHTML = '<option value="">Все города</option>' + ME.cities.map(c => `<option value="${c}">${esc(CITY_FULL[c] || c)}</option>`).join(''); }
+  setTab('orders');
+  setInterval(() => { if(document.hidden) return; if(TAB === 'orders' && VIEW === 'open' && !$('q').value) loadOrders(); }, 20000);
+  document.addEventListener('visibilitychange', () => { if(!document.hidden && TAB === 'orders') loadOrders(); });
+}
+boot();
+</script>
+</body>
+</html>
