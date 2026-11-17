@@ -1175,6 +1175,7 @@ const D = [
 ["строго для людей <b>старше 21 года</b>","iba pre osoby <b>staršie ako 21 rokov</b>","nur für Personen <b>ab 21 Jahren</b>","strictly for people <b>over 21</b>"],
 ["Кайзерслаутерн","Kaiserslautern","Kaiserslautern","Kaiserslautern"],
 ["Саарбрюкен","Saarbrücken","Saarbrücken","Saarbrücken"],
+["Ландау","Landau in der Pfalz","Landau in der Pfalz","Landau in der Pfalz"],
 ["📍 Выберите ваш город","📍 Vyber svoje mesto","📍 Wähle deine Stadt","📍 Choose your city"],
 ["📍 Город","📍 Mesto","📍 Stadt","📍 City"],
 ["От города зависят цены и наличие товаров.","Od mesta závisia ceny a dostupnosť tovaru.","Von der Stadt hängen Preise und Verfügbarkeit ab.","Prices and availability depend on the city."],
@@ -2011,6 +2012,9 @@ const CITIES = {
   sb: { key:'sb', short:'SB', region:'de', name:'Saarbrücken',
         // жидкости Vozol / ElfLiq / Puffy — 11 €, остальное как в базовом прайсе
         price: line => (line.category === 'liquid' && /^(Vozol Prime|ElfLiq|Puffy)/i.test(line.name)) ? 11.00 : null },
+  // Landau: как в Saarbrücken — Vozol / ElfLiq / Puffy по 11 € (в Kaiserslautern они 9,50 € по акции)
+  ld: { key:'ld', short:'LD', region:'de', name:'Landau in der Pfalz',
+        price: line => (line.category === 'liquid' && /^(Vozol Prime|ElfLiq|Puffy)/i.test(line.name)) ? 11.00 : null },
   // Словакия: отдельный бот и свой прайс (см. skPrice)
   bb: { key:'bb', short:'BB', region:'sk', name:'Banská Bystrica', price:skPrice },
   zv: { key:'zv', short:'ZV', region:'sk', name:'Zvolen', price:skPrice },
@@ -2476,7 +2480,7 @@ function buildCatFilters(){
 //   top:true  — плашка «ТОП»
 //   drop:15   — плашка «−15%» (процент считаешь сам; чтобы убрать — удали строку или поставь 0)
 //   strong:false — отключить автоматическую плашку «Strong» у товара
-// Города и страны: top и drop можно задать только для части городов (ключи городов kl, sb, bb, zv, za, ba или страны de, sk):
+// Города и страны: top и drop можно задать только для части городов (ключи городов kl, sb, ld, bb, zv, za, ba или страны de, sk):
 //   drop:{ kl:10 }              — скидка −10% только в Кайзерслаутерне
 //   drop:{ sk:15, sb:5 }        — −15% во всей Словакии и −5% в Саарбрюккене
 //   top:['kl','bb']             — «ТОП» только в этих городах   (top:{sk:true} — во всей Словакии)
