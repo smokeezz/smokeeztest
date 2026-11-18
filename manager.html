@@ -213,6 +213,16 @@ header.top .brand,header.top .city-pill,header.top .icon-btn{opacity:var(--hd,1)
 .pcustom .inp{flex:1;min-width:0}
 .chip{background:rgba(255,255,255,.03)}
 h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
+.card.new{box-shadow:none}
+.cbody{display:grid;grid-template-rows:0fr;transition:grid-template-rows .38s cubic-bezier(.4,0,.2,1)}
+.card.open .cbody{grid-template-rows:1fr}
+.cin{overflow:hidden;min-height:0}
+.cbody .cin>*:first-child{margin-top:10px}
+.tog{display:flex;flex-direction:column;align-items:center;gap:0;width:100%;margin-top:8px;padding:4px 0 0;background:none;border:0;color:var(--muted);cursor:pointer;font:700 .8rem 'Manrope',sans-serif}
+.tog .tt{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.tog svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .38s cubic-bezier(.4,0,.2,1)}
+.card.open .tog svg{transform:rotate(180deg)}
+.tog:active{opacity:.7}
 </style>
 </head>
 <body>
@@ -531,7 +541,7 @@ function chatBtn(o){ return o.tg_user ? `<button class="btn link" data-chat="u">
 function orderHtml(o){
   const isNew = o.status === 'delivered' || o.status === 'reserved';
   const late = isNew && (Date.now() + SKEW - o.created_at) > 15 * 60000;
-  const open = OPENED[o.no] !== undefined ? OPENED[o.no] : isNew;
+  const open = !!OPENED[o.no];
   const [stT, stC] = STAT[o.status] || [o.status, ''];
   const c = o.contact;
   const items = o.items.map(l => `<div><span>${esc(l.product)} — <b>${esc(l.flavor)}</b>${l.mode === 'preorder' ? ' <span class="pre">ПРЕДЗАКАЗ</span>' : ''}</span><span class="q">× ${l.qty}</span></div>`).join('');
@@ -550,14 +560,17 @@ function orderHtml(o){
   const editable = ['delivered', 'reserved', 'accepted', 'ready'].includes(o.status);
   const extra = (editable ? '<button class="btn sm" data-a="edit">✏️ Изменить состав</button>' : '') + (ME && ME.admin ? '<button class="btn sm bad" data-a="del">🗑 Удалить</button>' : '');
   const self = (o.status !== 'cancelled') ? `<label class="self"><input type="checkbox" data-self ${o.for_self ? 'checked' : ''}> 🏷 Взял себе (не продажа — в учёте «взято собой»)</label>` : '';
-  return `<div class="card ${isNew ? 'new' : ''} ${late ? 'late' : ''}" data-no="${o.no}">
+  return `<div class="card ${isNew ? 'new' : ''} ${late ? 'late' : ''} ${open ? 'open' : ''}" data-no="${o.no}">
     <div class="h" data-toggle><span class="no">№${o.no}</span><span class="city">${esc(cityName(o.city))}</span><span class="st ${stC}">${stT}</span></div>
     <div class="sub"><span>${fmtDT(o.created_at)}</span>${isNew ? `<span class="timer">⏱ ждёт ${ago(o.created_at)}</span>` : ''}${by ? `<span>${by}</span>` : ''}${o.for_self ? '<span style="color:var(--warn)">🏷 себе</span>' : ''}</div>
     <div class="items">${items}</div>
     <div class="sum"><b>${eur(o.total)}</b>${o.discount > 0 ? `<span>скидка −${eur(o.discount)}${o.promo ? ' · ' + esc(o.promo) : ''}</span>` : ''}</div>
-    ${open ? client + self : ''}
-    ${open && acts ? `<div class="acts">${acts}</div>` : ''}
-    ${open && extra ? `<div class="acts" style="margin-top:8px">${extra}</div>` : ''}
+    <div class="cbody"><div class="cin">
+      ${client}${self}
+      ${acts ? `<div class="acts">${acts}</div>` : ''}
+      ${extra ? `<div class="acts" style="margin-top:8px">${extra}</div>` : ''}
+    </div></div>
+    <button class="tog" type="button" data-tog><span class="tt">${open ? 'Показать меньше' : 'Посмотреть детали'}</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
   </div>`;
 }
 function renderOrders(){
@@ -584,7 +597,7 @@ async function loadOrders(append){
 $('ordList').addEventListener('click', async e => {
   const card = e.target.closest('.card'); if(!card) return;
   const no = Number(card.dataset.no), o = ORDERS.find(x => x.no === no); if(!o) return;
-  if(e.target.closest('[data-toggle]')){ const isNew = o.status === 'delivered' || o.status === 'reserved'; OPENED[no] = !(OPENED[no] !== undefined ? OPENED[no] : isNew); renderOrders(); return; }
+  if(e.target.closest('[data-toggle]') || e.target.closest('[data-tog]')){ OPENED[no] = !OPENED[no]; card.classList.toggle('open', OPENED[no]); card.querySelector('.tt').textContent = OPENED[no] ? 'Показать меньше' : 'Посмотреть детали'; return; }
   const ch = e.target.closest('[data-chat]');
   if(ch){
     if(ch.dataset.chat === 'u' && o.tg_user){ const u = 'https://t.me/' + o.tg_user; if(tg && tg.openTelegramLink) tg.openTelegramLink(u); else window.open(u, '_blank'); return; }
