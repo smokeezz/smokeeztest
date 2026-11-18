@@ -223,6 +223,23 @@ h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
 .tog svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .38s cubic-bezier(.4,0,.2,1)}
 .card.open .tog svg{transform:rotate(180deg)}
 .tog:active{opacity:.7}
+.wrapchips{flex-wrap:wrap;overflow:visible;padding-left:0;padding-right:0;margin:0 0 8px}
+.bcat{font:700 .62rem 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--magenta);margin:14px 2px 6px}
+.grp{border:1px solid var(--line2);border-radius:14px;background:rgba(255,255,255,.02);margin-bottom:6px;overflow:hidden}
+.gh{display:flex;align-items:center;gap:8px;padding:12px;cursor:pointer}
+.gh .gn{font-weight:700;font-size:.88rem;flex:1;min-width:0}
+.gh .gp{font:600 .7rem 'JetBrains Mono',monospace;color:var(--muted);white-space:nowrap}
+.gh .gc{min-width:22px;height:22px;padding:0 6px;border-radius:99px;background:linear-gradient(135deg,var(--magenta),var(--violet));color:#fff;font:700 .7rem/22px 'JetBrains Mono',monospace;text-align:center}
+.gh svg{width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .3s}
+.grp.open .gh svg{transform:rotate(180deg)}
+.gb{display:none;padding:2px 12px 12px;border-top:1px solid var(--line)}
+.grp.open .gb{display:block;animation:fade .18s ease}
+.fl{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:.86rem}
+.fl>span{flex:1;min-width:0}
+.fl .qin{width:76px;text-align:center;padding:8px 6px;flex:0 0 auto}
+.fl.add{margin-top:6px;padding-top:10px;border-top:1px dashed var(--line2)}
+.fl.add .inp{flex:1;min-width:0;padding:8px 10px;font-size:.82rem}
+.sheet{background:#0f0a18!important}
 </style>
 </head>
 <body>
@@ -269,15 +286,24 @@ h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
 </nav>
 
 <div class="modal" id="batchModal"><div class="sheet">
-  <h2 id="bmTitle">Новая поставка</h2>
-  <div class="filters"><input class="inp" type="date" id="bmDate"><input class="inp" id="bmNote" placeholder="Заметка (напр. «Заказ от 12.11»)"></div>
-  <div class="lbl">Позиции: товар · вкус · кол-во · закупка € за шт. (необязательно)</div>
-  <div id="bmRows"></div>
-  <button class="btn sm" id="bmAdd">+ позиция</button>
-  <div class="lbl" style="margin-top:14px">Или вставь списком из таблицы (товар ⇥ вкус ⇥ кол-во ⇥ цена): каждая строка — одна позиция</div>
-  <textarea class="inp" id="bmPaste" rows="4" style="width:100%" placeholder="ElfLiq 30ml 5%&#9;Mango&#9;10&#9;5,5"></textarea>
-  <button class="btn sm" id="bmPasteBtn" style="margin-top:6px">Добавить из списка</button>
+  <h2 id="bmTitle">Новая партия</h2>
+  <div class="lbl">Куда записываем</div>
+  <div class="chips wrapchips" id="bmCity"></div>
+  <div class="filters"><input class="inp" type="date" id="bmDate"><input class="inp" id="bmNote" placeholder="Заметка (необязательно)"></div>
+  <div class="lbl">Открой группу товара и впиши количество у каждого вкуса. Цена за штуку подставляется по прайсу выбранного города.</div>
+  <div id="bmGroups"></div>
+  <div class="sum" id="bmSum" style="margin-top:10px"></div>
   <div class="acts"><button class="btn" id="bmCancel">Отмена</button><button class="btn main" id="bmSave">Сохранить</button></div>
+</div></div>
+
+<div class="modal" id="discModal"><div class="sheet">
+  <h2 id="dmTitle">Скидка</h2>
+  <div class="lbl">Сумма заказа до скидки: <b id="dmSub"></b> · сейчас скидка: <b id="dmCur"></b>. Это итоговая скидка по заказу — она заменит текущую (в том числе промокод).</div>
+  <div class="seg" id="dmMode"><button class="on" data-m="eur">€ сумма</button><button data-m="pct">% процент</button></div>
+  <div class="chips wrapchips" id="dmQuick"></div>
+  <input class="inp" id="dmVal" inputmode="decimal" placeholder="0" style="width:100%">
+  <div class="sum" id="dmRes" style="margin-top:10px"></div>
+  <div class="acts"><button class="btn" id="dmCancel">Отмена</button><button class="btn main" id="dmSave">Сохранить</button></div>
 </div></div>
 
 <div class="modal" id="editModal"><div class="sheet">
@@ -292,197 +318,7 @@ h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
 
 <script>
 const API = 'https://smokeez-orders.hchpfckj6h.workers.dev/';
-const PRODUCT_LIST = `Vozol Prime 30ml 5%	Berry
-Vozol Prime 30ml 5%	Blueberry Ice
-Vozol Prime 30ml 5%	Blue Raspberry
-Vozol Prime 30ml 5%	LavaFire
-Vozol Prime 30ml 5%	Love 777
-Vozol Prime 30ml 5%	Lemon Lime
-Vozol Prime 30ml 5%	Mint Ice
-Vozol Prime 30ml 5%	Mixed Berries
-Vozol Prime 30ml 5%	Peach Ice
-Vozol Prime 30ml 5%	Pineapple Passion Fruit Lime
-Vozol Prime 30ml 5%	Pomegranate Lemonade
-Vozol Prime 30ml 5%	Strawberry Ice Cream
-Vozol Prime 30ml 5%	Watermelon Bubblegum
-Vozol Prime 30ml 5%	Berry Peach
-Vozol Prime 30ml 5%	Blueberry Watermelon
-Vozol Prime 30ml 5%	Dragon Fruit Banana Cherry
-Vozol Prime 30ml 5%	Kiwi Passion Fruit Guava
-Vozol Prime 30ml 5%	Grape Ice
-Vozol Prime 30ml 5%	Cola Gummies
-Vozol Prime 30ml 5%	Perfume Lemon
-Vozol Prime 30ml 5%	Cherry Cola
-ElfLiq 30ml 5%	Blackberry Lemon
-ElfLiq 30ml 5%	Blueberry Sour Raspberry
-ElfLiq 30ml 5%	Cherry
-ElfLiq 30ml 5%	Cool Mint
-ElfLiq 30ml 5%	Grape
-ElfLiq 30ml 5%	Pink Lemonade
-ElfLiq 30ml 5%	Pineapple Ice
-ElfLiq 30ml 5%	Pink Grapefruit
-ElfLiq 30ml 5%	Sour Watermelon Gummy
-ElfLiq 30ml 5%	Strawberry Cherry Lemon
-ElfLiq 30ml 5%	Apple Peach
-ElfLiq 30ml 5%	Double Apple
-ElfLiq 30ml 5%	Peach Ice
-ElfLiq 30ml 5%	Sour Apple
-ElfLiq 30ml 5%	Cherry Lemon Peach
-ElfLiq 30ml 5%	Grape Cherry
-ElfLiq 30ml 5%	Elf Jack
-ElfLiq 30ml 5%	Pineapple Colada
-Puffy 30ml 5%	Cherry Ice
-Puffy 30ml 5%	Energy Drink
-Puffy 30ml 5%	Gummy Bear
-Puffy 30ml 5%	Grape
-Puffy 30ml 5%	Turbo Mint
-Chaser Black 30ml 5%	Bali
-Chaser Black 30ml 5%	Banana Apple
-Chaser Black 30ml 5%	Blackberry Sour Raspberry
-Chaser Black 30ml 5%	Blackcurrant Peach Apple
-Chaser Black 30ml 5%	Blackcurrant Rose
-Chaser Black 30ml 5%	Bubblegum
-Chaser Black 30ml 5%	Energy Grape
-Chaser Black 30ml 5%	Energy Raspberry
-Chaser Black 30ml 5%	Flirt
-Chaser Black 30ml 5%	Forest Mix
-Chaser Black 30ml 5%	Kiwi Wild Strawberry
-Chaser Black 30ml 5%	Lemon Mint
-Chaser Black 30ml 5%	Mojito
-Chaser Black 30ml 5%	Multifruit
-Chaser Black 30ml 5%	Peach Lemonade
-Chaser Black 30ml 5%	Pink Lemonade
-Chaser Black 30ml 5%	Sherbet
-Chaser Black 30ml 5%	Strawberry Blueberry
-Chaser Black 30ml 5%	Triple Berry
-Chaser Black 30ml 5%	Triple Raspberry
-Chaser Black 30ml 5%	Triple Sour Apple
-Chaser Black 30ml 5%	Watermelon Lemon
-Chaser Lux 30ml 5%	Berry Lemonade
-Chaser Lux 30ml 5%	Blackberry Lemonade
-Chaser Lux 30ml 5%	Blackberry Pink Guava
-Chaser Lux 30ml 5%	Blueberry Mint
-Chaser Lux 30ml 5%	Blueberry Raspberry
-Chaser Lux 30ml 5%	Cherry Lemon
-Chaser Lux 30ml 5%	Coconut Melon
-Chaser Lux 30ml 5%	Energetic
-Chaser Lux 30ml 5%	Grape Mint
-Chaser Lux 30ml 5%	Kiwi Passion Fruit Guava
-Chaser Lux 30ml 5%	Mango Nectar
-Chaser Lux 30ml 5%	Sangria
-Chaser Lux 30ml 5%	Sour Apple
-Chaser Lux 30ml 5%	Strawberry Cream
-Chaser Lux 30ml 5%	Peach Tea
-Chaser Lux 30ml 5%	Tropic Punch
-Chaser Lux 30ml 5%	Turbo Mint
-Chaser Lux 30ml 5%	Vitamin
-Chaser Lux 30ml 5%	Watermelon Raspberry
-Chaser Lux 30ml 5%	Peach Yogurt
-Chaser Lux 30ml 5%	Watermelon Lime
-Chaser Lux 30ml 5%	Berry Needles
-Chaser Lux 30ml 5%	Ice Latte
-Chaser Limitini Editini 30ml 5%	Ballerina Capuccino
-Chaser Limitini Editini 30ml 5%	Glorbo Fruttodrillo
-Chaser Limitini Editini 30ml 5%	Tung Tung Tung Sahur
-Chaser for Pods 30ml 5%	Apple
-Chaser for Pods 30ml 5%	Apple Mint
-Chaser for Pods 30ml 5%	Banana
-Chaser for Pods 30ml 5%	Berries
-Chaser for Pods 30ml 5%	Blackcurrant Menthol
-Chaser for Pods 30ml 5%	Blue Raspberry
-Chaser for Pods 30ml 5%	Blueberry Menthol
-Chaser for Pods 30ml 5%	Cherry
-Chaser for Pods 30ml 5%	Cherry Menthol
-Chaser for Pods 30ml 5%	Grape
-Chaser for Pods 30ml 5%	Kiwi
-Chaser for Pods 30ml 5%	Mint
-Chaser for Pods 30ml 5%	Peach
-Chaser for Pods 30ml 5%	Pineapple
-Chaser for Pods 30ml 5%	Pomegranate
-Chaser for Pods 30ml 5%	Red Currant
-Chaser for Pods 30ml 5%	Strawberry
-Chaser for Pods 30ml 5%	Watermelon
-Chaser for Pods 30ml 5%	Watermelon Menthol
-Chaser for Pods 30ml 5%	Yellow Cherry
-Chaser for Pods 30ml 5%	Wild Strawberry
-Chaser for Pods 30ml 5%	Yellow Raspberry
-Chaser for Pods 30ml 5%	Yellow Dragonfruit
-Chaser Special 30ml 5%	Berry Candy
-Chaser Special 30ml 5%	Berry Needles
-Chaser Special 30ml 5%	Bilberry Mint
-Chaser Special 30ml 5%	Blackberry
-Chaser Special 30ml 5%	Blueberry Lemon
-Chaser Special 30ml 5%	Cherries
-Chaser Special 30ml 5%	Cranberry Mint
-Chaser Special 30ml 5%	Energy Cherry
-Chaser Special 30ml 5%	Fall Tea
-Chaser Special 30ml 5%	Mystery One
-Chaser Special 30ml 5%	Punch
-Chaser Special 30ml 5%	Strawberry Jelly
-Chaser Mix 30ml 5%	Cherry Tobacco
-Chaser Mix 30ml 5%	Cherry Watermelon
-Chaser Mix 30ml 5%	Cola
-Chaser Mix 30ml 5%	Basil Mint
-Chaser Mix 30ml 5%	Blackberry Jam
-Chaser Mix 30ml 5%	Fanta
-Chaser Mix 30ml 5%	Guava Peach
-Chaser Mix 30ml 5%	Orbit
-Chaser Mix 30ml 5%	Smoothie
-Chaser Mix 30ml 5%	Strawberry Grape
-Chaser Mix 30ml 5%	Strawberry Kvass
-Chaser Mix 30ml 5%	Watermelon Apple
-Chaser Mix 30ml 5%	Banana Aloe
-Chaser Mix 30ml 5%	Strawberry Banana
-Chaser Mix 30ml 5%	Rum Cola
-Chaser Mix 30ml 5%	Cranberry Cactus
-Chaser Mix 30ml 5%	Blue Raspberry Lemonade
-Vaporesso XROS 4 Mini	Black
-Vaporesso XROS 4 Mini	Space Grey
-Vaporesso XROS 4 Mini	Ice Purple
-Vaporesso XROS 4 Mini	Ice Green
-Vaporesso XROS 4 Mini	Ice Blue
-Vaporesso XROS 4 Mini	Champagne Gold
-Vaporesso XROS 4 Mini	Camo Yellow
-Vaporesso XROS 4 Mini	Camo Red
-Vaporesso XROS 4 Mini	Camo Silver
-Vaporesso XROS 4 Mini	Ice Pink
-Vaporesso XROS 5	Blue Silk
-Vaporesso XROS 5	Carbon Stripe
-Vaporesso XROS 5	Coral Red
-Vaporesso XROS 5	Cosmic Black
-Vaporesso XROS 5	Grey Silk
-Vaporesso XROS 5	Jade Green
-Vaporesso XROS 5	Lavender Purple
-Vaporesso XROS 5	Opal Pink
-Vaporesso XROS 5	Opal White
-Vaporesso XROS 5	Violet Silk
-Vaporesso XROS 5 Mini	Black
-Vaporesso XROS 5 Mini	Carbon Black
-Vaporesso XROS 5 Mini	Flowing Blue
-Vaporesso XROS 5 Mini	Flowing Green
-Vaporesso XROS 5 Mini	Flowing Pink
-Vaporesso XROS 5 Mini	Pastel Crystal
-Vaporesso XROS 5 Mini	Purple
-Vaporesso XROS 5 Mini	Rose Red
-Vaporesso XROS 5 Mini	Sky Blue
-Vaporesso XROS 5 Mini	Titanium Silver
-Vaporesso XROS Pro 2	Dawn Purple
-Vaporesso XROS Pro 2	Gem Green
-Vaporesso XROS Pro 2	Glittering Black
-Vaporesso XROS Pro 2	Glittering Gold
-Vaporesso XROS Pro 2	Glittering Silver
-Vaporesso XROS Pro 2	Moonlit Pink
-Vaporesso XROS Pro 2	Storm Blue
-Vaporesso XROS 6 Mini	Titanium Black
-Vaporesso XROS 6 Mini	Jelly Pink
-Vaporesso XROS 6	Carbon Fiber Gray
-Vaporesso XROS 6	Scorching Cloud
-Картриджи XROS	Corex 3.0 XROS 3мл 0.4 Ω
-Картриджи XROS	Corex 3.0 XROS 3мл 0.6 Ω
-Картриджи XROS	Corex 3.0 XROS 3мл 0.8 Ω
-Картриджи OXVA Xlim	OXVA Xlim 0.4 Ω
-Картриджи OXVA Xlim	OXVA Xlim 0.6 Ω
-Картриджи OXVA Xlim	OXVA Xlim 0.8 Ω`.trim().split('\n').map(l => l.split('\t'));
+const CATALOG = JSON.parse(`[{"category":"liquid","name":"Vozol Prime 30ml 5%","flavors":["Berry","Blueberry Ice","Blue Raspberry","LavaFire","Love 777","Lemon Lime","Mint Ice","Mixed Berries","Peach Ice","Pineapple Passion Fruit Lime","Pomegranate Lemonade","Strawberry Ice Cream","Watermelon Bubblegum","Berry Peach","Blueberry Watermelon","Dragon Fruit Banana Cherry","Kiwi Passion Fruit Guava","Grape Ice","Cola Gummies","Perfume Lemon","Cherry Cola"]},{"category":"liquid","name":"ElfLiq 30ml 5%","flavors":["Blackberry Lemon","Blueberry Sour Raspberry","Cherry","Cool Mint","Grape","Pink Lemonade","Pineapple Ice","Pink Grapefruit","Sour Watermelon Gummy","Strawberry Cherry Lemon","Apple Peach","Double Apple","Peach Ice","Sour Apple","Cherry Lemon Peach","Grape Cherry","Elf Jack","Pineapple Colada"]},{"category":"liquid","name":"Puffy 30ml 5%","flavors":["Cherry Ice","Energy Drink","Gummy Bear","Grape","Turbo Mint"]},{"category":"liquid","name":"Puffy 30ml 7%","flavors":[]},{"category":"liquid","name":"Chaser Black 30ml 5%","flavors":["Bali","Banana Apple","Blackberry Sour Raspberry","Blackcurrant Peach Apple","Blackcurrant Rose","Bubblegum","Energy Grape","Energy Raspberry","Flirt","Forest Mix","Kiwi Wild Strawberry","Lemon Mint","Mojito","Multifruit","Peach Lemonade","Pink Lemonade","Sherbet","Strawberry Blueberry","Triple Berry","Triple Raspberry","Triple Sour Apple","Watermelon Lemon"]},{"category":"liquid","name":"Chaser Lux 30ml 5%","flavors":["Berry Lemonade","Blackberry Lemonade","Blackberry Pink Guava","Blueberry Mint","Blueberry Raspberry","Cherry Lemon","Coconut Melon","Energetic","Grape Mint","Kiwi Passion Fruit Guava","Mango Nectar","Sangria","Sour Apple","Strawberry Cream","Peach Tea","Tropic Punch","Turbo Mint","Vitamin","Watermelon Raspberry","Peach Yogurt","Watermelon Lime","Berry Needles","Ice Latte"]},{"category":"liquid","name":"Chaser Lux 30ml 6,5%","flavors":[]},{"category":"liquid","name":"Chaser Limitini Editini 30ml 5%","flavors":["Ballerina Capuccino","Glorbo Fruttodrillo","Tung Tung Tung Sahur"]},{"category":"liquid","name":"Chaser for Pods 30ml 5%","flavors":["Apple","Apple Mint","Banana","Berries","Blackcurrant Menthol","Blue Raspberry","Blueberry Menthol","Cherry","Cherry Menthol","Grape","Kiwi","Mint","Peach","Pineapple","Pomegranate","Red Currant","Strawberry","Watermelon","Watermelon Menthol","Yellow Cherry","Wild Strawberry","Yellow Raspberry","Yellow Dragonfruit"]},{"category":"liquid","name":"Chaser Special 30ml 5%","flavors":["Berry Candy","Berry Needles","Bilberry Mint","Blackberry","Blueberry Lemon","Cherries","Cranberry Mint","Energy Cherry","Fall Tea","Mystery One","Punch","Strawberry Jelly"]},{"category":"liquid","name":"Chaser Special 30ml 6%","flavors":[]},{"category":"liquid","name":"Chaser Mix 30ml 5%","flavors":["Cherry Tobacco","Cherry Watermelon","Cola","Basil Mint","Blackberry Jam","Fanta","Guava Peach","Orbit","Smoothie","Strawberry Grape","Strawberry Kvass","Watermelon Apple","Banana Aloe","Strawberry Banana","Rum Cola","Cranberry Cactus","Blue Raspberry Lemonade"]},{"category":"liquid","name":"Chaser You&Me 30ml 5%","flavors":[]},{"category":"pod","name":"Vaporesso XROS 4 Mini","flavors":["Black","Space Grey","Ice Purple","Ice Green","Ice Blue","Champagne Gold","Camo Yellow","Camo Red","Camo Silver","Ice Pink"]},{"category":"pod","name":"Vaporesso XROS 5","flavors":["Blue Silk","Carbon Stripe","Coral Red","Cosmic Black","Grey Silk","Jade Green","Lavender Purple","Opal Pink","Opal White","Violet Silk"]},{"category":"pod","name":"Vaporesso XROS 5 Mini","flavors":["Black","Carbon Black","Flowing Blue","Flowing Green","Flowing Pink","Pastel Crystal","Purple","Rose Red","Sky Blue","Titanium Silver"]},{"category":"pod","name":"Vaporesso XROS Pro 2","flavors":["Dawn Purple","Gem Green","Glittering Black","Glittering Gold","Glittering Silver","Moonlit Pink","Storm Blue"]},{"category":"pod","name":"Vaporesso XROS 6 Mini","flavors":["Titanium Black","Jelly Pink"]},{"category":"pod","name":"Vaporesso XROS 6","flavors":["Carbon Fiber Gray","Scorching Cloud"]},{"category":"cartridge","name":"Картриджи XROS","flavors":["Corex 3.0 XROS 3мл 0.4 Ω","Corex 3.0 XROS 3мл 0.6 Ω","Corex 3.0 XROS 3мл 0.8 Ω"]},{"category":"cartridge","name":"Картриджи OXVA Xlim","flavors":["OXVA Xlim 0.4 Ω","OXVA Xlim 0.6 Ω","OXVA Xlim 0.8 Ω"]}]`);
 const tg = window.Telegram && Telegram.WebApp;
 if(tg){ try{ tg.ready(); tg.expand(); tg.disableVerticalSwipes && tg.disableVerticalSwipes(); }catch(e){} }
 const INIT = tg ? tg.initData : '';
@@ -558,7 +394,7 @@ function orderHtml(o){
   else if(o.status === 'accepted') acts = `<button class="btn main" data-a="rdy">✅ Готов к выдаче</button><button class="btn bad" data-a="cx">Отменить</button>`;
   else if(o.status === 'ready') acts = `<button class="btn main" data-a="done">📦 Выдан</button><button class="btn bad" data-a="cx">Отменить</button>`;
   const editable = ['delivered', 'reserved', 'accepted', 'ready'].includes(o.status);
-  const extra = (editable ? '<button class="btn sm" data-a="edit">✏️ Изменить состав</button>' : '') + (ME && ME.admin ? '<button class="btn sm bad" data-a="del">🗑 Удалить</button>' : '');
+  const extra = (editable ? '<button class="btn sm" data-a="edit">✏️ Изменить состав</button>' : '') + (o.status !== 'cancelled' ? '<button class="btn sm" data-a="disc">🏷 Скидка</button>' : '') + (ME && ME.admin ? '<button class="btn sm bad" data-a="del">🗑 Удалить</button>' : '');
   const self = (o.status !== 'cancelled') ? `<label class="self"><input type="checkbox" data-self ${o.for_self ? 'checked' : ''}> 🏷 Взял себе (не продажа — в учёте «взято собой»)</label>` : '';
   return `<div class="card ${isNew ? 'new' : ''} ${late ? 'late' : ''} ${open ? 'open' : ''}" data-no="${o.no}">
     <div class="h" data-toggle><span class="no">№${o.no}</span><span class="city">${esc(cityName(o.city))}</span><span class="st ${stC}">${stT}</span></div>
@@ -607,6 +443,7 @@ $('ordList').addEventListener('click', async e => {
   if(a){
     const act = a.dataset.a;
     if(act === 'edit') return openEdit(o);
+    if(act === 'disc') return openDisc(o);
     if(act === 'del'){
       if(!confirm('Удалить заказ №' + no + ' навсегда?\nСклад и баллы клиента НЕ меняются. Заказ исчезнет из учёта.')) return;
       a.disabled = true; const j = await api('delete', {}, {no});
@@ -671,72 +508,156 @@ async function loadStats(){
 ['sFrom', 'sTo'].forEach(id => $(id).addEventListener('change', loadStats));
 
 // ---------- поставки ----------
-let REGION = 'de', BATCHES = {}, EDIT = null;
+let REGION = 'de', BATCHES = {}, EDIT = null, BM = null, BCITIES = [];
+const CAT_LABEL = {liquid: 'Жидкости', pod: 'POD-системы', cartridge: 'Картриджи', disposable: 'Одноразки', snus: 'Снюс', other: 'Другое'};
+const fdate = d => String(d).split('-').reverse().join('.');
+function bCard(b, canEdit, general){
+  const tot = b.received || 1, ps = b.sold / tot * 100, pf = b.self / tot * 100;
+  const profit = b.cost ? b.revenue - b.soldCost : null;
+  const head = general
+    ? `<div class="h" data-tb><span class="no">${esc(fdate(b.date))}</span><span class="st s-acc">${b.received} ШТ</span></div><div class="sub"><span>${esc(b.note || 'без заметки')}</span>${b.cost ? `<span>на сумму ${eur(b.cost)}</span>` : ''}</div>`
+    : `<div class="h" data-tb><span class="no">${esc(fdate(b.date))}</span><span class="st ${b.left <= 0 ? 's-done' : 's-acc'}">${b.left <= 0 ? 'ПРОДАНА' : 'ОСТАЛОСЬ ' + b.left}</span></div>
+      <div class="sub"><span>${esc(b.note || 'без заметки')}</span><span>всего ${b.received} шт</span></div>
+      <div class="bar"><i style="width:${ps}%;background:linear-gradient(90deg,#e34fef,#8b5cf6)"></i><i style="width:${pf}%;background:var(--warn)"></i></div>
+      <div class="legend"><span><span class="dot" style="background:#c653f0"></span>продано <b>${b.sold}</b></span><span><span class="dot" style="background:var(--warn)"></span>себе <b>${b.self}</b></span><span>остаток <b>${b.left}</b></span></div>
+      <div class="sub" style="margin-top:6px"><span>Выручка: <b style="color:#fff">${eur(b.revenue)}</b></span>${b.cost ? `<span>Стоимость партии: <b style="color:#fff">${eur(b.cost)}</b></span>` : ''}</div>`;
+  const cols = general ? '1.8fr .5fr' : '1.8fr .5fr .5fr .5fr';
+  const rows = b.items.map(i => `<div class="r" style="grid-template-columns:${cols}"><div>${esc(i.product)}<span class="sm">${esc(i.flavor)}</span></div><div>${i.qty}</div>${general ? '' : `<div>${i.sold}${i.self ? ' +' + i.self + '🏷' : ''}</div><div>${i.qty - i.sold - i.self}</div>`}</div>`).join('');
+  const hd = general ? '<div>Товар · вкус</div><div>Шт</div>' : '<div>Товар · вкус</div><div>Пришло</div><div>Продано</div><div>Остаток</div>';
+  return `<div class="card" data-b="${b.id}">${head}
+    <div class="bitems" style="display:none"><div class="tbl" style="margin-top:8px"><div class="r hd" style="grid-template-columns:${cols}">${hd}</div>${rows}</div></div>
+    ${canEdit ? '<div class="acts"><button class="btn sm" data-edit>✏️ Изменить</button><button class="btn sm bad" data-del>Удалить</button></div>' : ''}</div>`;
+}
 async function loadBatches(){
   $('batchBody').innerHTML = '<div class="empty">Загружаю…</div>';
   const j = await api('batches', {});
   if(!j.ok){ $('batchBody').innerHTML = `<div class="empty">${esc(j.error || 'Ошибка')}</div>`; return; }
-  BATCHES = {}; j.regions.forEach(r => BATCHES[r.region] = r);
+  BATCHES = {}; j.regions.forEach(r => BATCHES[r.region] = r); BCITIES = j.cities || [];
   const regs = j.regions.map(r => r.region);
   $('regSeg').style.display = regs.length > 1 ? '' : 'none';
   if(!regs.includes(REGION)) REGION = regs[0];
   [...$('regSeg').children].forEach(x => x.classList.toggle('on', x.dataset.r === REGION));
   const R = BATCHES[REGION]; if(!R){ $('batchBody').innerHTML = '<div class="empty">Нет данных</div>'; return; }
-  let h = j.canEdit ? '<button class="btn main" style="width:100%;margin-bottom:10px" id="newBatch">+ Записать поставку</button>' : '';
-  if(!R.batches.length) h += '<div class="empty">Поставок пока нет.<br>Запиши первую — и увидишь, сколько продано из каждой.</div>';
-  R.batches.forEach(b => {
-    const tot = b.received || 1, ps = b.sold / tot * 100, pf = b.self / tot * 100;
-    const profit = b.cost ? b.revenue - b.soldCost : null;
-    h += `<div class="card" data-b="${b.id}"><div class="h" data-tb><span class="no">${esc(b.date.split('-').reverse().join('.'))}</span><span class="st ${b.left <= 0 ? 's-done' : 's-acc'}">${b.left <= 0 ? 'ПРОДАНА' : 'ОСТАЛОСЬ ' + b.left}</span></div>
-      <div class="sub"><span>${esc(b.note || 'без заметки')}</span><span>всего ${b.received} шт</span></div>
-      <div class="bar"><i style="width:${ps}%;background:linear-gradient(90deg,#e34fef,#8b5cf6)"></i><i style="width:${pf}%;background:var(--warn)"></i></div>
-      <div class="legend"><span><span class="dot" style="background:#c653f0"></span>продано <b>${b.sold}</b></span><span><span class="dot" style="background:var(--warn)"></span>себе <b>${b.self}</b></span><span>остаток <b>${b.left}</b></span></div>
-      <div class="sub" style="margin-top:6px"><span>Выручка: <b style="color:#fff">${eur(b.revenue)}</b></span>${b.cost ? `<span>Закупка: <b style="color:#fff">${eur(b.cost)}</b></span><span>Прибыль по проданному: <b style="color:${profit >= 0 ? 'var(--ok)' : 'var(--bad)'}">${eur(profit)}</b></span>` : ''}</div>
-      <div class="bitems" style="display:none"><div class="tbl" style="margin-top:8px"><div class="r hd" style="grid-template-columns:1.8fr .5fr .5fr .5fr"><div>Товар · вкус</div><div>Пришло</div><div>Продано</div><div>Остаток</div></div>${b.items.map(i => `<div class="r" style="grid-template-columns:1.8fr .5fr .5fr .5fr"><div>${esc(i.product)}<span class="sm">${esc(i.flavor)}${i.cost != null ? ' · ' + eur(i.cost) + '/шт' : ''}</span></div><div>${i.qty}</div><div>${i.sold}${i.self ? ' +' + i.self + '🏷' : ''}</div><div>${i.qty - i.sold - i.self}</div></div>`).join('')}</div>
-        ${j.canEdit ? '<div class="acts"><button class="btn sm" data-edit>✏️ Изменить</button><button class="btn sm bad" data-del>Удалить</button></div>' : ''}</div></div>`;
+  let h = '';
+  if(R.general){
+    h += `<h3>Общие поставки · видят только админы</h3>`;
+    h += `<div class="kpis"><div class="kpi"><div class="k">Пришло всего</div><div class="v">${R.general.received} <small>шт</small></div></div><div class="kpi"><div class="k">Роздано городам</div><div class="v">${R.general.distributed} <small>шт</small></div></div></div>`;
+    h += '<button class="btn main" style="width:100%;margin-bottom:10px" data-newg>+ Записать общую поставку</button>';
+    h += R.general.batches.length ? R.general.batches.map(b => bCard(b, true, true)).join('') : '<div class="empty" style="padding:18px">Общих поставок пока нет.</div>';
+  }
+  if(!R.cities.length) h += '<div class="empty">Нет доступных городов</div>';
+  R.cities.forEach(cb => {
+    const t = cb.totals;
+    h += `<h3>${esc(CITY_FULL[cb.city] || cb.city)}</h3>`;
+    h += `<div class="legend" style="margin:0 2px 8px"><span>пришло <b>${t.received}</b></span><span>продано <b>${t.sold}</b></span><span>себе <b>${t.self}</b></span><span>остаток <b>${t.left}</b></span></div>`;
+    h += `<button class="btn main" style="width:100%;margin-bottom:10px" data-newc="${cb.city}">+ Записать партию — ${esc(CITY_FULL[cb.city] || cb.city)}</button>`;
+    h += cb.batches.length ? cb.batches.map(b => bCard(b, true, false)).join('') : '<div class="empty" style="padding:18px">Партий пока нет.<br>Запиши первую — и увидишь, сколько продано.</div>';
+    if(cb.unassigned.length) h += `<div class="lbl" style="margin-top:6px">Продано не из записанных партий:</div><div class="tbl">${cb.unassigned.map(u => `<div class="r" style="grid-template-columns:1.8fr .5fr .5fr"><div>${esc(u.product)}<span class="sm">${esc(u.flavor)}</span></div><div>${u.sold}</div><div>${u.self ? u.self + '🏷' : ''}</div></div>`).join('')}</div>`;
   });
-  if(R.unassigned.length) h += `<h3>Продано не из записанных поставок</h3><div class="tbl">${R.unassigned.map(u => `<div class="r" style="grid-template-columns:1.8fr .5fr .5fr"><div>${esc(u.product)}<span class="sm">${esc(u.flavor)}</span></div><div>${u.sold}</div><div>${u.self ? u.self + '🏷' : ''}</div></div>`).join('')}</div><div class="lbl">Это продажи товара, которого нет ни в одной поставке на тот момент (остатки до учёта или поставка ещё не записана). Расчёт идёт по принципу «первая пришла — первая продана».</div>`;
   $('batchBody').innerHTML = h;
 }
 $('regSeg').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; REGION = b.dataset.r; loadBatches(); });
+function findBatch(id){ const R = BATCHES[REGION]; if(!R) return null; return [].concat(R.general ? R.general.batches : [], ...R.cities.map(c => c.batches)).find(x => x.id === id) || null; }
 $('batchBody').addEventListener('click', async e => {
-  if(e.target.id === 'newBatch') return openBatch(null);
+  const nc = e.target.closest('[data-newc]'); if(nc) return openBatch(null, nc.dataset.newc);
+  if(e.target.closest('[data-newg]')) return openBatch(null, '');
   const card = e.target.closest('[data-b]'); if(!card) return;
-  const b = (BATCHES[REGION].batches || []).find(x => x.id === Number(card.dataset.b));
+  const b = findBatch(Number(card.dataset.b)); if(!b) return;
   if(e.target.closest('[data-tb]')){ const el = card.querySelector('.bitems'); el.style.display = el.style.display === 'none' ? '' : 'none'; return; }
-  if(e.target.closest('[data-edit]')) return openBatch(b);
-  if(e.target.closest('[data-del]')){ if(!confirm('Удалить поставку от ' + b.date + '? Продажи пересчитаются.')) return; const j = await api('batch_delete', {}, {id: b.id}); toast(j.ok ? 'Удалено' : (j.error || 'Ошибка'), !j.ok); loadBatches(); }
+  if(e.target.closest('[data-edit]')) return openBatch(b, b.city || '');
+  if(e.target.closest('[data-del]')){ if(!confirm('Удалить поставку от ' + fdate(b.date) + '? Продажи пересчитаются.')) return; const j = await api('batch_delete', {}, {id: b.id}); toast(j.ok ? 'Удалено' : (j.error || 'Ошибка'), !j.ok); loadBatches(); }
 });
-function fillDatalists(){ const prods = [...new Set(PRODUCT_LIST.map(r => r[0]))]; $('dlProd').innerHTML = prods.map(p => `<option value="${esc(p)}">`).join(''); }
-fillDatalists();
-function rowHtml(i){ i = i || {}; return `<div class="fr"><input class="inp" list="dlProd" data-f="product" placeholder="Товар" value="${esc(i.product || '')}"><input class="inp" list="dlFlav" data-f="flavor" placeholder="Вкус" value="${esc(i.flavor || '')}"><input class="inp" data-f="qty" inputmode="numeric" placeholder="шт" value="${i.qty || ''}"><input class="inp" data-f="cost" inputmode="decimal" placeholder="€" value="${i.cost != null ? i.cost : ''}"><button class="btn sm" data-rm>✕</button></div>`; }
-function openBatch(b){
+// форма записи партии: раздел → группа товара → вкусы и количество; цена подставляется по прайсу города
+function bmGroups(){
+  const g = CATALOG.map(x => ({...x}));
+  if(EDIT) EDIT.items.forEach(i => { if(!g.some(x => x.name === i.product)) g.push({category: 'other', name: i.product, flavors: []}); });
+  return g;
+}
+async function bmPrices(){
+  const names = bmGroups().map(g => g.name);
+  const j = await api('prices', {}, {city: BM.city, region: REGION, names});
+  BM.prices = j.ok ? j.prices : {}; renderBM();
+}
+function bmCities(){
+  const R = BATCHES[REGION]; const list = EDIT ? [EDIT.city || ''] : (R.general ? [''] : []).concat(R.cities.map(c => c.city));
+  $('bmCity').innerHTML = list.map(c => `<span class="chip ${BM.city === c ? 'on' : ''}" data-c="${c}">${c ? esc(CITY_FULL[c] || c) : 'Общая поставка'}</span>`).join('');
+}
+function bmTotals(){
+  let n = 0, sum = 0;
+  Object.keys(BM.qty).forEach(k => { const q = BM.qty[k]; if(!(q > 0)) return; n += q; const pr = BM.prices[k.split('|')[0]]; if(pr) sum += q * pr; });
+  $('bmSum').innerHTML = 'Всего: <b style="font-size:1rem">' + n + ' шт</b> · по прайсу города ≈ <b style="font-size:1rem">' + eur(sum) + '</b>';
+}
+function renderBM(){
+  bmCities();
+  const groups = bmGroups(), byCat = {}; groups.forEach(g => (byCat[g.category] = byCat[g.category] || []).push(g));
+  let h = '';
+  Object.keys(byCat).forEach(cat => {
+    h += `<div class="bcat">${esc(CAT_LABEL[cat] || cat)}</div>`;
+    byCat[cat].forEach(g => {
+      const fl = [...new Set(g.flavors.concat(BM.extra[g.name] || []))];
+      const n = fl.reduce((a, f) => a + (BM.qty[g.name + '|' + f] || 0), 0), pr = BM.prices[g.name];
+      h += `<div class="grp ${BM.open[g.name] ? 'open' : ''}" data-g="${esc(g.name)}"><div class="gh" data-gh><span class="gn">${esc(g.name)}</span><span class="gp">${pr ? eur(pr) + ' / шт' : 'нет цены'}</span><span class="gc" ${n ? '' : 'style="display:none"'}>${n}</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
+        <div class="gb">${fl.map(f => `<div class="fl"><span>${esc(f)}</span><input class="inp qin" inputmode="numeric" data-k="${esc(g.name + '|' + f)}" value="${BM.qty[g.name + '|' + f] || ''}" placeholder="0"></div>`).join('')}
+        <div class="fl add"><input class="inp" data-newf placeholder="Другой вкус…"><button class="btn sm" data-addf type="button">Добавить</button></div></div></div>`;
+    });
+  });
+  $('bmGroups').innerHTML = h; bmTotals();
+}
+function openBatch(b, city){
   EDIT = b;
-  $('bmTitle').textContent = b ? 'Изменить поставку' : 'Новая поставка';
+  BM = {city: city || '', qty: {}, extra: {}, open: {}, prices: {}};
+  if(b) b.items.forEach(i => { BM.qty[i.product + '|' + i.flavor] = i.qty; const g = CATALOG.find(x => x.name === i.product); if(!g || !g.flavors.includes(i.flavor)) (BM.extra[i.product] = BM.extra[i.product] || []).push(i.flavor); });
+  $('bmTitle').textContent = b ? 'Изменить поставку' : (BM.city ? 'Новая партия · ' + (CITY_FULL[BM.city] || BM.city) : 'Новая общая поставка');
   $('bmDate').value = b ? b.date : new Date().toISOString().slice(0, 10);
   $('bmNote').value = b ? b.note : '';
-  $('bmRows').innerHTML = (b && b.items.length ? b.items : [null]).map(rowHtml).join('');
-  $('bmPaste').value = '';
-  $('batchModal').classList.add('on');
+  renderBM(); $('batchModal').classList.add('on'); bmPrices();
 }
-$('bmRows').addEventListener('click', e => { if(e.target.matches('[data-rm]')) e.target.closest('.fr').remove(); });
-$('bmRows').addEventListener('focusin', e => { if(e.target.dataset.f === 'flavor'){ const p = e.target.closest('.fr').querySelector('[data-f=product]').value.trim().toLowerCase(); $('dlFlav').innerHTML = PRODUCT_LIST.filter(r => r[0].toLowerCase() === p).map(r => `<option value="${esc(r[1])}">`).join(''); } });
-$('bmAdd').onclick = () => $('bmRows').insertAdjacentHTML('beforeend', rowHtml());
-$('bmPasteBtn').onclick = () => {
-  const lines = $('bmPaste').value.split('\n').map(l => l.split('\t').map(x => x.trim())).filter(r => r.length >= 3 && r[0] && r[1]);
-  if(!lines.length){ toast('Нужны колонки: товар, вкус, кол-во (через Tab)', true); return; }
-  const first = $('bmRows').querySelector('.fr [data-f=product]'); if(first && !first.value && $('bmRows').children.length === 1) $('bmRows').innerHTML = '';
-  $('bmRows').insertAdjacentHTML('beforeend', lines.map(r => rowHtml({product: r[0], flavor: r[1], qty: parseInt(r[2], 10) || '', cost: r[3] ? r[3].replace(',', '.') : ''})).join(''));
-  $('bmPaste').value = '';
-};
+$('bmCity').addEventListener('click', e => { const c = e.target.closest('.chip'); if(!c || EDIT) return; BM.city = c.dataset.c; $('bmTitle').textContent = BM.city ? 'Новая партия · ' + (CITY_FULL[BM.city] || BM.city) : 'Новая общая поставка'; bmPrices(); });
+$('bmGroups').addEventListener('click', e => {
+  const gh = e.target.closest('[data-gh]');
+  if(gh){ const g = gh.parentNode, nm = g.dataset.g; BM.open[nm] = !BM.open[nm]; g.classList.toggle('open', BM.open[nm]); return; }
+  if(e.target.closest('[data-addf]')){
+    const g = e.target.closest('.grp'), nm = g.dataset.g, inp = g.querySelector('[data-newf]'), f = inp.value.trim().slice(0, 100);
+    if(!f) return; (BM.extra[nm] = BM.extra[nm] || []).push(f); BM.open[nm] = true; renderBM();
+    const q = $('bmGroups').querySelector(`[data-k="${CSS.escape(nm + '|' + f)}"]`); if(q) q.focus();
+  }
+});
+$('bmGroups').addEventListener('input', e => {
+  if(!e.target.classList.contains('qin')) return;
+  const k = e.target.dataset.k, v = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0;
+  if(v > 0) BM.qty[k] = v; else delete BM.qty[k];
+  const g = e.target.closest('.grp'), nm = g.dataset.g; let n = 0; Object.keys(BM.qty).forEach(x => { if(x.startsWith(nm + '|')) n += BM.qty[x]; });
+  const gc = g.querySelector('.gc'); gc.textContent = n; gc.style.display = n ? '' : 'none'; bmTotals();
+});
 $('bmCancel').onclick = () => $('batchModal').classList.remove('on');
 $('bmSave').onclick = async () => {
-  const items = [...$('bmRows').querySelectorAll('.fr')].map(r => { const g = f => r.querySelector(`[data-f=${f}]`).value.trim(); return {product: g('product'), flavor: g('flavor'), qty: parseInt(g('qty'), 10), cost: g('cost') === '' ? null : parseFloat(g('cost').replace(',', '.'))}; }).filter(i => i.product && i.flavor && i.qty > 0);
-  if(!items.length){ toast('Добавь хотя бы одну позицию', true); return; }
+  const items = Object.keys(BM.qty).filter(k => BM.qty[k] > 0).map(k => { const i = k.indexOf('|'); return {product: k.slice(0, i), flavor: k.slice(i + 1), qty: BM.qty[k]}; });
+  if(!items.length){ toast('Впиши количество хотя бы у одного вкуса', true); return; }
   $('bmSave').disabled = true;
-  const j = await api('batch_save', {}, {id: EDIT ? EDIT.id : 0, region: REGION, date: $('bmDate').value, note: $('bmNote').value, items});
+  const j = await api('batch_save', {}, {id: EDIT ? EDIT.id : 0, region: REGION, city: BM.city, date: $('bmDate').value, note: $('bmNote').value, items});
   $('bmSave').disabled = false;
-  if(j.ok){ $('batchModal').classList.remove('on'); toast('Поставка сохранена'); loadBatches(); } else toast(j.error || 'Ошибка', true);
+  if(j.ok){ $('batchModal').classList.remove('on'); toast('Сохранено'); loadBatches(); } else toast(j.error || 'Ошибка', true);
+};
+
+// ---------- скидка на заказ ----------
+let DO = null, DMODE = 'eur';
+function dmCalc(){ const v = parseFloat(String($('dmVal').value).replace(',', '.')) || 0, sub = Number(DO.subtotal) || 0; let d = DMODE === 'pct' ? sub * v / 100 : v; d = Math.max(0, Math.min(sub, Math.round(d * 100) / 100)); return d; }
+function dmPaint(){ const d = dmCalc(), sub = Number(DO.subtotal) || 0; $('dmRes').innerHTML = 'Скидка: <b style="font-size:1rem">−' + eur(d) + '</b> · к оплате: <b style="font-size:1rem">' + eur(sub - d) + '</b>'; [...$('dmMode').children].forEach(x => x.classList.toggle('on', x.dataset.m === DMODE)); }
+function openDisc(o){
+  DO = o; DMODE = 'eur'; $('dmTitle').textContent = 'Скидка · заказ №' + o.no;
+  $('dmSub').textContent = eur(o.subtotal); $('dmCur').textContent = eur(o.discount || 0) + (o.promo ? ' (' + o.promo + ')' : '');
+  $('dmVal').value = o.discount > 0 ? String(o.discount).replace('.', ',') : '';
+  $('dmQuick').innerHTML = [5, 10, 15, 20].map(p => `<span class="chip" data-p="${p}">−${p}%</span>`).join('') + '<span class="chip" data-p="0">Без скидки</span>';
+  dmPaint(); $('discModal').classList.add('on');
+}
+$('dmMode').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; DMODE = b.dataset.m; $('dmVal').value = ''; dmPaint(); });
+$('dmQuick').addEventListener('click', e => { const c = e.target.closest('.chip'); if(!c) return; const p = Number(c.dataset.p); if(p === 0){ DMODE = 'eur'; $('dmVal').value = '0'; } else { DMODE = 'pct'; $('dmVal').value = String(p); } dmPaint(); });
+$('dmVal').addEventListener('input', dmPaint);
+$('dmCancel').onclick = () => $('discModal').classList.remove('on');
+$('dmSave').onclick = async () => {
+  const d = dmCalc(); $('dmSave').disabled = true;
+  const j = await api('discount', {}, {no: DO.no, discount: d}); $('dmSave').disabled = false;
+  if(j.ok){ $('discModal').classList.remove('on'); haptic('success'); toast('Скидка сохранена'); loadOrders(); } else toast(j.error || 'Не удалось', true);
 };
 
 // ---------- профиль ----------
