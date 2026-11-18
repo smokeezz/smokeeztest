@@ -2004,8 +2004,18 @@ function skPrice(line){
     if(/^Vaporesso XROS 6 Mini/i.test(n)) return 20.00;
     if(/^Vaporesso XROS 6(?!\s*Mini)/i.test(n)) return 28.00;
   }
-  if(n === 'Картриджи XROS') return 3.80;
+  if(n === 'Картриджи XROS' || n === 'Картриджи OXVA Xlim') return 4.00; // картриджи в Словакии — 4 € во всех городах
   return null;
+}
+// Banská Bystrica: Vozol / ElfLiq / Puffy (5%) — 9,50 €, весь Chaser — 11 €; остальное как в Словакии
+function bbPrice(line){
+  const n = line.name || '';
+  if(line.category === 'liquid'){
+    if(/^Puffy.*7\s*%/i.test(n)) return 11.00;
+    if(/^(Vozol Prime|ElfLiq|Puffy)/i.test(n)) return 9.50;
+    if(/^Chaser/i.test(n)) return 11.00;
+  }
+  return skPrice(line);
 }
 const CITIES = {
   kl: { key:'kl', short:'KL', region:'de', name:'Kaiserslautern', price:null },
@@ -2016,7 +2026,7 @@ const CITIES = {
   ld: { key:'ld', short:'LD', region:'de', name:'Landau in der Pfalz',
         price: line => (line.category === 'liquid' && /^(Vozol Prime|ElfLiq|Puffy)/i.test(line.name)) ? 11.00 : null },
   // Словакия: отдельный бот и свой прайс (см. skPrice)
-  bb: { key:'bb', short:'BB', region:'sk', name:'Banská Bystrica', price:skPrice },
+  bb: { key:'bb', short:'BB', region:'sk', name:'Banská Bystrica', price:bbPrice },
   zv: { key:'zv', short:'ZV', region:'sk', name:'Zvolen', price:skPrice },
   za: { key:'za', short:'ZA', region:'sk', name:'Žilina', price:skPrice },
   ba: { key:'ba', short:'BA', region:'sk', name:'Bratislava', price:skPrice }
@@ -2491,7 +2501,12 @@ const BADGES = {
   'ElfLiq 30ml 5%':      { drop: { kl: '11€' }, top: true },
   'Puffy 30ml 5%':       { drop: { kl: '11€' } },
   'Vaporesso XROS 6':    { top: true },
+  // Banská Bystrica: цена снижена — старая цена зачёркнута. Ключ с «*» на конце = все товары, название которых начинается так
+  // (берётся самый длинный подходящий ключ); точное название имеет приоритет.
+  'Chaser Special*':     { drop: { bb: '13€' } },
+  'Chaser*':             { drop: { bb: '12€' } },
 };
+BADGES['Vozol Prime 30ml 5%'].drop.bb = '11€'; BADGES['ElfLiq 30ml 5%'].drop.bb = '11€'; BADGES['Puffy 30ml 5%'].drop.bb = '11€';
 // Раскладка: «ТОП» — слева сверху под плашкой статуса (Предзаказ и т.п.), «−N%» — справа от цены, «Strong» — внизу слева над названием
 function badgeFor(v){ // значение для текущего города: число/true для всех, объект {город|страна:значение}, массив городов/стран
   if(v === undefined || v === null || v === false) return undefined;
@@ -2510,7 +2525,8 @@ function oldPriceHtml(p, raw, d){
   return `<span class="old-price">${(Math.round(old * 20) / 20).toFixed(2).replace('.', ',')} €</span>`;
 }
 function badgesInfo(p){
-  const b0 = BADGES[p.name] || BADGES[Object.keys(BADGES).find(k => k.trim().toLowerCase() === String(p.name).trim().toLowerCase())] || {}; // регистр в названии не важен
+  const nm0 = String(p.name || '').trim().toLowerCase(); const wk = Object.keys(BADGES).filter(k => k.endsWith('*') && nm0.startsWith(k.slice(0, -1).trim().toLowerCase())).sort((a, b) => b.length - a.length)[0];
+  const b0 = BADGES[p.name] || BADGES[Object.keys(BADGES).find(k => k.trim().toLowerCase() === nm0)] || (wk ? BADGES[wk] : null) || {}; // регистр в названии не важен
   const b = { top: badgeFor(b0.top), drop: badgeFor(b0.drop), strong: b0.strong };
   const d = Math.round(Number(b.drop) * 10) / 10; // допускается одна цифра после запятой (12.5 → «−12,5%»)
   const m = String(p.name || '').match(/(\d+(?:[.,]\d+)?)\s*%\s*$/);
