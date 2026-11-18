@@ -218,7 +218,7 @@ h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
 .card.open .cbody{grid-template-rows:1fr}
 .cin{overflow:hidden;min-height:0}
 .cbody .cin>*:first-child{margin-top:10px}
-.tog{display:flex;flex-direction:column;align-items:center;gap:0;width:100%;margin-top:8px;padding:4px 0 0;background:none;border:0;color:var(--muted);cursor:pointer;font:700 .8rem 'Manrope',sans-serif}
+.tog{display:flex;flex-direction:column;align-items:center;gap:0;margin:0 0 0 auto;padding:2px 2px 0;background:none;border:0;color:var(--muted);cursor:pointer;font:700 .8rem 'Manrope',sans-serif}
 .tog .tt{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
 .tog svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .38s cubic-bezier(.4,0,.2,1)}
 .card.open .tog svg{transform:rotate(180deg)}
@@ -564,13 +564,12 @@ function orderHtml(o){
     <div class="h" data-toggle><span class="no">№${o.no}</span><span class="city">${esc(cityName(o.city))}</span><span class="st ${stC}">${stT}</span></div>
     <div class="sub"><span>${fmtDT(o.created_at)}</span>${isNew ? `<span class="timer">⏱ ждёт ${ago(o.created_at)}</span>` : ''}${by ? `<span>${by}</span>` : ''}${o.for_self ? '<span style="color:var(--warn)">🏷 себе</span>' : ''}</div>
     <div class="items">${items}</div>
-    <div class="sum"><b>${eur(o.total)}</b>${o.discount > 0 ? `<span>скидка −${eur(o.discount)}${o.promo ? ' · ' + esc(o.promo) : ''}</span>` : ''}</div>
+    <div class="sum"><b>${eur(o.total)}</b>${o.discount > 0 ? `<span>скидка −${eur(o.discount)}${o.promo ? ' · ' + esc(o.promo) : ''}</span>` : ''}<button class="tog" type="button" data-tog><span class="tt">${open ? 'Показать меньше' : 'Посмотреть детали'}</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button></div>
     <div class="cbody"><div class="cin">
       ${client}${self}
       ${acts ? `<div class="acts">${acts}</div>` : ''}
       ${extra ? `<div class="acts" style="margin-top:8px">${extra}</div>` : ''}
     </div></div>
-    <button class="tog" type="button" data-tog><span class="tt">${open ? 'Показать меньше' : 'Посмотреть детали'}</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
   </div>`;
 }
 function renderOrders(){
@@ -662,7 +661,7 @@ async function loadStats(){
   let h = '<div class="kpis">' + kpi('Выручка', eur(T.revenue), 1) + kpi('Продано, шт', T.units + ' <small>· ' + T.orders + ' зак.</small>') + kpi('Скидки', eur(T.discount)) + kpi('Взято себе', T.selfUnits + ' шт <small>· ' + eur(T.selfValue) + '</small>') + '</div>';
   h += `<div class="legend" style="margin-bottom:6px"><span>В работе сейчас: <b>${j.open.count}</b> (${eur(j.open.sum)})</span><span>Отменено: <b>${T.cancelled}</b></span></div>`;
   const tbl = (title, head, rows) => rows.length ? `<h3>${title}</h3><div class="tbl"><div class="r hd">${head.map(x => `<div>${x}</div>`).join('')}</div>${rows.join('')}</div>` : '';
-  h += tbl('По менеджерам', ['Менеджер', 'Шт', 'Выручка', 'Скидки'], j.byManager.map(m => `<div class="r"><div>${esc(m.manager)}<span class="sm">${esc(CITY_FULL[m.city] || m.city)} · ${m.orders} зак.${m.selfUnits ? ' · себе ' + m.selfUnits + ' шт / ' + eur(m.selfValue) : ''}</span></div><div>${m.units}</div><div>${eur(m.revenue)}</div><div>${eur(m.discount)}</div></div>`));
+  h += tbl('По менеджерам', ['Менеджер', 'Шт', 'Выручка', 'Скидки'], j.byManager.map(m => `<div class="r"><div>${esc(m.manager)}<span class="sm">${esc((m.cities || [m.city]).map(c => CITY_FULL[c] || c).join(', '))} · ${m.orders} зак.${m.selfUnits ? ' · себе ' + m.selfUnits + ' шт / ' + eur(m.selfValue) : ''}</span></div><div>${m.units}</div><div>${eur(m.revenue)}</div><div>${eur(m.discount)}</div></div>`));
   h += tbl('По городам', ['Город', 'Шт', 'Выручка', 'Скидки'], j.byCity.map(m => `<div class="r"><div>${esc(CITY_FULL[m.city] || m.city)}<span class="sm">${m.orders} зак.${m.selfUnits ? ' · себе ' + m.selfUnits + ' шт / ' + eur(m.selfValue) : ''}</span></div><div>${m.units}</div><div>${eur(m.revenue)}</div><div>${eur(m.discount)}</div></div>`));
   h += tbl('По товарам', ['Товар', 'Шт', 'Выручка', 'Себе'], j.byProduct.map(m => `<div class="r"><div>${esc(m.product)}</div><div>${m.units}</div><div>${eur(m.revenue)}</div><div>${m.selfUnits || '—'}</div></div>`));
   if(!j.byManager.length) h += '<div class="empty">За этот период продаж нет</div>';
