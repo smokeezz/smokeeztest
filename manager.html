@@ -240,6 +240,7 @@ h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
 .fl.add{margin-top:6px;padding-top:10px;border-top:1px dashed var(--line2)}
 .fl.add .inp{flex:1;min-width:0;padding:8px 10px;font-size:.82rem}
 .sheet{background:#0f0a18!important}
+.xdel{border:0;background:rgba(251,113,133,.15);color:var(--bad);border-radius:6px;width:20px;height:20px;font-size:.7rem;line-height:20px;padding:0;margin-left:6px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -508,22 +509,21 @@ async function loadStats(){
 ['sFrom', 'sTo'].forEach(id => $(id).addEventListener('change', loadStats));
 
 // ---------- поставки ----------
-let REGION = 'de', BATCHES = {}, EDIT = null, BM = null, BCITIES = [];
+let REGION = 'de', BATCHES = {}, EDIT = null, BM = null, BCITIES = [], XFL = [], BADMIN = false;
 const CAT_LABEL = {liquid: 'Жидкости', pod: 'POD-системы', cartridge: 'Картриджи', disposable: 'Одноразки', snus: 'Снюс', other: 'Другое'};
 const fdate = d => String(d).split('-').reverse().join('.');
 function bCard(b, canEdit, general){
   const tot = b.received || 1, ps = b.sold / tot * 100, pf = b.self / tot * 100;
   const profit = b.cost ? b.revenue - b.soldCost : null;
-  const head = general
-    ? `<div class="h" data-tb><span class="no">${esc(fdate(b.date))}</span><span class="st s-acc">${b.received} ШТ</span></div><div class="sub"><span>${esc(b.note || 'без заметки')}</span>${b.cost ? `<span>на сумму ${eur(b.cost)}</span>` : ''}</div>`
-    : `<div class="h" data-tb><span class="no">${esc(fdate(b.date))}</span><span class="st ${b.left <= 0 ? 's-done' : 's-acc'}">${b.left <= 0 ? 'ПРОДАНА' : 'ОСТАЛОСЬ ' + b.left}</span></div>
+  const dist = general ? `<div class="sub" style="margin-top:6px"><span>роздано городам: <b style="color:#fff">${b.distributed}</b></span><span>не роздано: <b style="color:#fff">${b.undistributed}</b></span></div>` : '';
+  const head = `<div class="h" data-tb><span class="no">${esc(fdate(b.date))}</span><span class="st ${b.left <= 0 ? 's-done' : 's-acc'}">${b.left <= 0 ? 'ПРОДАНА' : 'ОСТАЛОСЬ ' + b.left}</span></div>
       <div class="sub"><span>${esc(b.note || 'без заметки')}</span><span>всего ${b.received} шт</span></div>
       <div class="bar"><i style="width:${ps}%;background:linear-gradient(90deg,#e34fef,#8b5cf6)"></i><i style="width:${pf}%;background:var(--warn)"></i></div>
-      <div class="legend"><span><span class="dot" style="background:#c653f0"></span>продано <b>${b.sold}</b></span><span><span class="dot" style="background:var(--warn)"></span>себе <b>${b.self}</b></span><span>остаток <b>${b.left}</b></span></div>
+      <div class="legend"><span><span class="dot" style="background:#c653f0"></span>продано <b>${b.sold}</b></span><span><span class="dot" style="background:var(--warn)"></span>себе <b>${b.self}</b></span><span>остаток <b>${b.left}</b></span></div>${dist}
       <div class="sub" style="margin-top:6px"><span>Выручка: <b style="color:#fff">${eur(b.revenue)}</b></span>${b.cost ? `<span>Стоимость партии: <b style="color:#fff">${eur(b.cost)}</b></span>` : ''}</div>`;
-  const cols = general ? '1.8fr .5fr' : '1.8fr .5fr .5fr .5fr';
-  const rows = b.items.map(i => `<div class="r" style="grid-template-columns:${cols}"><div>${esc(i.product)}<span class="sm">${esc(i.flavor)}</span></div><div>${i.qty}</div>${general ? '' : `<div>${i.sold}${i.self ? ' +' + i.self + '🏷' : ''}</div><div>${i.qty - i.sold - i.self}</div>`}</div>`).join('');
-  const hd = general ? '<div>Товар · вкус</div><div>Шт</div>' : '<div>Товар · вкус</div><div>Пришло</div><div>Продано</div><div>Остаток</div>';
+  const cols = general ? '1.6fr .45fr .5fr .5fr .5fr' : '1.8fr .5fr .5fr .5fr';
+  const rows = b.items.map(i => `<div class="r" style="grid-template-columns:${cols}"><div>${esc(i.product)}<span class="sm">${esc(i.flavor)}</span></div><div>${i.qty}</div>${general ? `<div>${i.distributed}</div>` : ''}<div>${i.sold}${i.self ? ' +' + i.self + '🏷' : ''}</div><div>${i.qty - i.sold - i.self}</div></div>`).join('');
+  const hd = general ? '<div>Товар · вкус</div><div>Пришло</div><div>Роздано</div><div>Продано</div><div>Остаток</div>' : '<div>Товар · вкус</div><div>Пришло</div><div>Продано</div><div>Остаток</div>';
   return `<div class="card" data-b="${b.id}">${head}
     <div class="bitems" style="display:none"><div class="tbl" style="margin-top:8px"><div class="r hd" style="grid-template-columns:${cols}">${hd}</div>${rows}</div></div>
     ${canEdit ? '<div class="acts"><button class="btn sm" data-edit>✏️ Изменить</button><button class="btn sm bad" data-del>Удалить</button></div>' : ''}</div>`;
@@ -532,25 +532,27 @@ async function loadBatches(){
   $('batchBody').innerHTML = '<div class="empty">Загружаю…</div>';
   const j = await api('batches', {});
   if(!j.ok){ $('batchBody').innerHTML = `<div class="empty">${esc(j.error || 'Ошибка')}</div>`; return; }
-  BATCHES = {}; j.regions.forEach(r => BATCHES[r.region] = r); BCITIES = j.cities || [];
+  BATCHES = {}; j.regions.forEach(r => BATCHES[r.region] = r); BCITIES = j.cities || []; XFL = j.flavors || []; BADMIN = !!j.admin;
   const regs = j.regions.map(r => r.region);
   $('regSeg').style.display = regs.length > 1 ? '' : 'none';
   if(!regs.includes(REGION)) REGION = regs[0];
   [...$('regSeg').children].forEach(x => x.classList.toggle('on', x.dataset.r === REGION));
   const R = BATCHES[REGION]; if(!R){ $('batchBody').innerHTML = '<div class="empty">Нет данных</div>'; return; }
   let h = '';
-  if(R.general){
+  const shown = CITY ? R.cities.filter(c => c.city === CITY) : R.cities;
+  if(shown.length) h += `<button class="btn main" style="width:100%;margin-bottom:6px" data-newc>+ Записать партию${CITY ? ' — ' + esc(CITY_FULL[CITY] || CITY) : ''}</button>`;
+  if(R.general && !CITY){
     h += `<h3>Общие поставки · видят только админы</h3>`;
-    h += `<div class="kpis"><div class="kpi"><div class="k">Пришло всего</div><div class="v">${R.general.received} <small>шт</small></div></div><div class="kpi"><div class="k">Роздано городам</div><div class="v">${R.general.distributed} <small>шт</small></div></div></div>`;
+    const gt = R.general.totals; h += `<div class="kpis"><div class="kpi"><div class="k">Пришло всего</div><div class="v">${gt.received} <small>шт</small></div></div><div class="kpi"><div class="k">Роздано городам</div><div class="v">${R.general.distributed} <small>шт</small></div></div><div class="kpi"><div class="k">Продано всего</div><div class="v">${gt.sold} <small>шт</small></div></div><div class="kpi"><div class="k">Остаток</div><div class="v">${gt.left} <small>шт</small></div></div></div>`;
     h += '<button class="btn main" style="width:100%;margin-bottom:10px" data-newg>+ Записать общую поставку</button>';
     h += R.general.batches.length ? R.general.batches.map(b => bCard(b, true, true)).join('') : '<div class="empty" style="padding:18px">Общих поставок пока нет.</div>';
+    if(R.general.unassigned.length) h += `<div class="lbl" style="margin-top:6px">Продано по стране не из записанных общих поставок:</div><div class="tbl">${R.general.unassigned.map(u => `<div class="r" style="grid-template-columns:1.8fr .5fr .5fr"><div>${esc(u.product)}<span class="sm">${esc(u.flavor)}</span></div><div>${u.sold}</div><div>${u.self ? u.self + '🏷' : ''}</div></div>`).join('')}</div>`;
   }
-  if(!R.cities.length) h += '<div class="empty">Нет доступных городов</div>';
-  R.cities.forEach(cb => {
+  if(!shown.length) h += '<div class="empty">Нет доступных городов</div>';
+  shown.forEach(cb => {
     const t = cb.totals;
     h += `<h3>${esc(CITY_FULL[cb.city] || cb.city)}</h3>`;
     h += `<div class="legend" style="margin:0 2px 8px"><span>пришло <b>${t.received}</b></span><span>продано <b>${t.sold}</b></span><span>себе <b>${t.self}</b></span><span>остаток <b>${t.left}</b></span></div>`;
-    h += `<button class="btn main" style="width:100%;margin-bottom:10px" data-newc="${cb.city}">+ Записать партию — ${esc(CITY_FULL[cb.city] || cb.city)}</button>`;
     h += cb.batches.length ? cb.batches.map(b => bCard(b, true, false)).join('') : '<div class="empty" style="padding:18px">Партий пока нет.<br>Запиши первую — и увидишь, сколько продано.</div>';
     if(cb.unassigned.length) h += `<div class="lbl" style="margin-top:6px">Продано не из записанных партий:</div><div class="tbl">${cb.unassigned.map(u => `<div class="r" style="grid-template-columns:1.8fr .5fr .5fr"><div>${esc(u.product)}<span class="sm">${esc(u.flavor)}</span></div><div>${u.sold}</div><div>${u.self ? u.self + '🏷' : ''}</div></div>`).join('')}</div>`;
   });
@@ -559,7 +561,7 @@ async function loadBatches(){
 $('regSeg').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; REGION = b.dataset.r; loadBatches(); });
 function findBatch(id){ const R = BATCHES[REGION]; if(!R) return null; return [].concat(R.general ? R.general.batches : [], ...R.cities.map(c => c.batches)).find(x => x.id === id) || null; }
 $('batchBody').addEventListener('click', async e => {
-  const nc = e.target.closest('[data-newc]'); if(nc) return openBatch(null, nc.dataset.newc);
+  if(e.target.closest('[data-newc]')){ const R = BATCHES[REGION], opts = CITY ? [CITY] : R.cities.map(c => c.city); return openBatch(null, opts.length === 1 ? opts[0] : undefined); }
   if(e.target.closest('[data-newg]')) return openBatch(null, '');
   const card = e.target.closest('[data-b]'); if(!card) return;
   const b = findBatch(Number(card.dataset.b)); if(!b) return;
@@ -568,12 +570,15 @@ $('batchBody').addEventListener('click', async e => {
   if(e.target.closest('[data-del]')){ if(!confirm('Удалить поставку от ' + fdate(b.date) + '? Продажи пересчитаются.')) return; const j = await api('batch_delete', {}, {id: b.id}); toast(j.ok ? 'Удалено' : (j.error || 'Ошибка'), !j.ok); loadBatches(); }
 });
 // форма записи партии: раздел → группа товара → вкусы и количество; цена подставляется по прайсу города
+function bmTitleFor(){ if(EDIT) return 'Изменить поставку'; if(BM.city === null) return 'Новая партия'; return BM.city ? 'Новая партия · ' + (CITY_FULL[BM.city] || BM.city) : 'Новая общая поставка'; }
 function bmGroups(){
   const g = CATALOG.map(x => ({...x}));
   if(EDIT) EDIT.items.forEach(i => { if(!g.some(x => x.name === i.product)) g.push({category: 'other', name: i.product, flavors: []}); });
+  XFL.forEach(x => { if(!g.some(y => y.name === x.product)) g.push({category: 'other', name: x.product, flavors: []}); });
   return g;
 }
 async function bmPrices(){
+  if(BM.city === null){ BM.prices = {}; renderBM(); return; }
   const names = bmGroups().map(g => g.name);
   const j = await api('prices', {}, {city: BM.city, region: REGION, names});
   BM.prices = j.ok ? j.prices : {}; renderBM();
@@ -594,10 +599,10 @@ function renderBM(){
   Object.keys(byCat).forEach(cat => {
     h += `<div class="bcat">${esc(CAT_LABEL[cat] || cat)}</div>`;
     byCat[cat].forEach(g => {
-      const fl = [...new Set(g.flavors.concat(BM.extra[g.name] || []))];
+      const fl = [...new Set(g.flavors.concat(BM.extra[g.name] || []))].sort((a, b) => a.localeCompare(b, 'en', {sensitivity: 'base', numeric: true}));
       const n = fl.reduce((a, f) => a + (BM.qty[g.name + '|' + f] || 0), 0), pr = BM.prices[g.name];
       h += `<div class="grp ${BM.open[g.name] ? 'open' : ''}" data-g="${esc(g.name)}"><div class="gh" data-gh><span class="gn">${esc(g.name)}</span><span class="gp">${pr ? eur(pr) + ' / шт' : 'нет цены'}</span><span class="gc" ${n ? '' : 'style="display:none"'}>${n}</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
-        <div class="gb">${fl.map(f => `<div class="fl"><span>${esc(f)}</span><input class="inp qin" inputmode="numeric" data-k="${esc(g.name + '|' + f)}" value="${BM.qty[g.name + '|' + f] || ''}" placeholder="0"></div>`).join('')}
+        <div class="gb">${fl.map(f => `<div class="fl"><span>${esc(f)}${BADMIN && XFL.some(x => x.product === g.name && x.flavor === f) && !g.flavors.includes(f) ? ` <button class="xdel" type="button" data-delf="${esc(g.name + '|' + f)}" title="Убрать смак из списка">✕</button>` : ''}</span><input class="inp qin" inputmode="numeric" data-k="${esc(g.name + '|' + f)}" value="${BM.qty[g.name + '|' + f] || ''}" placeholder="0"></div>`).join('')}
         <div class="fl add"><input class="inp" data-newf placeholder="Другой вкус…"><button class="btn sm" data-addf type="button">Добавить</button></div></div></div>`;
     });
   });
@@ -605,17 +610,20 @@ function renderBM(){
 }
 function openBatch(b, city){
   EDIT = b;
-  BM = {city: city || '', qty: {}, extra: {}, open: {}, prices: {}};
+  BM = {city: city === undefined ? null : city, qty: {}, extra: {}, open: {}, prices: {}};
+  XFL.forEach(x => { const g = CATALOG.find(c => c.name === x.product); if(!g || !g.flavors.includes(x.flavor)) (BM.extra[x.product] = BM.extra[x.product] || []).push(x.flavor); });
   if(b) b.items.forEach(i => { BM.qty[i.product + '|' + i.flavor] = i.qty; const g = CATALOG.find(x => x.name === i.product); if(!g || !g.flavors.includes(i.flavor)) (BM.extra[i.product] = BM.extra[i.product] || []).push(i.flavor); });
-  $('bmTitle').textContent = b ? 'Изменить поставку' : (BM.city ? 'Новая партия · ' + (CITY_FULL[BM.city] || BM.city) : 'Новая общая поставка');
+  $('bmTitle').textContent = bmTitleFor();
   $('bmDate').value = b ? b.date : new Date().toISOString().slice(0, 10);
   $('bmNote').value = b ? b.note : '';
   renderBM(); $('batchModal').classList.add('on'); bmPrices();
 }
-$('bmCity').addEventListener('click', e => { const c = e.target.closest('.chip'); if(!c || EDIT) return; BM.city = c.dataset.c; $('bmTitle').textContent = BM.city ? 'Новая партия · ' + (CITY_FULL[BM.city] || BM.city) : 'Новая общая поставка'; bmPrices(); });
+$('bmCity').addEventListener('click', e => { const c = e.target.closest('.chip'); if(!c || EDIT) return; BM.city = c.dataset.c; $('bmTitle').textContent = bmTitleFor(); bmPrices(); });
 $('bmGroups').addEventListener('click', e => {
   const gh = e.target.closest('[data-gh]');
   if(gh){ const g = gh.parentNode, nm = g.dataset.g; BM.open[nm] = !BM.open[nm]; g.classList.toggle('open', BM.open[nm]); return; }
+  const df = e.target.closest('[data-delf]');
+  if(df){ const k = df.dataset.delf, i = k.indexOf('|'), pr = k.slice(0, i), fl = k.slice(i + 1); if(!confirm('Убрать «' + fl + '» из списка смаков для всех менеджеров?')) return; api('flavor_delete', {}, {product: pr, flavor: fl}).then(j => { if(!j.ok) return toast(j.error || 'Ошибка', true); XFL = XFL.filter(x => !(x.product === pr && x.flavor === fl)); BM.extra[pr] = (BM.extra[pr] || []).filter(x => x !== fl); delete BM.qty[k]; renderBM(); }); return; }
   if(e.target.closest('[data-addf]')){
     const g = e.target.closest('.grp'), nm = g.dataset.g, inp = g.querySelector('[data-newf]'), f = inp.value.trim().slice(0, 100);
     if(!f) return; (BM.extra[nm] = BM.extra[nm] || []).push(f); BM.open[nm] = true; renderBM();
@@ -632,11 +640,12 @@ $('bmGroups').addEventListener('input', e => {
 $('bmCancel').onclick = () => $('batchModal').classList.remove('on');
 $('bmSave').onclick = async () => {
   const items = Object.keys(BM.qty).filter(k => BM.qty[k] > 0).map(k => { const i = k.indexOf('|'); return {product: k.slice(0, i), flavor: k.slice(i + 1), qty: BM.qty[k]}; });
+  if(BM.city === null){ toast('Выбери, куда записываем партию', true); return; }
   if(!items.length){ toast('Впиши количество хотя бы у одного вкуса', true); return; }
   $('bmSave').disabled = true;
   const j = await api('batch_save', {}, {id: EDIT ? EDIT.id : 0, region: REGION, city: BM.city, date: $('bmDate').value, note: $('bmNote').value, items});
   $('bmSave').disabled = false;
-  if(j.ok){ $('batchModal').classList.remove('on'); toast('Сохранено'); loadBatches(); } else toast(j.error || 'Ошибка', true);
+  if(j.ok){ $('batchModal').classList.remove('on'); toast('Сохранено: ' + (BM.city ? (CITY_FULL[BM.city] || BM.city) : 'общая поставка')); if(CITY && BM.city && BM.city !== CITY){ CITY = BM.city; paintCity(); } loadBatches(); } else toast(j.error || 'Ошибка', true);
 };
 
 // ---------- скидка на заказ ----------
