@@ -241,6 +241,8 @@ h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
 .fl.add .inp{flex:1;min-width:0;padding:8px 10px;font-size:.82rem}
 .sheet{background:#0f0a18!important}
 .xdel{border:0;background:rgba(251,113,133,.15);color:var(--bad);border-radius:6px;width:20px;height:20px;font-size:.7rem;line-height:20px;padding:0;margin-left:6px;cursor:pointer}
+.cm-h{font:700 .6rem 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--magenta);padding:8px 12px 2px}
+.cmenu{max-height:70vh;overflow:auto}
 </style>
 </head>
 <body>
@@ -295,6 +297,13 @@ h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
   <div id="bmGroups"></div>
   <div class="sum" id="bmSum" style="margin-top:10px"></div>
   <div class="acts"><button class="btn" id="bmCancel">Отмена</button><button class="btn main" id="bmSave">Сохранить</button></div>
+</div></div>
+
+<div class="modal" id="syncModal"><div class="sheet">
+  <h2 id="syncTitle">Сверка со складом</h2>
+  <div class="lbl">Берём то, что осталось в таблице склада, и сравниваем с тем, что должно остаться по записанным партиям и заказам. Разницу можно дописать как проданную. Работает только по твоей кнопке.</div>
+  <div id="syncBody"><div class="empty">Загружаю…</div></div>
+  <div class="acts"><button class="btn" id="syncCancel">Закрыть</button><button class="btn main" id="syncApply" style="display:none">Дописать выбранное</button></div>
 </div></div>
 
 <div class="modal" id="discModal"><div class="sheet">
@@ -522,7 +531,7 @@ function bCard(b, canEdit, general){
       <div class="legend"><span><span class="dot" style="background:#c653f0"></span>продано <b>${b.sold}</b></span><span><span class="dot" style="background:var(--warn)"></span>себе <b>${b.self}</b></span><span>остаток <b>${b.left}</b></span></div>${dist}
       <div class="sub" style="margin-top:6px"><span>Выручка: <b style="color:#fff">${eur(b.revenue)}</b></span>${b.cost ? `<span>Стоимость партии: <b style="color:#fff">${eur(b.cost)}</b></span>` : ''}</div>`;
   const cols = general ? '1.6fr .45fr .5fr .5fr .5fr' : '1.8fr .5fr .5fr .5fr';
-  const rows = b.items.map(i => `<div class="r" style="grid-template-columns:${cols}"><div>${esc(i.product)}<span class="sm">${esc(i.flavor)}</span></div><div>${i.qty}</div>${general ? `<div>${i.distributed}</div>` : ''}<div>${i.sold}${i.self ? ' +' + i.self + '🏷' : ''}</div><div>${i.qty - i.sold - i.self}</div></div>`).join('');
+  const rows = b.items.map(i => `<div class="r" style="grid-template-columns:${cols}"><div>${esc(i.product)}<span class="sm">${esc(i.flavor)}</span></div><div>${i.qty}</div>${general ? `<div>${i.distributed}</div>` : ''}<div>${i.sold}${i.adj ? '<span class="sm" style="white-space:nowrap">склад ' + i.adj + '</span>' : ''}${i.self ? ' +' + i.self + '🏷' : ''}</div><div>${i.qty - i.sold - i.self}</div></div>`).join('');
   const hd = general ? '<div>Товар · вкус</div><div>Пришло</div><div>Роздано</div><div>Продано</div><div>Остаток</div>' : '<div>Товар · вкус</div><div>Пришло</div><div>Продано</div><div>Остаток</div>';
   return `<div class="card" data-b="${b.id}">${head}
     <div class="bitems" style="display:none"><div class="tbl" style="margin-top:8px"><div class="r hd" style="grid-template-columns:${cols}">${hd}</div>${rows}</div></div>
@@ -535,12 +544,13 @@ async function loadBatches(){
   BATCHES = {}; j.regions.forEach(r => BATCHES[r.region] = r); BCITIES = j.cities || []; XFL = j.flavors || []; BADMIN = !!j.admin;
   const regs = j.regions.map(r => r.region);
   $('regSeg').style.display = regs.length > 1 ? '' : 'none';
+  if(CITY){ const rg = REG_OF(cityList()[0]); if(regs.includes(rg)) REGION = rg; }
   if(!regs.includes(REGION)) REGION = regs[0];
   [...$('regSeg').children].forEach(x => x.classList.toggle('on', x.dataset.r === REGION));
   const R = BATCHES[REGION]; if(!R){ $('batchBody').innerHTML = '<div class="empty">Нет данных</div>'; return; }
   let h = '';
-  const shown = CITY ? R.cities.filter(c => c.city === CITY) : R.cities;
-  if(shown.length) h += `<button class="btn main" style="width:100%;margin-bottom:6px" data-newc>+ Записать партию${CITY ? ' — ' + esc(CITY_FULL[CITY] || CITY) : ''}</button>`;
+  const sel = cityList(), shown = CITY ? R.cities.filter(c => sel.includes(c.city)) : R.cities;
+  if(shown.length) h += `<button class="btn main" style="width:100%;margin-bottom:6px" data-newc>+ Записать партию${CITY && sel.length === 1 ? ' — ' + esc(CITY_FULL[CITY] || CITY) : ''}</button>`;
   if(R.general && !CITY){
     h += `<h3>Общие поставки · видят только админы</h3>`;
     const gt = R.general.totals; h += `<div class="kpis"><div class="kpi"><div class="k">Пришло всего</div><div class="v">${gt.received} <small>шт</small></div></div><div class="kpi"><div class="k">Роздано городам</div><div class="v">${R.general.distributed} <small>шт</small></div></div><div class="kpi"><div class="k">Продано всего</div><div class="v">${gt.sold} <small>шт</small></div></div><div class="kpi"><div class="k">Остаток</div><div class="v">${gt.left} <small>шт</small></div></div></div>`;
@@ -553,22 +563,57 @@ async function loadBatches(){
     const t = cb.totals;
     h += `<h3>${esc(CITY_FULL[cb.city] || cb.city)}</h3>`;
     h += `<div class="legend" style="margin:0 2px 8px"><span>пришло <b>${t.received}</b></span><span>продано <b>${t.sold}</b></span><span>себе <b>${t.self}</b></span><span>остаток <b>${t.left}</b></span></div>`;
+    if(cb.batches.length) h += `<button class="btn" style="width:100%;margin-bottom:8px" data-sync="${cb.city}">🔄 Сверить со складом</button>`;
     h += cb.batches.length ? cb.batches.map(b => bCard(b, true, false)).join('') : '<div class="empty" style="padding:18px">Партий пока нет.<br>Запиши первую — и увидишь, сколько продано.</div>';
+    if((cb.adjustments || []).length) h += `<div class="lbl" style="margin-top:6px">Дописано по складу вручную (нет в заказах бота):</div><div class="tbl">${cb.adjustments.map(a => `<div class="r" style="grid-template-columns:1.8fr .4fr .5fr"><div>${esc(a.product)}<span class="sm">${esc(a.flavor)} · ${esc(a.by)}</span></div><div>${a.qty}</div><div><button class="btn sm bad" data-unsync="${a.id}">Убрать</button></div></div>`).join('')}</div>`;
     if(cb.unassigned.length) h += `<div class="lbl" style="margin-top:6px">Продано не из записанных партий:</div><div class="tbl">${cb.unassigned.map(u => `<div class="r" style="grid-template-columns:1.8fr .5fr .5fr"><div>${esc(u.product)}<span class="sm">${esc(u.flavor)}</span></div><div>${u.sold}</div><div>${u.self ? u.self + '🏷' : ''}</div></div>`).join('')}</div>`;
   });
   $('batchBody').innerHTML = h;
 }
-$('regSeg').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; REGION = b.dataset.r; loadBatches(); });
+$('regSeg').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; REGION = b.dataset.r; if(CITY && REG_OF(cityList()[0]) !== REGION){ CITY = ''; paintCity(); } loadBatches(); });
 function findBatch(id){ const R = BATCHES[REGION]; if(!R) return null; return [].concat(R.general ? R.general.batches : [], ...R.cities.map(c => c.batches)).find(x => x.id === id) || null; }
 $('batchBody').addEventListener('click', async e => {
-  if(e.target.closest('[data-newc]')){ const R = BATCHES[REGION], opts = CITY ? [CITY] : R.cities.map(c => c.city); return openBatch(null, opts.length === 1 ? opts[0] : undefined); }
+  if(e.target.closest('[data-newc]')){ const R = BATCHES[REGION], opts = CITY ? cityList().filter(c => R.cities.some(x => x.city === c)) : R.cities.map(c => c.city); return openBatch(null, opts.length === 1 ? opts[0] : undefined); }
   if(e.target.closest('[data-newg]')) return openBatch(null, '');
+  const us = e.target.closest('[data-unsync]');
+  if(us){ if(!confirm('Убрать эту дописанную продажу?')) return; const j = await api('sync_undo', {}, {id: Number(us.dataset.unsync)}); toast(j.ok ? 'Убрано' : (j.error || 'Ошибка'), !j.ok); loadBatches(); return; }
+  const sy = e.target.closest('[data-sync]'); if(sy) return openSync(sy.dataset.sync);
   const card = e.target.closest('[data-b]'); if(!card) return;
   const b = findBatch(Number(card.dataset.b)); if(!b) return;
   if(e.target.closest('[data-tb]')){ const el = card.querySelector('.bitems'); el.style.display = el.style.display === 'none' ? '' : 'none'; return; }
   if(e.target.closest('[data-edit]')) return openBatch(b, b.city || '');
   if(e.target.closest('[data-del]')){ if(!confirm('Удалить поставку от ' + fdate(b.date) + '? Продажи пересчитаются.')) return; const j = await api('batch_delete', {}, {id: b.id}); toast(j.ok ? 'Удалено' : (j.error || 'Ошибка'), !j.ok); loadBatches(); }
 });
+// ---------- сверка со складом (вручную) ----------
+let SYNC = {city: '', rows: []};
+async function openSync(city){
+  SYNC = {city, rows: []};
+  $('syncTitle').textContent = 'Сверка со складом · ' + (CITY_FULL[city] || city);
+  $('syncBody').innerHTML = '<div class="empty">Загружаю остатки со склада…</div>'; $('syncApply').style.display = 'none';
+  $('syncModal').classList.add('on');
+  const j = await api('sync_preview', {city});
+  if(!j.ok){ $('syncBody').innerHTML = `<div class="empty">${esc(j.error || 'Ошибка')}</div>`; return; }
+  SYNC.rows = j.rows || [];
+  const up = SYNC.rows.filter(r => !r.nosheet && r.diff > 0), other = SYNC.rows.filter(r => r.nosheet || r.diff < 0);
+  let h = '';
+  if(!SYNC.rows.length) h = `<div class="empty">${esc(j.note || 'Всё сходится: остатки склада совпадают с партиями и заказами.')}</div>`;
+  if(up.length){
+    h += `<div class="lbl" style="margin-top:8px">Продано, но нет в заказах (склад показывает меньше, чем должно быть). Отметь, что дописать:</div><div class="tbl">${up.map(r => `<label class="r" style="grid-template-columns:.3fr 1.7fr .5fr .5fr .5fr;cursor:pointer"><div><input type="checkbox" data-sk="${esc(r.key)}" checked></div><div>${esc(r.product)}<span class="sm">${esc(r.flavor)}</span></div><div>${r.expected}</div><div>${r.actual}</div><div><b>${r.diff}</b></div></label>`).join('')}</div><div class="lbl">Столбцы: по записям · на складе · дописать. Выручка считается по текущему прайсу города.</div>`;
+    $('syncApply').style.display = '';
+  }
+  if(other.length) h += `<div class="lbl" style="margin-top:10px">Не дописываем (только для сведения):</div><div class="tbl">${other.map(r => `<div class="r" style="grid-template-columns:1.8fr 1fr"><div>${esc(r.product)}<span class="sm">${esc(r.flavor)}</span></div><div>${r.nosheet ? 'нет в таблице склада' : 'на складе больше на ' + (-r.diff)}</div></div>`).join('')}</div>`;
+  $('syncBody').innerHTML = h;
+}
+$('syncCancel').onclick = () => $('syncModal').classList.remove('on');
+$('syncApply').onclick = async () => {
+  const keys = [...$('syncBody').querySelectorAll('input[data-sk]:checked')].map(x => x.dataset.sk);
+  if(!keys.length) return toast('Ничего не выбрано', true);
+  $('syncApply').disabled = true;
+  const j = await api('sync_apply', {}, {city: SYNC.city, keys});
+  $('syncApply').disabled = false;
+  if(j.ok){ $('syncModal').classList.remove('on'); toast('Дописано: ' + j.units + ' шт'); loadBatches(); } else toast(j.error || 'Ошибка', true);
+};
+
 // форма записи партии: раздел → группа товара → вкусы и количество; цена подставляется по прайсу города
 function bmTitleFor(){ if(EDIT) return 'Изменить поставку'; if(BM.city === null) return 'Новая партия'; return BM.city ? 'Новая партия · ' + (CITY_FULL[BM.city] || BM.city) : 'Новая общая поставка'; }
 function bmGroups(){
@@ -645,7 +690,7 @@ $('bmSave').onclick = async () => {
   $('bmSave').disabled = true;
   const j = await api('batch_save', {}, {id: EDIT ? EDIT.id : 0, region: REGION, city: BM.city, date: $('bmDate').value, note: $('bmNote').value, items});
   $('bmSave').disabled = false;
-  if(j.ok){ $('batchModal').classList.remove('on'); toast('Сохранено: ' + (BM.city ? (CITY_FULL[BM.city] || BM.city) : 'общая поставка')); if(CITY && BM.city && BM.city !== CITY){ CITY = BM.city; paintCity(); } loadBatches(); } else toast(j.error || 'Ошибка', true);
+  if(j.ok){ $('batchModal').classList.remove('on'); toast('Сохранено: ' + (BM.city ? (CITY_FULL[BM.city] || BM.city) : 'общая поставка')); if(CITY && BM.city && !cityList().includes(BM.city)){ CITY = BM.city; paintCity(); } loadBatches(); } else toast(j.error || 'Ошибка', true);
 };
 
 // ---------- скидка на заказ ----------
@@ -708,7 +753,26 @@ function setTab(t){
   if(t === 'orders') loadOrders(); if(t === 'stats') loadStats(); if(t === 'batches') loadBatches(); if(t === 'profile') loadProfile(PROF_ID);
 }
 document.querySelectorAll('.tabs button[data-t]').forEach(b => b.addEventListener('click', () => { haptic('light'); setTab(b.dataset.t); }));
-function paintCity(){ $('cityName').textContent = CITY ? cityName(CITY) : 'ВСЕ'; $('cityMenu').innerHTML = '<button data-c="" class="' + (!CITY ? 'on' : '') + '">Все города</button>' + ME.cities.map(c => `<button data-c="${c}" class="${CITY === c ? 'on' : ''}">${esc(CITY_FULL[c] || c)}</button>`).join(''); }
+const REG_OF = c => ['kl', 'sb', 'ld'].includes(c) ? 'de' : 'sk';
+const REG_LABEL = {de: '🇩🇪 Германия', sk: '🇸🇰 Словакия'};
+const cityList = () => CITY ? CITY.split(',') : (ME ? ME.cities : []);
+const regionCsv = r => ME.cities.filter(c => REG_OF(c) === r).join(',');
+function cityLabel(){
+  if(!CITY) return 'ВСЕ';
+  const l = CITY.split(','); if(l.length === 1) return cityName(l[0]);
+  const rs = [...new Set(l.map(REG_OF))]; return rs.length === 1 ? rs[0].toUpperCase() : 'ВСЕ';
+}
+function paintCity(){
+  $('cityName').textContent = cityLabel();
+  const regs = [...new Set(ME.cities.map(REG_OF))], btn = (v, label, cls = '') => `<button data-c="${v}" class="${CITY === v ? 'on' : ''} ${cls}">${label}</button>`;
+  let h = btn('', regs.length > 1 ? 'Все страны и города' : 'Все города');
+  regs.forEach(r => {
+    const cs = ME.cities.filter(c => REG_OF(c) === r);
+    if(regs.length > 1){ h += `<div class="cm-h">${REG_LABEL[r]}</div>`; if(cs.length > 1) h += btn(cs.join(','), 'Все города — ' + (r === 'de' ? 'Германия' : 'Словакия')); }
+    h += cs.map(c => btn(c, esc(CITY_FULL[c] || c))).join('');
+  });
+  $('cityMenu').innerHTML = h;
+}
 $('cityBtn').addEventListener('click', e => { e.stopPropagation(); $('cityMenu').classList.toggle('open'); });
 document.addEventListener('click', e => { if(!e.target.closest('#cityMenu')) $('cityMenu').classList.remove('open'); });
 $('cityMenu').addEventListener('click', e => { const b = e.target.closest('button[data-c]'); if(!b) return; CITY = b.dataset.c; $('cityMenu').classList.remove('open'); paintCity(); ORDERS = []; setTab(TAB); });
