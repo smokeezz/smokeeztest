@@ -403,7 +403,7 @@ function orderHtml(o){
   if(isNew) acts = `<button class="btn main" data-a="acc">👌 Принять</button><button class="btn bad" data-a="cx">Отменить</button>`;
   else if(o.status === 'accepted') acts = `<button class="btn main" data-a="rdy">✅ Готов к выдаче</button><button class="btn bad" data-a="cx">Отменить</button>`;
   else if(o.status === 'ready') acts = `<button class="btn main" data-a="done">📦 Выдан</button><button class="btn bad" data-a="cx">Отменить</button>`;
-  const editable = ['delivered', 'reserved', 'accepted', 'ready'].includes(o.status);
+  const editable = ['delivered', 'reserved', 'accepted', 'ready'].includes(o.status) || (o.status === 'done' && ME && ME.admin);
   const extra = (editable ? '<button class="btn sm" data-a="edit">✏️ Изменить состав</button>' : '') + (o.status !== 'cancelled' ? '<button class="btn sm" data-a="disc">🏷 Скидка</button>' : '') + (ME && ME.admin ? '<button class="btn sm bad" data-a="del">🗑 Удалить</button>' : '');
   const self = (o.status !== 'cancelled') ? `<label class="self"><input type="checkbox" data-self ${o.for_self ? 'checked' : ''}> 🏷 Взял себе (не продажа — в учёте «взято собой»)</label>` : '';
   return `<div class="card ${isNew ? 'new' : ''} ${late ? 'late' : ''} ${open ? 'open' : ''}" data-no="${o.no}">
@@ -492,7 +492,7 @@ $('emCancel').onclick = () => $('editModal').classList.remove('on');
 $('emSave').onclick = async () => {
   if(EQ.every((q, i) => q === EO.items[i].qty)){ $('editModal').classList.remove('on'); return; }
   $('emSave').disabled = true; const j = await api('edit', {}, {no: EO.no, qtys: EQ}); $('emSave').disabled = false;
-  if(j.ok){ $('editModal').classList.remove('on'); haptic('success'); toast('Состав обновлён: ' + eur(j.total)); loadOrders(); } else toast(j.error || 'Не удалось', true);
+  if(j.ok){ $('editModal').classList.remove('on'); haptic('success'); toast('Состав обновлён: ' + eur(j.total) + (j.pointsLost ? ' · −' + j.pointsLost + ' баллов клиента' : '') + (j.stockBack ? ' · на склад +' + j.stockBack : '') + ((j.notes || []).length ? ' · ⚠️ ' + j.notes.join('; ') : '')); loadOrders(); } else toast(j.error || 'Не удалось', true);
 };
 
 // ---------- бухгалтерия ----------
