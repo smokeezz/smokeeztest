@@ -266,6 +266,7 @@ h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
 </div>
 
 <div class="wrap" id="v-stats" style="display:none">
+  <div class="seg" id="finSeg" style="display:none;margin-bottom:8px"><button class="on" data-f="sales">Продажи</button><button data-f="settle">Расчёты</button><button data-f="partners">Партнёры</button></div>
   <div class="pbar" id="sPeriod"><div class="prow"><span class="chip" data-p="today">Сегодня</span><span class="chip" data-p="yest">Вчера</span><span class="chip" data-p="7">7 дней</span><span class="chip more-btn" data-more>Ещё ▾</span></div><div class="pmenu"><div class="pg"><span class="chip" data-p="month">Этот месяц</span><span class="chip" data-p="pmonth">Прошлый месяц</span><span class="chip" data-p="30">30 дней</span><span class="chip" data-p="custom">Свой период…</span></div><div class="pcustom"><input class="inp" type="date" id="sFrom"><input class="inp" type="date" id="sTo"></div></div></div>
   <div id="statsBody"></div>
 </div>
@@ -293,6 +294,7 @@ h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
   <div class="lbl">Куда записываем</div>
   <div class="chips wrapchips" id="bmCity"></div>
   <div class="filters"><input class="inp" type="date" id="bmDate"><input class="inp" id="bmNote" placeholder="Заметка (необязательно)"></div>
+  <div id="bmPartners"></div>
   <div class="lbl">Открой группу товара и впиши количество у каждого вкуса. Цена за штуку подставляется по прайсу выбранного города.</div>
   <div id="bmGroups"></div>
   <div class="sum" id="bmSum" style="margin-top:10px"></div>
@@ -304,6 +306,21 @@ h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
   <div class="lbl">Берём то, что осталось в таблице склада, и сравниваем с тем, что должно остаться по записанным партиям и заказам. Разницу можно дописать как проданную. Работает только по твоей кнопке.</div>
   <div id="syncBody"><div class="empty">Загружаю…</div></div>
   <div class="acts"><button class="btn" id="syncCancel">Закрыть</button><button class="btn main" id="syncApply" style="display:none">Дописать выбранное</button></div>
+</div></div>
+
+<div class="modal" id="payModal"><div class="sheet">
+  <h2>Кто принял оплату</h2>
+  <div class="lbl" id="payInfo"></div>
+  <div id="payOpts" style="display:grid;gap:8px;margin-top:6px"></div>
+  <div class="acts"><button class="btn" id="payCancel">Отмена</button></div>
+</div></div>
+
+<div class="modal" id="moneyModal"><div class="sheet">
+  <h2 id="mmTitle">Операция</h2>
+  <div class="lbl" id="mmInfo"></div>
+  <div class="filters"><input class="inp" id="mmAmt" inputmode="decimal" placeholder="Сумма, €"><input class="inp" type="date" id="mmDate"></div>
+  <input class="inp" id="mmNote" placeholder="Заметка (необязательно)" style="width:100%;margin-top:8px">
+  <div class="acts"><button class="btn" id="mmCancel">Отмена</button><button class="btn main" id="mmSave">Записать</button></div>
 </div></div>
 
 <div class="modal" id="discModal"><div class="sheet">
@@ -384,6 +401,16 @@ function periodRange(p, fromEl, toEl){
 const STAT = {delivered:['НОВЫЙ','s-new'], reserved:['НОВЫЙ','s-new'], accepted:['ПРИНЯТ','s-acc'], ready:['ГОТОВ','s-rdy'], done:['ВЫДАН','s-done'], cancelled:['ОТМЕНЁН','s-cx']};
 function ago(ts){ const m = Math.max(0, Math.round((Date.now() + SKEW - ts) / 60000)); return m < 60 ? m + ' мин' : m < 1440 ? Math.floor(m / 60) + ' ч ' + (m % 60) + ' мин' : Math.floor(m / 1440) + ' дн'; }
 function chatBtn(o){ return o.tg_user ? `<button class="btn link" data-chat="u">💬 Написать @${esc(o.tg_user)}</button>` : (o.user_id ? '<button class="btn link" data-chat="b">💬 Чат с клиентом (ссылка в бот)</button>' : ''); }
+function adminName(city, id){ const l = (ME && ME.admins && ME.admins[REG_OF(city)]) || []; const a = l.find(x => String(x.id) === String(id)); return a ? a.name : 'id ' + id; }
+function payLine(o){
+  if(o.status === 'cancelled') return '';
+  let t, warn = false;
+  if(o.paid_to === 'mgr') t = '💵 наличные — у менеджера';
+  else if(o.paid_to) t = '💳 деньги у админа: ' + esc(adminName(o.city, o.paid_to));
+  else if(o.pay_text){ t = (o.pay_cash ? '💵 ' : '💳 ') + esc(o.pay_text) + (o.pay_cash ? ' — у менеджера' : ' — не указано, кто принял'); warn = !o.pay_cash; }
+  else { t = '💳 не указано, кто принял оплату'; warn = true; }
+  return `<div class="lbl" style="margin:6px 0 0;${warn ? 'color:var(--warn)' : ''}">${t}</div>`;
+}
 function orderHtml(o){
   const isNew = o.status === 'delivered' || o.status === 'reserved';
   const late = isNew && (Date.now() + SKEW - o.created_at) > 15 * 60000;
@@ -404,12 +431,13 @@ function orderHtml(o){
   else if(o.status === 'accepted') acts = `<button class="btn main" data-a="rdy">✅ Готов к выдаче</button><button class="btn bad" data-a="cx">Отменить</button>`;
   else if(o.status === 'ready') acts = `<button class="btn main" data-a="done">📦 Выдан</button><button class="btn bad" data-a="cx">Отменить</button>`;
   const editable = ['delivered', 'reserved', 'accepted', 'ready'].includes(o.status) || (o.status === 'done' && ME && ME.admin);
-  const extra = (editable ? '<button class="btn sm" data-a="edit">✏️ Изменить состав</button>' : '') + (o.status !== 'cancelled' ? '<button class="btn sm" data-a="disc">🏷 Скидка</button>' : '') + (ME && ME.admin ? '<button class="btn sm bad" data-a="del">🗑 Удалить</button>' : '');
+  const extra = (o.status !== 'cancelled' ? '<button class="btn sm" data-a="pay">💳 Оплата</button>' : '') + (editable ? '<button class="btn sm" data-a="edit">✏️ Изменить состав</button>' : '') + (o.status !== 'cancelled' ? '<button class="btn sm" data-a="disc">🏷 Скидка</button>' : '') + (ME && ME.admin ? '<button class="btn sm bad" data-a="del">🗑 Удалить</button>' : '');
   const self = (o.status !== 'cancelled') ? `<label class="self"><input type="checkbox" data-self ${o.for_self ? 'checked' : ''}> 🏷 Взял себе (не продажа — в учёте «взято собой»)</label>` : '';
   return `<div class="card ${isNew ? 'new' : ''} ${late ? 'late' : ''} ${open ? 'open' : ''}" data-no="${o.no}">
     <div class="h" data-toggle><span class="no">№${o.no}</span><span class="city">${esc(cityName(o.city))}</span><span class="st ${stC}">${stT}</span></div>
     <div class="sub"><span>${fmtDT(o.created_at)}</span>${isNew ? `<span class="timer">⏱ ждёт ${ago(o.created_at)}</span>` : ''}${by ? `<span>${by}</span>` : ''}${o.for_self ? '<span style="color:var(--warn)">🏷 себе</span>' : ''}</div>
     <div class="items">${items}</div>
+    ${payLine(o)}
     <div class="sum"><b>${eur(o.total)}</b>${o.discount > 0 ? `<span>скидка −${eur(o.discount)}${o.promo ? ' · ' + esc(o.promo) : ''}</span>` : ''}<button class="tog" type="button" data-tog><span class="tt">${open ? 'Показать меньше' : 'Посмотреть детали'}</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button></div>
     <div class="cbody"><div class="cin">
       ${client}${self}
@@ -454,6 +482,7 @@ $('ordList').addEventListener('click', async e => {
     const act = a.dataset.a;
     if(act === 'edit') return openEdit(o);
     if(act === 'disc') return openDisc(o);
+    if(act === 'pay') return openPay(o);
     if(act === 'del'){
       if(!confirm('Удалить заказ №' + no + ' навсегда?\nСклад и баллы клиента НЕ меняются. Заказ исчезнет из учёта.')) return;
       a.disabled = true; const j = await api('delete', {}, {no});
@@ -498,6 +527,9 @@ $('emSave').onclick = async () => {
 // ---------- бухгалтерия ----------
 let SPERIOD = 'today';
 async function loadStats(){
+  const adm = !!(ME && ME.admin); $('sPeriod').style.display = adm && FSEG === 'settle' ? 'none' : '';
+  if(adm && FSEG === 'settle') return loadSettle();
+  if(adm && FSEG === 'partners') return loadPartners();
   const [f, t] = periodRange(SPERIOD, 'sFrom', 'sTo');
   const p = {from: f || 1, to: t || Date.now() + 86400000}; if(CITY) p.city = CITY;
   $('statsBody').innerHTML = '<div class="empty">Считаю…</div>';
@@ -541,7 +573,7 @@ async function loadBatches(){
   $('batchBody').innerHTML = '<div class="empty">Загружаю…</div>';
   const j = await api('batches', {});
   if(!j.ok){ $('batchBody').innerHTML = `<div class="empty">${esc(j.error || 'Ошибка')}</div>`; return; }
-  BATCHES = {}; j.regions.forEach(r => BATCHES[r.region] = r); BCITIES = j.cities || []; XFL = j.flavors || []; BADMIN = !!j.admin;
+  BATCHES = {}; j.regions.forEach(r => BATCHES[r.region] = r); BCITIES = j.cities || []; XFL = j.flavors || []; BADMIN = !!j.admin; PARTNER_OPTS = j.partnerOpts || {};
   const regs = j.regions.map(r => r.region);
   $('regSeg').style.display = regs.length > 1 ? '' : 'none';
   if(CITY){ const rg = REG_OF(cityList()[0]); if(regs.includes(rg)) REGION = rg; }
@@ -653,6 +685,14 @@ function renderBM(){
   });
   $('bmGroups').innerHTML = h; bmTotals();
 }
+let PARTNER_OPTS = {};
+function bmPartners(){
+  const box = $('bmPartners');
+  if(!BADMIN || !BM.city){ box.innerHTML = ''; return; }
+  const list = PARTNER_OPTS[REG_OF(BM.city)] || [];
+  const cur = {}; if(EDIT && EDIT.partners && (EDIT.city || '') === BM.city) EDIT.partners.forEach(x => cur[x.id] = x.amount);
+  box.innerHTML = `<div class="lbl">Закупка партии, € — сколько вложил каждый админ (по ним считается прибыль и доли). Пусто — не участвует.</div><div class="filters">${list.map(a => `<label style="flex:1;min-width:120px;font-size:.72rem;color:var(--dim)">${esc(a.name)}<input class="inp" data-pi="${esc(a.id)}" inputmode="decimal" value="${cur[a.id] || ''}" placeholder="0" style="width:100%;margin-top:4px"></label>`).join('')}</div>`;
+}
 function openBatch(b, city){
   EDIT = b;
   BM = {city: city === undefined ? null : city, qty: {}, extra: {}, open: {}, prices: {}};
@@ -661,9 +701,9 @@ function openBatch(b, city){
   $('bmTitle').textContent = bmTitleFor();
   $('bmDate').value = b ? b.date : new Date().toISOString().slice(0, 10);
   $('bmNote').value = b ? b.note : '';
-  renderBM(); $('batchModal').classList.add('on'); bmPrices();
+  renderBM(); bmPartners(); $('batchModal').classList.add('on'); bmPrices();
 }
-$('bmCity').addEventListener('click', e => { const c = e.target.closest('.chip'); if(!c || EDIT) return; BM.city = c.dataset.c; $('bmTitle').textContent = bmTitleFor(); bmPrices(); });
+$('bmCity').addEventListener('click', e => { const c = e.target.closest('.chip'); if(!c || EDIT) return; BM.city = c.dataset.c; $('bmTitle').textContent = bmTitleFor(); bmPartners(); bmPrices(); });
 $('bmGroups').addEventListener('click', e => {
   const gh = e.target.closest('[data-gh]');
   if(gh){ const g = gh.parentNode, nm = g.dataset.g; BM.open[nm] = !BM.open[nm]; g.classList.toggle('open', BM.open[nm]); return; }
@@ -688,7 +728,9 @@ $('bmSave').onclick = async () => {
   if(BM.city === null){ toast('Выбери, куда записываем партию', true); return; }
   if(!items.length){ toast('Впиши количество хотя бы у одного вкуса', true); return; }
   $('bmSave').disabled = true;
-  const j = await api('batch_save', {}, {id: EDIT ? EDIT.id : 0, region: REGION, city: BM.city, date: $('bmDate').value, note: $('bmNote').value, items});
+  const body = {id: EDIT ? EDIT.id : 0, region: REGION, city: BM.city, date: $('bmDate').value, note: $('bmNote').value, items};
+  if(BADMIN && BM.city) body.partners = [...$('bmPartners').querySelectorAll('input[data-pi]')].map(i => ({id: i.dataset.pi, amount: parseFloat(String(i.value).replace(',', '.')) || 0})).filter(x => x.amount > 0);
+  const j = await api('batch_save', {}, body);
   $('bmSave').disabled = false;
   if(j.ok){ $('batchModal').classList.remove('on'); toast('Сохранено: ' + (BM.city ? (CITY_FULL[BM.city] || BM.city) : 'общая поставка')); if(CITY && BM.city && !cityList().includes(BM.city)){ CITY = BM.city; paintCity(); } loadBatches(); } else toast(j.error || 'Ошибка', true);
 };
@@ -729,6 +771,11 @@ async function loadProfile(id){
   h += `<div class="pf"><div class="avatar">${esc((P.name || '?').replace(/^[@\s]+/, '').charAt(0).toUpperCase() || '?')}</div><div style="min-width:0"><div class="nm">${esc(P.name)}</div><div class="rl"><span class="tag ${P.admin ? 'adm' : ''}">${P.admin ? 'АДМИН' : 'МЕНЕДЖЕР'}</span>${P.cities.map(c => `<span class="tag">${esc(CITY_FULL[c] || c)}</span>`).join('')}</div></div></div>`;
   h += '<div class="kpis">' + kpi('Выручка', eur(T.revenue), 1) + kpi('Продано, шт', T.units + ' <small>· ' + T.orders + ' зак.</small>') + kpi('Скидки', eur(T.discount)) + kpi('Взято себе', (T.selfUnits || 0) + ' шт') + kpi('Клиентов обслужил', j.clients.mine) + kpi('Клиентов в городе', j.clients.city + ' <small>· за период ' + j.clients.period + '</small>') + '</div>';
   h += `<div class="legend" style="margin-bottom:4px"><span>Выдано заказов за всё время: <b>${j.handledAll}</b></span>${T.cancelled ? `<span>Отменено: <b>${T.cancelled}</b></span>` : ''}</div>`;
+  if(j.settle){
+    const S = j.settle;
+    h += '<h3>Расчёты</h3><div class="kpis">' + kpi('Процент', S.pct + ' %') + kpi('Заработано', eur(S.earned), 1) + kpi('Выплачено', eur(S.paid)) + kpi('К выплате', eur(S.toPay)) + kpi('Наличные на руках', eur(S.held)) + '</div>';
+    h += `<div class="lbl" style="font-size:.82rem;color:#fff;margin:6px 0">Итог: ${netMsg(S.net)}</div><div class="lbl">За всё время. Заработано = твой % от прибыли города.</div>`;
+  }
   if(j.supply && j.supply.length){
     h += '<h3>Поставки</h3><div class="tbl"><div class="r hd" style="grid-template-columns:1.2fr .8fr .8fr .8fr"><div>Регион</div><div>Пришло</div><div>Продано</div><div>Остаток</div></div>' + j.supply.map(s => `<div class="r" style="grid-template-columns:1.2fr .8fr .8fr .8fr"><div>${s.region === 'sk' ? '🇸🇰 Словакия' : '🇩🇪 Германия'}<span class="sm">${s.batches} пост.${s.last ? ' · посл. ' + esc(s.last.split('-').reverse().join('.')) : ''}</span></div><div>${s.received}</div><div>${s.sold + s.self}</div><div>${s.left}</div></div>`).join('') + '</div>';
   }
@@ -739,6 +786,88 @@ async function loadProfile(id){
   $('profBody').innerHTML = h;
 }
 $('profBody').addEventListener('click', e => { if(e.target.closest('#profBack')) return loadProfile(''); const r = e.target.closest('[data-m]'); if(r){ window.scrollTo(0, 0); loadProfile(r.dataset.m); } });
+
+// ---------- кто принял оплату ----------
+let PO = null;
+function openPay(o){
+  PO = o;
+  $('payInfo').textContent = 'Заказ №' + o.no + ' · ' + eur(o.total) + (o.pay_text ? ' · клиент выбрал: ' + o.pay_text : '') + '. Выручка города и менеджера не меняется — это нужно для расчётов.';
+  const list = ((ME.admins || {})[REG_OF(o.city)] || []);
+  const cur = o.paid_to || '';
+  $('payOpts').innerHTML = `<button class="btn ${cur === 'mgr' ? 'main' : ''}" data-to="mgr">💵 Наличные у менеджера</button>` + list.map(a => `<button class="btn ${cur === String(a.id) ? 'main' : ''}" data-to="${esc(a.id)}">💳 На реквизиты: ${esc(a.name)}</button>`).join('') + (cur ? '<button class="btn" data-to="">↺ Сбросить (по способу оплаты клиента)</button>' : '');
+  $('payModal').classList.add('on');
+}
+$('payCancel').onclick = () => $('payModal').classList.remove('on');
+$('payOpts').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-to]'); if(!b || !PO) return;
+  const j = await api('paid', {}, {no: PO.no, to: b.dataset.to});
+  if(j.ok){ $('payModal').classList.remove('on'); haptic('success'); toast('Записано'); loadOrders(); } else toast(j.error || 'Ошибка', true);
+});
+
+// ---------- финансы (админы): расчёты с менеджерами и доли партнёров ----------
+let FSEG = 'sales', MM = null;
+const netMsg = n => n > 0.004 ? `Админы должны менеджеру <b>${eur(n)}</b>` : n < -0.004 ? `Менеджер должен админам <b>${eur(-n)}</b>` : 'Расчёт закрыт';
+$('finSeg').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; FSEG = b.dataset.f; [...$('finSeg').children].forEach(x => x.classList.toggle('on', x === b)); loadStats(); });
+async function loadSettle(){
+  $('statsBody').innerHTML = '<div class="empty">Считаю…</div>';
+  const p = {}; if(CITY) p.city = CITY;
+  const j = await api('settle', p);
+  if(!j.ok){ $('statsBody').innerHTML = `<div class="empty">${esc(j.error || 'Ошибка')}</div>`; return; }
+  let h = '<div class="lbl">Прибыль = выручка (после скидок) − закупка проданного. Закупка берётся из «вкладов» в партии. Заработок менеджера = его % от прибыли его города. Всё за всё время.</div>';
+  const rowsShown = j.rows.filter(r => r.revenue || r.pct || r.paid || r.handed || r.profit);
+  if(!rowsShown.length) h += '<div class="empty">Пока нет продаж или настроек по городам</div>';
+  rowsShown.forEach(r => {
+    const adm = Object.keys(r.byAdmin || {}).map(id => `${esc(adminName(r.city, id))}: ${eur(r.byAdmin[id])}`).join(' · ');
+    const row = (k, v, b) => `<div class="r" style="grid-template-columns:1.6fr 1fr"><div>${k}</div><div>${b ? '<b>' + v + '</b>' : v}</div></div>`;
+    h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · ${esc(r.manager || 'менеджер')}</h3><div class="tbl">
+      <div class="r" style="grid-template-columns:1.6fr 1fr"><div>Процент менеджера</div><div><input class="inp" data-rate="${esc(r.manager_id)}" value="${r.pct}" inputmode="decimal" style="width:70px;text-align:right"> %</div></div>
+      ${row('Прибыль города', eur(r.profit))}${row('Заработал менеджер', eur(r.earned))}${row('Выплачено ему', eur(r.paid))}${row('К выплате менеджеру', eur(r.toPay), 1)}
+      ${row('Наличные принял менеджер', eur(r.cashIn))}${row('Сдал админам', eur(r.handed))}${row('Сейчас на руках у менеджера', eur(r.held), 1)}
+      ${row('Оплата на реквизиты админов', eur(r.toAdmins) + (adm ? '<span class="sm">' + adm + '</span>' : ''))}
+      ${r.unset > 0 ? row('Не указано, кто принял', '<span style="color:var(--warn)">' + eur(r.unset) + '</span>') : ''}
+    </div><div class="lbl" style="font-size:.82rem;color:#fff;margin:6px 0">Итог: ${netMsg(r.net)}</div>
+    ${r.noCostRevenue > 0 ? `<div class="lbl" style="color:var(--warn)">⚠️ ${eur(r.noCostRevenue)} выручки в партиях без вклада/закупки — в прибыль не вошло. Открой Поставки → Изменить и впиши вклад.</div>` : ''}
+    <div class="acts" style="margin-top:6px"><button class="btn sm" data-led="handover" data-city="${r.city}">💵 Менеджер сдал наличные</button><button class="btn sm" data-led="payout" data-city="${r.city}">💸 Выплата менеджеру</button></div>`;
+  });
+  if(j.ledger.length) h += '<h3>Журнал</h3><div class="tbl">' + j.ledger.map(l => `<div class="r" style="grid-template-columns:1.8fr .8fr .4fr"><div>${l.kind === 'handover' ? '💵 Сдал наличные' : '💸 Выплата менеджеру'} · ${esc(CITY_FULL[l.city] || l.city)}<span class="sm">${esc(String(l.date || '').split('-').reverse().join('.'))}${l.note ? ' · ' + esc(l.note) : ''} · ${esc(l.created_by || '')}</span></div><div>${eur(l.amount)}</div><div><button class="btn sm bad" data-ldel="${l.id}">✕</button></div></div>`).join('') + '</div>';
+  $('statsBody').innerHTML = h;
+}
+$('statsBody').addEventListener('change', async e => {
+  const i = e.target.closest('input[data-rate]'); if(!i) return;
+  const pct = parseFloat(String(i.value).replace(',', '.'));
+  if(!(pct >= 0 && pct <= 100)){ toast('Процент от 0 до 100', true); return; }
+  const j = await api('rate_save', {}, {manager_id: i.dataset.rate, pct}); toast(j.ok ? 'Процент сохранён' : (j.error || 'Ошибка'), !j.ok); if(j.ok) loadSettle();
+});
+$('statsBody').addEventListener('click', async e => {
+  const d = e.target.closest('[data-ldel]');
+  if(d){ if(!confirm('Удалить запись из журнала?')) return; const j = await api('ledger_delete', {}, {id: Number(d.dataset.ldel)}); toast(j.ok ? 'Удалено' : (j.error || 'Ошибка'), !j.ok); loadSettle(); return; }
+  const b = e.target.closest('[data-led]'); if(!b) return;
+  MM = {kind: b.dataset.led, city: b.dataset.city};
+  $('mmTitle').textContent = (MM.kind === 'handover' ? 'Менеджер сдал наличные · ' : 'Выплата менеджеру · ') + (CITY_FULL[MM.city] || MM.city);
+  $('mmInfo').textContent = MM.kind === 'handover' ? 'Сколько наличных менеджер передал админам — уменьшит сумму у него на руках.' : 'Сколько вы выплатили менеджеру — уменьшит «к выплате».';
+  $('mmAmt').value = ''; $('mmNote').value = ''; $('mmDate').value = new Date().toISOString().slice(0, 10); $('moneyModal').classList.add('on');
+});
+$('mmCancel').onclick = () => $('moneyModal').classList.remove('on');
+$('mmSave').onclick = async () => {
+  const amount = parseFloat(String($('mmAmt').value).replace(',', '.'));
+  if(!(amount > 0)){ toast('Впиши сумму', true); return; }
+  $('mmSave').disabled = true; const j = await api('ledger_add', {}, {city: MM.city, kind: MM.kind, amount, note: $('mmNote').value, date: $('mmDate').value}); $('mmSave').disabled = false;
+  if(j.ok){ $('moneyModal').classList.remove('on'); haptic('success'); toast('Записано'); loadSettle(); } else toast(j.error || 'Ошибка', true);
+};
+async function loadPartners(){
+  const [f, t] = periodRange(SPERIOD, 'sFrom', 'sTo');
+  const p = {from: f || 1, to: t || Date.now() + 86400000}; if(CITY) p.city = CITY;
+  $('statsBody').innerHTML = '<div class="empty">Считаю…</div>';
+  const j = await api('partners', p);
+  if(!j.ok){ $('statsBody').innerHTML = `<div class="empty">${esc(j.error || 'Ошибка')}</div>`; return; }
+  const kpi = (k, v, hot) => `<div class="kpi ${hot ? 'hot' : ''}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  let h = '<div class="kpis">' + kpi('Прибыль', eur(j.profit), 1) + kpi('Менеджерам', eur(j.commission)) + kpi('Остаётся админам', eur(j.net)) + '</div>';
+  if(j.totals.length) h += '<h3>Доли админов</h3><div class="tbl">' + j.totals.map(x => `<div class="r" style="grid-template-columns:1.6fr 1fr"><div>${esc(x.name)}</div><div><b>${eur(x.amount)}</b></div></div>`).join('') + '</div>';
+  if(j.noCostRevenue > 0) h += `<div class="lbl" style="color:var(--warn);margin-top:8px">⚠️ ${eur(j.noCostRevenue)} выручки — по партиям без вклада/закупки, в прибыль не вошло. Поставки → Изменить партию → впиши вклад.</div>`;
+  h += j.rows.length ? '<h3>По поставкам</h3><div class="tbl"><div class="r hd" style="grid-template-columns:1.5fr .8fr .8fr .8fr"><div>Поставка</div><div>Выручка</div><div>Закупка</div><div>Прибыль</div></div>' + j.rows.map(r => `<div class="r" style="grid-template-columns:1.5fr .8fr .8fr .8fr"><div>${esc(CITY_FULL[r.city] || r.city)} · ${esc(String(r.date).split('-').reverse().join('.'))}<span class="sm">${r.nocost ? '<span style="color:var(--warn)">нет вклада</span>' : `менеджеру ${eur(r.commission)} → ${r.shares.map(s => esc(s.name) + ' ' + s.pct + '%').join(', ')}`}</span></div><div>${eur(r.revenue)}</div><div>${r.nocost ? '—' : eur(r.cost)}</div><div>${r.nocost ? '—' : eur(r.profit)}</div></div>`).join('') + '</div>' : '<div class="empty">За этот период продаж из партий нет</div>';
+  h += '<div class="lbl" style="margin-top:10px">Доля админа = его вклад в партию ÷ сумма вкладов. Прибыль партии делится после вычета % менеджера города.</div>';
+  $('statsBody').innerHTML = h;
+}
 
 bindPeriod('hPeriod', () => HPERIOD, p => HPERIOD = p, () => loadOrders());
 bindPeriod('sPeriod', () => SPERIOD, p => SPERIOD = p, () => loadStats());
@@ -782,6 +911,7 @@ async function boot(){
   ME = j.me; SKEW = j.now - Date.now();
   $('who').textContent = (String(ME.name || '?').replace(/^[@\s]+/, '').charAt(0) || '?').toUpperCase(); $('who').title = ME.name; $('who').onclick = () => { haptic('light'); setTab('profile'); };
   if(ME.cities.length > 1){ $('cityBtn').style.display = ''; paintCity(); }
+  if(ME.admin) $('finSeg').style.display = '';
   setTab('orders');
   setInterval(() => { if(document.hidden) return; if(TAB === 'orders' && VIEW === 'open' && !$('q').value) loadOrders(); }, 20000);
   document.addEventListener('visibilitychange', () => { if(!document.hidden && TAB === 'orders') loadOrders(); });
