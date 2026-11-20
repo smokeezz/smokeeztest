@@ -817,8 +817,12 @@ async function loadSettle(){
   const rowsShown = j.rows.filter(r => r.revenue || r.pct || r.paid || r.handed || r.profit);
   if(!rowsShown.length) h += '<div class="empty">Пока нет продаж или настроек по городам</div>';
   rowsShown.forEach(r => {
-    const adm = Object.keys(r.byAdmin || {}).map(id => `${esc(adminName(r.city, id))}: ${eur(r.byAdmin[id])}`).join(' · ');
     const row = (k, v, b) => `<div class="r" style="grid-template-columns:1.6fr 1fr"><div>${k}</div><div>${b ? '<b>' + v + '</b>' : v}</div></div>`;
+    const adm = Object.keys(r.byAdmin || {}).map(id => `${esc(adminName(r.city, id))}: ${eur(r.byAdmin[id])}`).join(' · ');
+    if(r.adminMgr){
+      h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · аккаунт админов</h3><div class="tbl">${row('Прибыль города', eur(r.profit), 1)}${row('Оплата на аккаунт и реквизиты админов', eur(r.cashIn + r.toAdmins) + (adm ? '<span class="sm">' + adm + '</span>' : ''))}${r.unset > 0 ? row('Не указано, кто принял', '<span style="color:var(--warn)">' + eur(r.unset) + '</span>') : ''}</div><div class="lbl">Менеджер этого города — общий аккаунт админов: процент и выплаты не нужны, прибыль делится по вкладам (вкладка «Партнёры»).</div>${r.noCostRevenue > 0 ? `<div class="lbl" style="color:var(--warn)">⚠️ ${eur(r.noCostRevenue)} выручки в партиях без вклада/закупки — в прибыль не вошло.</div>` : ''}`;
+      return;
+    }
     h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · ${esc(r.manager || 'менеджер')}</h3><div class="tbl">
       <div class="r" style="grid-template-columns:1.6fr 1fr"><div>Процент менеджера</div><div><input class="inp" data-rate="${esc(r.manager_id)}" value="${r.pct}" inputmode="decimal" style="width:70px;text-align:right"> %</div></div>
       ${row('Прибыль города', eur(r.profit))}${row('Заработал менеджер', eur(r.earned))}${row('Выплачено ему', eur(r.paid))}${row('К выплате менеджеру', eur(r.toPay), 1)}
