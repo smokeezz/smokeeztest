@@ -688,10 +688,10 @@ function renderBM(){
 let PARTNER_OPTS = {};
 function bmPartners(){
   const box = $('bmPartners');
-  if(!BADMIN || !BM.city){ box.innerHTML = ''; return; }
-  const list = PARTNER_OPTS[REG_OF(BM.city)] || [];
+  if(!BADMIN || BM.city === null){ box.innerHTML = ''; return; }
+  const list = PARTNER_OPTS[BM.city ? REG_OF(BM.city) : REGION] || [];
   const cur = {}; if(EDIT && EDIT.partners && (EDIT.city || '') === BM.city) EDIT.partners.forEach(x => cur[x.id] = x.amount);
-  box.innerHTML = `<div class="lbl">Закупка партии, € — сколько вложил каждый админ (по ним считается прибыль и доли). Пусто — не участвует.</div><div class="filters">${list.map(a => `<label style="flex:1;min-width:120px;font-size:.72rem;color:var(--dim)">${esc(a.name)}<input class="inp" data-pi="${esc(a.id)}" inputmode="decimal" value="${cur[a.id] || ''}" placeholder="0" style="width:100%;margin-top:4px"></label>`).join('')}</div>`;
+  box.innerHTML = `<div class="lbl">${BM.city ? 'Закупка этой партии, € — только если покупали отдельно. Если товар из общей поставки — оставь пустым: закупка возьмётся из неё.' : 'Закупка общей поставки, € — сколько вложил каждый админ. Из неё считается себестоимость партий городов и доли. Пусто — не участвует.'}</div><div class="filters">${list.map(a => `<label style="flex:1;min-width:120px;font-size:.72rem;color:var(--dim)">${esc(a.name)}<input class="inp" data-pi="${esc(a.id)}" inputmode="decimal" value="${cur[a.id] || ''}" placeholder="0" style="width:100%;margin-top:4px"></label>`).join('')}</div>`;
 }
 function openBatch(b, city){
   EDIT = b;
@@ -729,7 +729,7 @@ $('bmSave').onclick = async () => {
   if(!items.length){ toast('Впиши количество хотя бы у одного вкуса', true); return; }
   $('bmSave').disabled = true;
   const body = {id: EDIT ? EDIT.id : 0, region: REGION, city: BM.city, date: $('bmDate').value, note: $('bmNote').value, items};
-  if(BADMIN && BM.city) body.partners = [...$('bmPartners').querySelectorAll('input[data-pi]')].map(i => ({id: i.dataset.pi, amount: parseFloat(String(i.value).replace(',', '.')) || 0})).filter(x => x.amount > 0);
+  if(BADMIN && BM.city !== null) body.partners = [...$('bmPartners').querySelectorAll('input[data-pi]')].map(i => ({id: i.dataset.pi, amount: parseFloat(String(i.value).replace(',', '.')) || 0})).filter(x => x.amount > 0);
   const j = await api('batch_save', {}, body);
   $('bmSave').disabled = false;
   if(j.ok){ $('batchModal').classList.remove('on'); toast('Сохранено: ' + (BM.city ? (CITY_FULL[BM.city] || BM.city) : 'общая поставка')); if(CITY && BM.city && !cityList().includes(BM.city)){ CITY = BM.city; paintCity(); } loadBatches(); } else toast(j.error || 'Ошибка', true);
@@ -820,7 +820,7 @@ async function loadSettle(){
     const row = (k, v, b) => `<div class="r" style="grid-template-columns:1.6fr 1fr"><div>${k}</div><div>${b ? '<b>' + v + '</b>' : v}</div></div>`;
     const adm = Object.keys(r.byAdmin || {}).map(id => `${esc(adminName(r.city, id))}: ${eur(r.byAdmin[id])}`).join(' · ');
     if(r.adminMgr){
-      h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · аккаунт админов</h3><div class="tbl">${row('Прибыль города', eur(r.profit), 1)}${row('Оплата на аккаунт и реквизиты админов', eur(r.cashIn + r.toAdmins) + (adm ? '<span class="sm">' + adm + '</span>' : ''))}${r.unset > 0 ? row('Не указано, кто принял', '<span style="color:var(--warn)">' + eur(r.unset) + '</span>') : ''}</div><div class="lbl">Менеджер этого города — общий аккаунт админов: процент и выплаты не нужны, прибыль делится по вкладам (вкладка «Партнёры»).</div>${r.noCostRevenue > 0 ? `<div class="lbl" style="color:var(--warn)">⚠️ ${eur(r.noCostRevenue)} выручки в партиях без вклада/закупки — в прибыль не вошло.</div>` : ''}`;
+      h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · аккаунт админов</h3><div class="tbl">${row('Прибыль города', eur(r.profit), 1)}${row('Оплата на аккаунт и реквизиты админов', eur(r.cashIn + r.toAdmins) + (adm ? '<span class="sm">' + adm + '</span>' : ''))}${r.unset > 0 ? row('Не указано, кто принял', '<span style="color:var(--warn)">' + eur(r.unset) + '</span>') : ''}</div><div class="lbl">Менеджер этого города — общий аккаунт админов: процент и выплаты не нужны, прибыль делится по вкладам (вкладка «Партнёры»).</div>${r.noCostRevenue > 0 ? `<div class="lbl" style="color:var(--warn)">⚠️ ${eur(r.noCostRevenue)} выручки в партиях без закупки — в прибыль не вошло.</div>` : ''}`;
       return;
     }
     h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · ${esc(r.manager || 'менеджер')}</h3><div class="tbl">
@@ -830,7 +830,7 @@ async function loadSettle(){
       ${row('Оплата на реквизиты админов', eur(r.toAdmins) + (adm ? '<span class="sm">' + adm + '</span>' : ''))}
       ${r.unset > 0 ? row('Не указано, кто принял', '<span style="color:var(--warn)">' + eur(r.unset) + '</span>') : ''}
     </div><div class="lbl" style="font-size:.82rem;color:#fff;margin:6px 0">Итог: ${netMsg(r.net)}</div>
-    ${r.noCostRevenue > 0 ? `<div class="lbl" style="color:var(--warn)">⚠️ ${eur(r.noCostRevenue)} выручки в партиях без вклада/закупки — в прибыль не вошло. Открой Поставки → Изменить и впиши вклад.</div>` : ''}
+    ${r.noCostRevenue > 0 ? `<div class="lbl" style="color:var(--warn)">⚠️ ${eur(r.noCostRevenue)} выручки в партиях без закупки — в прибыль не вошло. Впиши закупку в общую поставку (или в партию города): Поставки → Изменить.</div>` : ''}
     <div class="acts" style="margin-top:6px"><button class="btn sm" data-led="handover" data-city="${r.city}">💵 Менеджер сдал наличные</button><button class="btn sm" data-led="payout" data-city="${r.city}">💸 Выплата менеджеру</button></div>`;
   });
   if(j.ledger.length) h += '<h3>Журнал</h3><div class="tbl">' + j.ledger.map(l => `<div class="r" style="grid-template-columns:1.8fr .8fr .4fr"><div>${l.kind === 'handover' ? '💵 Сдал наличные' : '💸 Выплата менеджеру'} · ${esc(CITY_FULL[l.city] || l.city)}<span class="sm">${esc(String(l.date || '').split('-').reverse().join('.'))}${l.note ? ' · ' + esc(l.note) : ''} · ${esc(l.created_by || '')}</span></div><div>${eur(l.amount)}</div><div><button class="btn sm bad" data-ldel="${l.id}">✕</button></div></div>`).join('') + '</div>';
@@ -867,7 +867,7 @@ async function loadPartners(){
   const kpi = (k, v, hot) => `<div class="kpi ${hot ? 'hot' : ''}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
   let h = '<div class="kpis">' + kpi('Прибыль', eur(j.profit), 1) + kpi('Менеджерам', eur(j.commission)) + kpi('Остаётся админам', eur(j.net)) + '</div>';
   if(j.totals.length) h += '<h3>Доли админов</h3><div class="tbl">' + j.totals.map(x => `<div class="r" style="grid-template-columns:1.6fr 1fr"><div>${esc(x.name)}</div><div><b>${eur(x.amount)}</b></div></div>`).join('') + '</div>';
-  if(j.noCostRevenue > 0) h += `<div class="lbl" style="color:var(--warn);margin-top:8px">⚠️ ${eur(j.noCostRevenue)} выручки — по партиям без вклада/закупки, в прибыль не вошло. Поставки → Изменить партию → впиши вклад.</div>`;
+  if(j.noCostRevenue > 0) h += `<div class="lbl" style="color:var(--warn);margin-top:8px">⚠️ ${eur(j.noCostRevenue)} выручки — по партиям без закупки, в прибыль не вошло. Впиши закупку в общую поставку или в партию города (Поставки → Изменить).</div>`;
   h += j.rows.length ? '<h3>По поставкам</h3><div class="tbl"><div class="r hd" style="grid-template-columns:1.5fr .8fr .8fr .8fr"><div>Поставка</div><div>Выручка</div><div>Закупка</div><div>Прибыль</div></div>' + j.rows.map(r => `<div class="r" style="grid-template-columns:1.5fr .8fr .8fr .8fr"><div>${esc(CITY_FULL[r.city] || r.city)} · ${esc(String(r.date).split('-').reverse().join('.'))}<span class="sm">${r.nocost ? '<span style="color:var(--warn)">нет вклада</span>' : `менеджеру ${eur(r.commission)} → ${r.shares.map(s => esc(s.name) + ' ' + s.pct + '%').join(', ')}`}</span></div><div>${eur(r.revenue)}</div><div>${r.nocost ? '—' : eur(r.cost)}</div><div>${r.nocost ? '—' : eur(r.profit)}</div></div>`).join('') + '</div>' : '<div class="empty">За этот период продаж из партий нет</div>';
   h += '<div class="lbl" style="margin-top:10px">Доля админа = его вклад в партию ÷ сумма вкладов. Прибыль партии делится после вычета % менеджера города.</div>';
   $('statsBody').innerHTML = h;
