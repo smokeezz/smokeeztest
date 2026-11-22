@@ -259,6 +259,7 @@ h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
 <div class="wrap" id="v-orders">
   <div class="seg" id="ordSeg"><button class="on" data-v="open">Активные</button><button data-v="history">История</button></div>
   <div class="filters"><input class="inp" id="q" type="search" placeholder="Поиск: № заказа, имя, телефон, товар"></div>
+  <div id="asBar" style="display:none;margin:0 0 10px"></div>
   <div id="histFilters" style="display:none">
     <div class="chips" id="hStatus"><span class="chip on" data-v="">Все</span><span class="chip" data-v="done">Выданные</span><span class="chip" data-v="cancelled">Отменённые</span></div>
     <div class="pbar" id="hPeriod"><div class="prow"><span class="chip" data-p="all">Всё время</span><span class="chip" data-p="today">Сегодня</span><span class="chip" data-p="7">7 дней</span><span class="chip more-btn" data-more>Ещё ▾</span></div><div class="pmenu"><div class="pg"><span class="chip" data-p="30">30 дней</span><span class="chip" data-p="custom">Свой период…</span></div><div class="pcustom"><input class="inp" type="date" id="hFrom"><input class="inp" type="date" id="hTo"></div></div></div>
@@ -320,7 +321,7 @@ h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
 </div></div>
 
 <div class="modal" id="payModal"><div class="sheet">
-  <h2>Кто принял оплату</h2>
+  <h2 id="payTitle">Кто принял оплату</h2>
   <div class="lbl" id="payInfo"></div>
   <div id="payOpts" style="display:grid;gap:8px;margin-top:6px"></div>
   <div class="acts"><button class="btn" id="payCancel">Отмена</button></div>
@@ -416,12 +417,13 @@ function chatBtn(o){ return o.tg_user ? `<button class="btn link" data-chat="u">
 function adminName(city, id){ const l = (ME && ME.admins && ME.admins[REG_OF(city)]) || []; const a = l.find(x => String(x.id) === String(id)); return a ? a.name : 'id ' + id; }
 function payLine(o){
   if(o.status === 'cancelled') return '';
+  const sl = isShared(o.city) ? `<div class="lbl" style="margin:6px 0 0;${o.seller ? '' : 'color:var(--warn)'}">👤 ${o.seller ? 'Продал: ' + esc(adminName(o.city, o.seller)) : 'не указано, кто из админов продал'}</div>` : '';
   let t, warn = false;
   if(o.paid_to === 'mgr') t = '💵 наличные — у менеджера';
   else if(o.paid_to) t = '💳 деньги у админа: ' + esc(adminName(o.city, o.paid_to));
   else if(o.pay_text){ t = (o.pay_cash ? '💵 ' : '💳 ') + esc(o.pay_text) + (o.pay_cash ? ' — у менеджера' : ' — не указано, кто принял'); warn = !o.pay_cash; }
   else { t = '💳 не указано, кто принял оплату'; warn = true; }
-  return `<div class="lbl" style="margin:6px 0 0;${warn ? 'color:var(--warn)' : ''}">${t}</div>`;
+  return sl + `<div class="lbl" style="margin:6px 0 0;${warn ? 'color:var(--warn)' : ''}">${t}</div>`;
 }
 function orderHtml(o){
   const isNew = o.status === 'delivered' || o.status === 'reserved';
@@ -443,7 +445,7 @@ function orderHtml(o){
   else if(o.status === 'accepted') acts = `<button class="btn main" data-a="rdy">✅ Готов к выдаче</button><button class="btn bad" data-a="cx">Отменить</button>`;
   else if(o.status === 'ready') acts = `<button class="btn main" data-a="done">📦 Выдан</button><button class="btn bad" data-a="cx">Отменить</button>`;
   const editable = ['delivered', 'reserved', 'accepted', 'ready'].includes(o.status) || (o.status === 'done' && ME && ME.admin);
-  const extra = (o.status !== 'cancelled' ? '<button class="btn sm" data-a="pay">💳 Оплата</button>' : '') + (editable ? '<button class="btn sm" data-a="edit">✏️ Изменить состав</button>' : '') + (o.status !== 'cancelled' ? '<button class="btn sm" data-a="disc">🏷 Скидка</button>' : '') + (ME && ME.admin ? '<button class="btn sm bad" data-a="del">🗑 Удалить</button>' : '');
+  const extra = (o.status !== 'cancelled' ? '<button class="btn sm" data-a="pay">💳 Оплата</button>' + (isShared(o.city) ? '<button class="btn sm" data-a="seller">👤 Кто продал</button>' : '') : '') + (editable ? '<button class="btn sm" data-a="edit">✏️ Изменить состав</button>' : '') + (o.status !== 'cancelled' ? '<button class="btn sm" data-a="disc">🏷 Скидка</button>' : '') + (ME && ME.admin ? '<button class="btn sm bad" data-a="del">🗑 Удалить</button>' : '');
   const self = (o.status !== 'cancelled') ? `<label class="self"><input type="checkbox" data-self ${o.for_self ? 'checked' : ''}> 🏷 Взял себе (не продажа — в учёте «взято собой»)</label>` : '';
   return `<div class="card ${isNew ? 'new' : ''} ${late ? 'late' : ''} ${open ? 'open' : ''}" data-no="${o.no}">
     <div class="h" data-toggle><span class="no">№${o.no}</span><span class="city">${esc(cityName(o.city))}</span><span class="st ${stC}">${stT}</span></div>
@@ -495,6 +497,7 @@ $('ordList').addEventListener('click', async e => {
     if(act === 'edit') return openEdit(o);
     if(act === 'disc') return openDisc(o);
     if(act === 'pay') return openPay(o);
+    if(act === 'seller') return openSeller(o);
     if(act === 'del'){
       if(!confirm('Удалить заказ №' + no + ' навсегда?\nСклад и баллы клиента НЕ меняются. Заказ исчезнет из учёта.')) return;
       a.disabled = true; const j = await api('delete', {}, {no});
@@ -503,7 +506,8 @@ $('ordList').addEventListener('click', async e => {
     }
     if(act === 'cx' && !confirm('Отменить заказ №' + no + '?\nСклад и баллы клиента вернутся, клиент получит уведомление.')) return;
     a.disabled = true;
-    const j = await api('status', {}, {no, act});
+    const body = {no, act}; if(isShared(o.city) && act !== 'cx'){ if(!AS){ toast('Выбери, кто ты: «я продаю как» над списком', true); a.disabled = false; return; } body.as = AS; }
+    const j = await api('status', {}, body);
     if(j.ok){ haptic('success'); toast(act === 'cx' ? 'Заказ отменён' : 'Готово'); if(j.notes && j.notes.length) toast(j.notes.join('\n'), true); }
     else toast(j.error || 'Не удалось', true);
     loadOrders(); return;
@@ -619,8 +623,12 @@ async function loadStats(){
   h += tbl('По менеджерам', ['Менеджер', 'Шт', 'Выручка', 'Скидки'], j.byManager.map(m => `<div class="r"><div>${esc(m.manager)}<span class="sm">${esc((m.cities || [m.city]).map(c => CITY_FULL[c] || c).join(', '))} · ${m.orders} зак.${m.selfUnits ? ' · себе ' + m.selfUnits + ' шт / ' + eur(m.selfValue) : ''}</span></div><div>${m.units}</div><div>${eur(m.revenue)}</div><div>${eur(m.discount)}</div></div>`));
   h += tbl('По городам', ['Город', 'Шт', 'Выручка', 'Скидки'], j.byCity.map(m => `<div class="r"><div>${esc(CITY_FULL[m.city] || m.city)}<span class="sm">${m.orders} зак.${m.selfUnits ? ' · себе ' + m.selfUnits + ' шт / ' + eur(m.selfValue) : ''}</span></div><div>${m.units}</div><div>${eur(m.revenue)}</div><div>${eur(m.discount)}</div></div>`));
   h += tbl('По товарам', ['Товар', 'Шт', 'Выручка', 'Себе'], j.byProduct.map(m => `<div class="r"><div>${esc(m.product)}</div><div>${m.units}</div><div>${eur(m.revenue)}</div><div>${m.selfUnits || '—'}</div></div>`));
+  (j.sellers || []).forEach(sc => {
+    if(!sc.rows.some(r => r.orders) && !sc.unset.orders) return;
+    h += `<h3>Кто продал · ${esc(CITY_FULL[sc.city] || sc.city)} <span class="sm" style="display:inline">общий аккаунт</span></h3><div class="tbl"><div class="r hd" style="grid-template-columns:1.6fr .5fr 1fr"><div>Админ</div><div>Зак.</div><div>Выручка</div></div>${sc.rows.map(r => `<div class="r" style="grid-template-columns:1.6fr .5fr 1fr"><div>${esc(r.name)}</div><div>${r.orders}</div><div>${eur(r.revenue)}</div></div>`).join('')}${sc.unset.orders ? `<div class="r" style="grid-template-columns:1.6fr .5fr 1fr"><div style="color:var(--warn)">Не указано, кто продал</div><div>${sc.unset.orders}</div><div>${eur(sc.unset.revenue)}</div></div>` : ''}</div>`;
+  });
   if(!j.byManager.length) h += '<div class="empty">За этот период продаж нет</div>';
-  h += '<div class="lbl" style="margin-top:14px">Продажа — заказ со статусом «Выдан» (по дате выдачи). «Взял себе» — отмеченные заказы, они не входят в выручку. Менеджер — тот, кто нажал «Выдан» (если нет — «Принять»).</div>';
+  h += '<div class="lbl" style="margin-top:14px">Продажа — заказ со статусом «Выдан» (по дате выдачи). «Взял себе» — отмеченные заказы, они не входят в выручку. Менеджер — менеджер города, в котором продали (кто бы ни нажал «Выдан»).</div>';
   $('statsBody').innerHTML = h;
 }
 ['sFrom', 'sTo'].forEach(id => $(id).addEventListener('change', loadStats));
@@ -849,7 +857,7 @@ async function loadProfile(id){
   h += `<div class="legend" style="margin-bottom:4px"><span>Выдано заказов за всё время: <b>${j.handledAll}</b></span>${T.cancelled ? `<span>Отменено: <b>${T.cancelled}</b></span>` : ''}</div>`;
   if(j.settle){
     const S = j.settle;
-    h += '<h3>Расчёты</h3><div class="kpis">' + kpi('Процент', S.pct + ' %') + kpi('Заработано', eur(S.earned), 1) + kpi('Выплачено', eur(S.paid)) + kpi('К выплате', eur(S.toPay)) + kpi('Наличные на руках', eur(S.held)) + '</div>';
+    h += '<h3>Расчёты</h3><div class="kpis">' + kpi('Процент', S.pct + ' %') + kpi('Заработано', eur(S.earned), 1) + (S.bonus ? kpi('Бонусы', '+' + eur(S.bonus)) : '') + (S.penalty ? kpi('Штрафы', '−' + eur(S.penalty)) : '') + kpi('Выплачено', eur(S.paid)) + kpi('К выплате', eur(S.toPay)) + kpi('Наличные на руках', eur(S.held)) + '</div>';
     h += `<div class="lbl" style="font-size:.82rem;color:#fff;margin:6px 0">Итог: ${netMsg(S.net)}</div><div class="lbl">За всё время. Заработано = твой % от прибыли города.</div>`;
   }
   if(j.supply && j.supply.length){
@@ -864,19 +872,39 @@ async function loadProfile(id){
 $('profBody').addEventListener('click', e => { if(e.target.closest('#profBack')) return loadProfile(''); const r = e.target.closest('[data-m]'); if(r){ window.scrollTo(0, 0); loadProfile(r.dataset.m); } });
 
 // ---------- кто принял оплату ----------
-let PO = null;
+let PO = null, PMODE = 'pay';
 function openPay(o){
-  PO = o;
+  PO = o; PMODE = 'pay'; $('payTitle').textContent = 'Кто принял оплату';
   $('payInfo').textContent = 'Заказ №' + o.no + ' · ' + eur(o.total) + (o.pay_text ? ' · клиент выбрал: ' + o.pay_text : '') + '. Выручка города и менеджера не меняется — это нужно для расчётов.';
   const list = ((ME.admins || {})[REG_OF(o.city)] || []);
   const cur = o.paid_to || '';
   $('payOpts').innerHTML = `<button class="btn ${cur === 'mgr' ? 'main' : ''}" data-to="mgr">💵 Наличные у менеджера</button>` + list.map(a => `<button class="btn ${cur === String(a.id) ? 'main' : ''}" data-to="${esc(a.id)}">💳 На реквизиты: ${esc(a.name)}</button>`).join('') + (cur ? '<button class="btn" data-to="">↺ Сбросить (по способу оплаты клиента)</button>' : '');
   $('payModal').classList.add('on');
 }
+function openSeller(o){
+  PO = o; PMODE = 'seller'; $('payTitle').textContent = 'Кто из админов продал';
+  $('payInfo').textContent = 'Заказ №' + o.no + ' · ' + eur(o.total) + '. Общий аккаунт города — отметь, кто из вас продал.';
+  const list = ((ME.admins || {})[REG_OF(o.city)] || []); const cur = o.seller || '';
+  $('payOpts').innerHTML = list.map(a => `<button class="btn ${cur === String(a.id) ? 'main' : ''}" data-to="${esc(a.id)}">👤 ${esc(a.name)}</button>`).join('') + (cur ? '<button class="btn" data-to="">↺ Сбросить</button>' : '');
+  $('payModal').classList.add('on');
+}
 $('payCancel').onclick = () => $('payModal').classList.remove('on');
+// «Я продаю как» — для городов с общим аккаунтом админов
+let AS = ''; try { AS = localStorage.getItem('asId') || ''; } catch(e) {}
+const isShared = c => !!(ME && (ME.shared || []).includes(c));
+function asPartners(){ const r = {}; ((ME && ME.admins && ME.admins[REG_OF((ME.shared || [])[0] || 'bb')]) || []).forEach(a => r[a.id] = a); return Object.values(r); }
+function paintAs(){
+  const bar = $('asBar');
+  if(!ME || !(ME.shared || []).length){ bar.style.display = 'none'; return; }
+  const ps = asPartners();
+  if(!AS || !ps.some(a => String(a.id) === AS)){ AS = ps.some(a => String(a.id) === String(ME.id)) ? String(ME.id) : ''; }
+  bar.style.display = '';
+  bar.innerHTML = '<div class="lbl" style="margin:0 0 4px">Общий аккаунт · я продаю как:</div><div style="display:flex;gap:8px;flex-wrap:wrap">' + ps.map(a => `<span class="chip ${AS === String(a.id) ? 'on' : ''}" data-as="${esc(a.id)}">${esc(a.name)}</span>`).join('') + '</div>' + (AS ? '' : '<div class="lbl" style="color:var(--warn);margin-top:4px">Выбери себя — иначе не получится принять или выдать заказ</div>');
+}
+$('asBar').addEventListener('click', e => { const c = e.target.closest('[data-as]'); if(!c) return; AS = c.dataset.as; try { localStorage.setItem('asId', AS); } catch(x) {} paintAs(); });
 $('payOpts').addEventListener('click', async e => {
   const b = e.target.closest('button[data-to]'); if(!b || !PO) return;
-  const j = await api('paid', {}, {no: PO.no, to: b.dataset.to});
+  const j = await api(PMODE === 'seller' ? 'seller' : 'paid', {}, {no: PO.no, to: b.dataset.to});
   if(j.ok){ $('payModal').classList.remove('on'); haptic('success'); toast('Записано'); loadOrders(); } else toast(j.error || 'Ошибка', true);
 });
 
@@ -893,7 +921,7 @@ async function loadSettleBatches(){
   let h = setSegHtml() + '<div class="lbl">Зарплата менеджера за каждую партию города: его % × чистая прибыль партии (выручка − закупка проданного). Можно задать свой % для партии и выплатить за неё отдельно.</div>';
   if(!j.rows.length) h += '<div class="empty">Нет городов с менеджером</div>';
   j.rows.forEach(r => {
-    h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · ${esc(r.manager || 'менеджер')}</h3><div class="lbl">Стандартный процент: <b style="color:#fff">${r.pct} %</b> · заработал по партиям ${eur(r.commission)} · выплачено ${eur(r.paidLinked + r.unlinked)}${r.unlinked ? ` (из них ${eur(r.unlinked)} без привязки к партии)` : ''} · <b style="color:#fff">осталось ${eur(r.remaining)}</b></div>`;
+    h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · ${esc(r.manager || 'менеджер')}</h3><div class="lbl">Стандартный процент: <b style="color:#fff">${r.pct} %</b> · заработал по партиям ${eur(r.commission)} · выплачено ${eur(r.paidLinked + r.unlinked)}${r.unlinked ? ` (из них ${eur(r.unlinked)} без привязки к партии)` : ''}${r.unBonus ? ` · общие бонусы +${eur(r.unBonus)}` : ''}${r.unPenalty ? ` · общие штрафы −${eur(r.unPenalty)}` : ''} · <b style="color:#fff">осталось ${eur(r.remaining)}</b></div>`;
     if(!r.batches.length) h += '<div class="empty" style="padding:12px">Партий пока нет</div>';
     r.batches.forEach(b => {
       h += `<div class="bcard" style="margin-bottom:10px"><div class="tbl">
@@ -901,9 +929,9 @@ async function loadSettleBatches(){
         <div class="r" style="grid-template-columns:1.5fr 1fr"><div>Выручка · закупка</div><div>${eur(b.revenue)} · ${b.nocost ? '<span style="color:var(--warn)">нет закупки</span>' : eur(b.cost)}</div></div>
         <div class="r" style="grid-template-columns:1.5fr 1fr"><div>Чистая прибыль</div><div><b>${b.nocost ? '—' : eur(b.profit)}</b></div></div>
         <div class="r" style="grid-template-columns:1.5fr 1fr"><div>Процент менеджера${b.override ? ' <span class="sm">свой для партии</span>' : ''}</div><div><input class="inp" data-brate="${b.id}" value="${b.override ? b.pct : ''}" placeholder="${r.pct}" inputmode="decimal" style="width:70px;text-align:right"> %</div></div>
-        <div class="r" style="grid-template-columns:1.5fr 1fr"><div>Заработал · выплачено</div><div>${eur(b.commission)} · ${eur(b.paid)}</div></div>
+        <div class="r" style="grid-template-columns:1.5fr 1fr"><div>Заработал · выплачено</div><div>${eur(b.commission)} · ${eur(b.paid)}</div></div>${b.bonus ? `<div class="r" style="grid-template-columns:1.5fr 1fr"><div>Бонусы</div><div>+${eur(b.bonus)}</div></div>` : ''}${b.penalty ? `<div class="r" style="grid-template-columns:1.5fr 1fr"><div>Штрафы</div><div>−${eur(b.penalty)}</div></div>` : ''}
         <div class="r" style="grid-template-columns:1.5fr 1fr"><div>Осталось выплатить</div><div><b>${eur(b.remaining)}</b></div></div></div>
-        <div class="acts" style="margin-top:6px"><button class="btn sm" data-led="payout" data-city="${r.city}" data-batch="${b.id}" data-amt="${Math.max(0, b.remaining)}" data-bl="${esc(String(b.date).split('-').reverse().join('.'))}">💸 Выплатить за партию</button></div></div>`;
+        <div class="acts" style="margin-top:6px"><button class="btn sm" data-led="payout" data-city="${r.city}" data-batch="${b.id}" data-amt="${Math.max(0, b.remaining)}" data-bl="${esc(String(b.date).split('-').reverse().join('.'))}">💸 Выплатить за партию</button><button class="btn sm" data-led="bonus" data-city="${r.city}" data-batch="${b.id}" data-bl="${esc(String(b.date).split('-').reverse().join('.'))}">➕ Бонус</button><button class="btn sm bad" data-led="penalty" data-city="${r.city}" data-batch="${b.id}" data-bl="${esc(String(b.date).split('-').reverse().join('.'))}">➖ Штраф</button></div></div>`;
     });
   });
   $('statsBody').innerHTML = h;
@@ -921,20 +949,20 @@ async function loadSettle(){
     const row = (k, v, b) => `<div class="r" style="grid-template-columns:1.6fr 1fr"><div>${k}</div><div>${b ? '<b>' + v + '</b>' : v}</div></div>`;
     const adm = Object.keys(r.byAdmin || {}).map(id => `${esc(adminName(r.city, id))}: ${eur(r.byAdmin[id])}`).join(' · ');
     if(r.adminMgr){
-      h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · аккаунт админов</h3><div class="tbl">${row('Прибыль города', eur(r.profit), 1)}${row('Оплата на аккаунт и реквизиты админов', eur(r.cashIn + r.toAdmins) + (adm ? '<span class="sm">' + adm + '</span>' : ''))}${r.unset > 0 ? row('Не указано, кто принял', '<span style="color:var(--warn)">' + eur(r.unset) + '</span>') : ''}</div><div class="lbl">Менеджер этого города — общий аккаунт админов: процент и выплаты не нужны, прибыль делится по вкладам (вкладка «Партнёры»).</div>${r.noCostRevenue > 0 ? `<div class="lbl" style="color:var(--warn)">⚠️ ${eur(r.noCostRevenue)} выручки в партиях без закупки — в прибыль не вошло.</div>` : ''}`;
+      h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · аккаунт админов</h3><div class="tbl">${row('Прибыль города', eur(r.profit), 1)}${row('Оплата на аккаунт и реквизиты админов', eur(r.cashIn + r.toAdmins) + (adm ? '<span class="sm">' + adm + '</span>' : ''))}${r.unset > 0 ? row('Не указано, кто принял', '<span style="color:var(--warn)">' + eur(r.unset) + '</span>') : ''}</div><div class="lbl">Менеджер этого города — общий аккаунт админов: процент и выплаты не нужны, прибыль делится по вкладам (вкладка «Партнёры»).</div>${r.noCostRevenue > 0 ? `<div class="lbl" style="color:var(--warn)">⚠️ ${eur(r.noCostRevenue)} выручки в партиях без закупки — в прибыль не вошло.</div>` : ''}${r.sellers ? '<div class="lbl" style="margin-top:8px">Кто продал (за всё время):</div><div class="tbl">' + r.sellers.rows.map(x => `<div class="r" style="grid-template-columns:1.6fr .5fr 1fr"><div>${esc(x.name)}</div><div>${x.orders}</div><div>${eur(x.revenue)}</div></div>`).join('') + (r.sellers.unset.orders ? `<div class="r" style="grid-template-columns:1.6fr .5fr 1fr"><div style="color:var(--warn)">Не указано</div><div>${r.sellers.unset.orders}</div><div>${eur(r.sellers.unset.revenue)}</div></div>` : '') + '</div>' : ''}`;
       return;
     }
     h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · ${esc(r.manager || 'менеджер')}</h3><div class="tbl">
       <div class="r" style="grid-template-columns:1.6fr 1fr"><div>Процент менеджера</div><div><input class="inp" data-rate="${esc(r.manager_id)}" value="${r.pct}" inputmode="decimal" style="width:70px;text-align:right"> %</div></div>
-      ${row('Прибыль города', eur(r.profit))}${row('Заработал менеджер', eur(r.earned))}${row('Выплачено ему', eur(r.paid))}${row('К выплате менеджеру', eur(r.toPay), 1)}
+      ${row('Прибыль города', eur(r.profit))}${row('Заработал менеджер (по %)', eur(r.earned))}${r.bonus ? row('Бонусы', '+' + eur(r.bonus)) : ''}${r.penalty ? row('Штрафы', '−' + eur(r.penalty)) : ''}${row('Выплачено ему', eur(r.paid))}${row('К выплате менеджеру', eur(r.toPay), 1)}
       ${row('Наличные принял менеджер', eur(r.cashIn))}${row('Сдал админам', eur(r.handed))}${row('Сейчас на руках у менеджера', eur(r.held), 1)}
       ${row('Оплата на реквизиты админов', eur(r.toAdmins) + (adm ? '<span class="sm">' + adm + '</span>' : ''))}
       ${r.unset > 0 ? row('Не указано, кто принял', '<span style="color:var(--warn)">' + eur(r.unset) + '</span>') : ''}
     </div><div class="lbl" style="font-size:.82rem;color:#fff;margin:6px 0">Итог: ${netMsg(r.net)}</div>
     ${r.noCostRevenue > 0 ? `<div class="lbl" style="color:var(--warn)">⚠️ ${eur(r.noCostRevenue)} выручки в партиях без закупки — в прибыль не вошло. Впиши закупку в общую поставку (или в партию города): Поставки → Изменить.</div>` : ''}
-    <div class="acts" style="margin-top:6px"><button class="btn sm" data-led="handover" data-city="${r.city}">💵 Менеджер сдал наличные</button><button class="btn sm" data-led="payout" data-city="${r.city}">💸 Выплата менеджеру</button></div>`;
+    <div class="acts" style="margin-top:6px"><button class="btn sm" data-led="handover" data-city="${r.city}">💵 Менеджер сдал наличные</button><button class="btn sm" data-led="payout" data-city="${r.city}">💸 Выплата менеджеру</button><button class="btn sm" data-led="bonus" data-city="${r.city}">➕ Бонус</button><button class="btn sm bad" data-led="penalty" data-city="${r.city}">➖ Штраф</button></div>`;
   });
-  if(j.ledger.length) h += '<h3>Журнал</h3><div class="tbl">' + j.ledger.map(l => `<div class="r" style="grid-template-columns:1.8fr .8fr .4fr"><div>${l.kind === 'handover' ? '💵 Сдал наличные' : '💸 Выплата менеджеру'}${l.batch_id ? ' (за партию)' : ''} · ${esc(CITY_FULL[l.city] || l.city)}<span class="sm">${esc(String(l.date || '').split('-').reverse().join('.'))}${l.note ? ' · ' + esc(l.note) : ''} · ${esc(l.created_by || '')}</span></div><div>${eur(l.amount)}</div><div><button class="btn sm bad" data-ldel="${l.id}">✕</button></div></div>`).join('') + '</div>';
+  if(j.ledger.length) h += '<h3>Журнал</h3><div class="tbl">' + j.ledger.map(l => `<div class="r" style="grid-template-columns:1.8fr .8fr .4fr"><div>${({handover: '💵 Сдал наличные', payout: '💸 Выплата менеджеру', bonus: '➕ Бонус', penalty: '➖ Штраф'})[l.kind] || l.kind}${l.batch_id ? ' (за партию)' : ''} · ${esc(CITY_FULL[l.city] || l.city)}<span class="sm">${esc(String(l.date || '').split('-').reverse().join('.'))}${l.note ? ' · ' + esc(l.note) : ''} · ${esc(l.created_by || '')}</span></div><div>${eur(l.amount)}</div><div><button class="btn sm bad" data-ldel="${l.id}">✕</button></div></div>`).join('') + '</div>';
   $('statsBody').innerHTML = h;
 }
 $('statsBody').addEventListener('click', e => { const b = e.target.closest('#setSeg button'); if(!b) return; SMODE = b.dataset.m; loadSettle(); });
@@ -955,14 +983,17 @@ $('statsBody').addEventListener('click', async e => {
   if(d){ if(!confirm('Удалить запись из журнала?')) return; const j = await api('ledger_delete', {}, {id: Number(d.dataset.ldel)}); toast(j.ok ? 'Удалено' : (j.error || 'Ошибка'), !j.ok); loadSettle(); return; }
   const b = e.target.closest('[data-led]'); if(!b) return;
   MM = {kind: b.dataset.led, city: b.dataset.city, batch: b.dataset.batch ? Number(b.dataset.batch) : 0};
-  $('mmTitle').textContent = (MM.kind === 'handover' ? 'Менеджер сдал наличные · ' : 'Выплата менеджеру · ') + (CITY_FULL[MM.city] || MM.city) + (MM.batch ? ' · партия ' + (b.dataset.bl || '') : '');
-  $('mmInfo').textContent = MM.kind === 'handover' ? 'Сколько наличных менеджер передал админам — уменьшит сумму у него на руках.' : 'Сколько вы выплатили менеджеру — уменьшит «к выплате».';
+  const MMT = {handover: 'Менеджер сдал наличные', payout: 'Выплата менеджеру', bonus: 'Бонус менеджеру', penalty: 'Штраф менеджеру'};
+  const MMI = {handover: 'Сколько наличных менеджер передал админам — уменьшит сумму у него на руках.', payout: 'Сколько вы выплатили менеджеру — уменьшит «к выплате».', bonus: 'Добавится к его зарплате. Впиши, за что (заметка).', penalty: 'Вычтется из его зарплаты. Впиши, за что (заметка).'};
+  $('mmTitle').textContent = MMT[MM.kind] + ' · ' + (CITY_FULL[MM.city] || MM.city) + (MM.batch ? ' · партия ' + (b.dataset.bl || '') : '');
+  $('mmInfo').textContent = MMI[MM.kind];
   $('mmAmt').value = b.dataset.amt && Number(b.dataset.amt) > 0 ? b.dataset.amt : ''; $('mmNote').value = ''; $('mmDate').value = new Date().toISOString().slice(0, 10); $('moneyModal').classList.add('on');
 });
 $('mmCancel').onclick = () => $('moneyModal').classList.remove('on');
 $('mmSave').onclick = async () => {
   const amount = parseFloat(String($('mmAmt').value).replace(',', '.'));
   if(!(amount > 0)){ toast('Впиши сумму', true); return; }
+  if((MM.kind === 'bonus' || MM.kind === 'penalty') && !String($('mmNote').value).trim()){ toast('Впиши, за что (заметка)', true); return; }
   $('mmSave').disabled = true; const j = await api('ledger_add', {}, {city: MM.city, kind: MM.kind, amount, note: $('mmNote').value, date: $('mmDate').value, batch_id: MM.batch || undefined}); $('mmSave').disabled = false;
   if(j.ok){ $('moneyModal').classList.remove('on'); haptic('success'); toast('Записано'); loadSettle(); } else toast(j.error || 'Ошибка', true);
 };
@@ -1024,6 +1055,7 @@ async function boot(){
   $('who').textContent = (String(ME.name || '?').replace(/^[@\s]+/, '').charAt(0) || '?').toUpperCase(); $('who').title = ME.name; $('who').onclick = () => { haptic('light'); setTab('profile'); };
   if(ME.cities.length > 1){ $('cityBtn').style.display = ''; paintCity(); }
   if(ME.admin) $('finSeg').style.display = '';
+  paintAs();
   setTab('orders');
   setInterval(() => { if(document.hidden) return; if(TAB === 'orders' && VIEW === 'open' && !$('q').value) loadOrders(); }, 20000);
   document.addEventListener('visibilitychange', () => { if(!document.hidden && TAB === 'orders') loadOrders(); });
