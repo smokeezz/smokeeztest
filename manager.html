@@ -104,6 +104,7 @@ h3::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--li
 .tag.adm{color:#d9c8ff;border-color:rgba(139,92,246,.55);background:rgba(139,92,246,.14)}
 .back{display:inline-flex;align-items:center;gap:6px;margin:0 0 10px;padding:7px 12px;border-radius:99px;border:1px solid var(--line2);background:var(--panel);font-size:.78rem;font-weight:700;cursor:pointer;color:var(--muted)}
 .modal{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.82);display:none;align-items:flex-end;justify-content:center}
+#pickModal{z-index:80}
 .modal.on{display:flex}
 .sheet{width:100%;max-width:560px;max-height:92vh;overflow:auto;background:var(--panel);border:1px solid var(--line2);border-radius:22px 22px 0 0;padding:18px 14px calc(18px + var(--safe-b));animation:up .25s ease}
 @keyframes up{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
@@ -309,6 +310,15 @@ h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
   <div class="acts"><button class="btn" id="syncCancel">Закрыть</button><button class="btn main" id="syncApply" style="display:none">Дописать выбранное</button></div>
 </div></div>
 
+<div class="modal" id="pickModal"><div class="sheet">
+  <h2 id="pkTitle">Добавить товар</h2>
+  <select class="sel" id="pkCat" style="width:100%"></select>
+  <select class="sel" id="pkProd" style="width:100%;margin-top:8px"></select>
+  <select class="sel" id="pkFlav" style="width:100%;margin-top:8px"></select>
+  <div class="erow" style="border:0"><div class="n">Количество</div><div class="stepper"><button data-pk="-1">−</button><b id="pkQty">1</b><button data-pk="1">+</button></div></div>
+  <div class="acts"><button class="btn" id="pkCancel">Отмена</button><button class="btn main" id="pkOk">Добавить</button></div>
+</div></div>
+
 <div class="modal" id="payModal"><div class="sheet">
   <h2>Кто принял оплату</h2>
   <div class="lbl" id="payInfo"></div>
@@ -336,8 +346,9 @@ h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
 
 <div class="modal" id="editModal"><div class="sheet">
   <h2 id="emTitle">Состав заказа</h2>
-  <div class="lbl">Поставь, сколько клиент реально забрал. 0 — убрать позицию. Сумма и скидка пересчитаются. Склад в таблице автоматически не меняется.</div>
+  <div class="lbl">Меняй количество, вкус или добавь товар. Сумма и скидка пересчитаются, склад в таблице и баллы клиента обновятся. Добавленное считается по текущему прайсу, остальное — по цене заказа. 0 — убрать позицию.</div>
   <div id="emRows"></div>
+  <button class="btn" id="emAdd" style="width:100%;margin-top:8px">➕ Добавить товар</button>
   <div class="sum" id="emSum" style="margin-top:10px"></div>
   <div class="acts"><button class="btn" id="emCancel">Закрыть</button><button class="btn main" id="emSave">Сохранить</button></div>
 </div></div>
@@ -509,20 +520,84 @@ $('moreBtn').addEventListener('click', () => loadOrders(true));
 let qT; $('q').addEventListener('input', () => { clearTimeout(qT); qT = setTimeout(() => loadOrders(), 350); });
 
 // ---------- изменение состава заказа ----------
-let EO = null, EQ = [];
+let EO = null, EL = [], EPRICE = {}, PK = null;
 function emPaint(){
   $('emTitle').textContent = 'Заказ №' + EO.no;
-  $('emRows').innerHTML = EO.items.map((l, i) => `<div class="erow"><div class="n">${esc(l.product)}<small>${esc(l.flavor)}${l.mode === 'preorder' ? ' · предзаказ' : ''}</small></div><div class="stepper"><button data-i="${i}" data-d="-1">−</button><b>${EQ[i]}</b><button data-i="${i}" data-d="1">+</button></div></div>`).join('');
-  const sub = EO.items.reduce((a, l, i) => a + (l.sum === null || l.sum === undefined ? 0 : l.sum / (l.qty || 1) * EQ[i]), 0);
-  $('emSum').innerHTML = 'Позиций: <b style="font-size:1rem">' + EQ.reduce((a, b) => a + b, 0) + ' шт</b> · сумма до скидки ≈ <b style="font-size:1rem">' + eur(sub) + '</b>';
+  $('emRows').innerHTML = EL.map((l, i) => `<div class="erow" style="${l.qty === 0 ? 'opacity:.45' : ''}"><div class="n" style="flex:1">${esc(l.product)}<small>${esc(l.flavor)}${l.mode === 'preorder' ? ' · предзаказ' : ''}${l.isNew ? ' · <span style="color:var(--ok)">новая</span>' : (l.q0 !== l.qty ? ' · было ' + l.q0 : '')}</small></div><button class="btn sm" data-r="${i}" title="Заменить товар/вкус">✎</button><div class="stepper"><button data-i="${i}" data-d="-1">−</button><b>${l.qty}</b><button data-i="${i}" data-d="1">+</button></div></div>`).join('');
+  const unit = (l) => l.qty0 > 0 && l.sum !== null && l.sum !== undefined ? l.sum / l.qty0 : (EPRICE[l.product] || 0);
+  const sub = EL.reduce((a, l) => { if(l.isNew || !(l.qty0 > 0)) return a + l.qty * (EPRICE[l.product] || 0); const base = l.sum === null || l.sum === undefined ? l.qty0 * (EPRICE[l.product] || 0) : l.sum; return a + (l.qty <= l.qty0 ? base / l.qty0 * l.qty : base + (l.qty - l.qty0) * (EPRICE[l.product] || 0)); }, 0);
+  $('emSum').innerHTML = 'Позиций: <b style="font-size:1rem">' + EL.reduce((a, l) => a + l.qty, 0) + ' шт</b> · сумма до скидки ≈ <b style="font-size:1rem">' + eur(sub) + '</b>';
 }
-function openEdit(o){ EO = o; EQ = o.items.map(l => l.qty); emPaint(); $('editModal').classList.add('on'); }
-$('emRows').addEventListener('click', e => { const b = e.target.closest('button[data-i]'); if(!b) return; const i = +b.dataset.i; EQ[i] = Math.max(0, Math.min(EO.items[i].qty, EQ[i] + +b.dataset.d)); emPaint(); });
+async function emPrices(){
+  const names = [...new Set(EL.map(l => l.product).concat(CATALOG.map(c => c.name)))];
+  const j = await api('prices', {}, {city: EO.city, names}); if(j.ok) EPRICE = j.prices || {};
+  emPaint();
+}
+function openEdit(o){
+  EO = o; EL = o.items.map(l => ({product: l.product, flavor: l.flavor, qty: l.qty, qty0: l.qty, q0: l.qty, mode: l.mode, sum: l.sum === undefined ? null : l.sum}));
+  emPaint(); $('editModal').classList.add('on'); emPrices();
+}
+$('emRows').addEventListener('click', e => {
+  const r = e.target.closest('button[data-r]'); if(r){ return openPick(+r.dataset.r); }
+  const b = e.target.closest('button[data-i]'); if(!b) return;
+  const i = +b.dataset.i; EL[i].qty = Math.max(0, Math.min(99, EL[i].qty + +b.dataset.d)); emPaint();
+});
+$('emAdd').onclick = () => openPick(-1);
 $('emCancel').onclick = () => $('editModal').classList.remove('on');
+// выбор товара: раздел → группа → вкус
+function pkFill(){
+  const cat = $('pkCat').value;
+  const prods = CATALOG.filter(c => c.category === cat);
+  $('pkProd').innerHTML = prods.map(c => `<option>${esc(c.name)}</option>`).join('');
+  pkFlav();
+}
+function pkFlav(){
+  const g = CATALOG.find(c => c.name === $('pkProd').value);
+  $('pkFlav').innerHTML = (g ? g.flavors : []).slice().sort((a, b) => a.localeCompare(b, 'ru')).map(f => `<option>${esc(f)}</option>`).join('');
+}
+function openPick(idx){
+  PK = {idx, qty: idx >= 0 ? Math.max(1, EL[idx].qty) : 1};
+  const cats = [...new Set(CATALOG.map(c => c.category))];
+  $('pkCat').innerHTML = cats.map(c => `<option value="${c}">${esc(CAT_LABEL[c] || c)}</option>`).join('');
+  if(idx >= 0){ const g = CATALOG.find(c => c.name === EL[idx].product); if(g) $('pkCat').value = g.category; }
+  pkFill();
+  if(idx >= 0){ $('pkProd').value = EL[idx].product; pkFlav(); $('pkFlav').value = EL[idx].flavor; }
+  $('pkTitle').textContent = idx >= 0 ? 'Заменить товар / вкус' : 'Добавить товар';
+  $('pkOk').textContent = idx >= 0 ? 'Заменить' : 'Добавить';
+  $('pkQty').textContent = PK.qty; $('pickModal').classList.add('on');
+}
+$('pkCat').onchange = pkFill; $('pkProd').onchange = pkFlav;
+$('pickModal').addEventListener('click', e => { const b = e.target.closest('button[data-pk]'); if(!b) return; PK.qty = Math.max(1, Math.min(99, PK.qty + +b.dataset.pk)); $('pkQty').textContent = PK.qty; });
+$('pkCancel').onclick = () => $('pickModal').classList.remove('on');
+$('pkOk').onclick = () => {
+  const product = $('pkProd').value, flavor = $('pkFlav').value; if(!product || !flavor) return toast('Выбери товар и вкус', true);
+  if(PK.idx >= 0){
+    const o = EL[PK.idx];
+    if(o.product === product && o.flavor === flavor){ o.qty = PK.qty; }
+    else { // замена: старая позиция убирается (0), новая добавляется
+      if(o.isNew) EL.splice(PK.idx, 1); else o.qty = 0;
+      addLine(product, flavor, PK.qty);
+    }
+  } else addLine(product, flavor, PK.qty);
+  $('pickModal').classList.remove('on'); emPaint();
+};
+function addLine(product, flavor, qty){
+  const ex = EL.find(l => l.product === product && l.flavor === flavor);
+  if(ex){ ex.qty = Math.min(99, ex.qty + qty); return; }
+  EL.push({product, flavor, qty, qty0: 0, q0: 0, mode: 'stock', sum: null, isNew: true});
+}
 $('emSave').onclick = async () => {
-  if(EQ.every((q, i) => q === EO.items[i].qty)){ $('editModal').classList.remove('on'); return; }
-  $('emSave').disabled = true; const j = await api('edit', {}, {no: EO.no, qtys: EQ}); $('emSave').disabled = false;
-  if(j.ok){ $('editModal').classList.remove('on'); haptic('success'); toast('Состав обновлён: ' + eur(j.total) + (j.pointsLost ? ' · −' + j.pointsLost + ' баллов клиента' : '') + (j.stockBack ? ' · на склад +' + j.stockBack : '') + ((j.notes || []).length ? ' · ⚠️ ' + j.notes.join('; ') : '')); loadOrders(); } else toast(j.error || 'Не удалось', true);
+  const lines = EL.filter(l => l.qty > 0).map(l => ({product: l.product, flavor: l.flavor, qty: l.qty, mode: l.mode}));
+  if(!lines.length) return toast('Заказ не может быть пустым — отмени или удали его', true);
+  const changed = EL.length !== EO.items.length || EL.some(l => l.isNew || l.qty !== l.q0);
+  if(!changed){ $('editModal').classList.remove('on'); return; }
+  $('emSave').disabled = true; const j = await api('edit', {}, {no: EO.no, lines}); $('emSave').disabled = false;
+  if(j.ok){
+    $('editModal').classList.remove('on'); haptic('success');
+    const pd = j.pointsDelta || 0;
+    toast('Состав обновлён: ' + eur(j.total) + (pd ? ' · ' + (pd > 0 ? '+' : '−') + Math.abs(pd) + ' баллов клиента' : '') + (j.stockBack ? ' · на склад +' + j.stockBack : '') + (j.stockTaken ? ' · со склада −' + j.stockTaken : '') + ((j.notes || []).length ? ' · ⚠️ ' + j.notes.join('; ') : ''));
+    loadOrders();
+  } else toast(j.error || 'Не удалось', true);
 };
 
 // ---------- бухгалтерия ----------
@@ -806,15 +881,40 @@ $('payOpts').addEventListener('click', async e => {
 });
 
 // ---------- финансы (админы): расчёты с менеджерами и доли партнёров ----------
-let FSEG = 'sales', MM = null;
+let FSEG = 'sales', MM = null, SMODE = 'city';
 const netMsg = n => n > 0.004 ? `Админы должны менеджеру <b>${eur(n)}</b>` : n < -0.004 ? `Менеджер должен админам <b>${eur(-n)}</b>` : 'Расчёт закрыт';
 $('finSeg').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; FSEG = b.dataset.f; [...$('finSeg').children].forEach(x => x.classList.toggle('on', x === b)); loadStats(); });
+const setSegHtml = () => `<div class="seg" id="setSeg" style="margin-bottom:8px"><button data-m="city" class="${SMODE === 'city' ? 'on' : ''}">По городу</button><button data-m="batch" class="${SMODE === 'batch' ? 'on' : ''}">По поставкам</button></div>`;
+async function loadSettleBatches(){
+  $('statsBody').innerHTML = setSegHtml() + '<div class="empty">Считаю…</div>';
+  const p = {}; if(CITY) p.city = CITY;
+  const j = await api('settle_batches', p);
+  if(!j.ok){ $('statsBody').innerHTML = setSegHtml() + `<div class="empty">${esc(j.error || 'Ошибка')}</div>`; return; }
+  let h = setSegHtml() + '<div class="lbl">Зарплата менеджера за каждую партию города: его % × чистая прибыль партии (выручка − закупка проданного). Можно задать свой % для партии и выплатить за неё отдельно.</div>';
+  if(!j.rows.length) h += '<div class="empty">Нет городов с менеджером</div>';
+  j.rows.forEach(r => {
+    h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · ${esc(r.manager || 'менеджер')}</h3><div class="lbl">Стандартный процент: <b style="color:#fff">${r.pct} %</b> · заработал по партиям ${eur(r.commission)} · выплачено ${eur(r.paidLinked + r.unlinked)}${r.unlinked ? ` (из них ${eur(r.unlinked)} без привязки к партии)` : ''} · <b style="color:#fff">осталось ${eur(r.remaining)}</b></div>`;
+    if(!r.batches.length) h += '<div class="empty" style="padding:12px">Партий пока нет</div>';
+    r.batches.forEach(b => {
+      h += `<div class="bcard" style="margin-bottom:10px"><div class="tbl">
+        <div class="r" style="grid-template-columns:1.5fr 1fr"><div><b>${esc(String(b.date).split('-').reverse().join('.'))}</b>${b.note ? '<span class="sm">' + esc(b.note) + '</span>' : ''}</div><div>продано <b>${b.sold}/${b.received}</b> шт</div></div>
+        <div class="r" style="grid-template-columns:1.5fr 1fr"><div>Выручка · закупка</div><div>${eur(b.revenue)} · ${b.nocost ? '<span style="color:var(--warn)">нет закупки</span>' : eur(b.cost)}</div></div>
+        <div class="r" style="grid-template-columns:1.5fr 1fr"><div>Чистая прибыль</div><div><b>${b.nocost ? '—' : eur(b.profit)}</b></div></div>
+        <div class="r" style="grid-template-columns:1.5fr 1fr"><div>Процент менеджера${b.override ? ' <span class="sm">свой для партии</span>' : ''}</div><div><input class="inp" data-brate="${b.id}" value="${b.override ? b.pct : ''}" placeholder="${r.pct}" inputmode="decimal" style="width:70px;text-align:right"> %</div></div>
+        <div class="r" style="grid-template-columns:1.5fr 1fr"><div>Заработал · выплачено</div><div>${eur(b.commission)} · ${eur(b.paid)}</div></div>
+        <div class="r" style="grid-template-columns:1.5fr 1fr"><div>Осталось выплатить</div><div><b>${eur(b.remaining)}</b></div></div></div>
+        <div class="acts" style="margin-top:6px"><button class="btn sm" data-led="payout" data-city="${r.city}" data-batch="${b.id}" data-amt="${Math.max(0, b.remaining)}" data-bl="${esc(String(b.date).split('-').reverse().join('.'))}">💸 Выплатить за партию</button></div></div>`;
+    });
+  });
+  $('statsBody').innerHTML = h;
+}
 async function loadSettle(){
-  $('statsBody').innerHTML = '<div class="empty">Считаю…</div>';
+  if(SMODE === 'batch') return loadSettleBatches();
+  $('statsBody').innerHTML = setSegHtml() + '<div class="empty">Считаю…</div>';
   const p = {}; if(CITY) p.city = CITY;
   const j = await api('settle', p);
   if(!j.ok){ $('statsBody').innerHTML = `<div class="empty">${esc(j.error || 'Ошибка')}</div>`; return; }
-  let h = '<div class="lbl">Прибыль = выручка (после скидок) − закупка проданного. Закупка берётся из «вкладов» в партии. Заработок менеджера = его % от прибыли его города. Всё за всё время.</div>';
+  let h = setSegHtml() + '<div class="lbl">Прибыль = выручка (после скидок) − закупка проданного. Закупка берётся из «вкладов» в партии. Заработок менеджера = его % от прибыли его города. Всё за всё время.</div>';
   const rowsShown = j.rows.filter(r => r.revenue || r.pct || r.paid || r.handed || r.profit);
   if(!rowsShown.length) h += '<div class="empty">Пока нет продаж или настроек по городам</div>';
   rowsShown.forEach(r => {
@@ -834,10 +934,17 @@ async function loadSettle(){
     ${r.noCostRevenue > 0 ? `<div class="lbl" style="color:var(--warn)">⚠️ ${eur(r.noCostRevenue)} выручки в партиях без закупки — в прибыль не вошло. Впиши закупку в общую поставку (или в партию города): Поставки → Изменить.</div>` : ''}
     <div class="acts" style="margin-top:6px"><button class="btn sm" data-led="handover" data-city="${r.city}">💵 Менеджер сдал наличные</button><button class="btn sm" data-led="payout" data-city="${r.city}">💸 Выплата менеджеру</button></div>`;
   });
-  if(j.ledger.length) h += '<h3>Журнал</h3><div class="tbl">' + j.ledger.map(l => `<div class="r" style="grid-template-columns:1.8fr .8fr .4fr"><div>${l.kind === 'handover' ? '💵 Сдал наличные' : '💸 Выплата менеджеру'} · ${esc(CITY_FULL[l.city] || l.city)}<span class="sm">${esc(String(l.date || '').split('-').reverse().join('.'))}${l.note ? ' · ' + esc(l.note) : ''} · ${esc(l.created_by || '')}</span></div><div>${eur(l.amount)}</div><div><button class="btn sm bad" data-ldel="${l.id}">✕</button></div></div>`).join('') + '</div>';
+  if(j.ledger.length) h += '<h3>Журнал</h3><div class="tbl">' + j.ledger.map(l => `<div class="r" style="grid-template-columns:1.8fr .8fr .4fr"><div>${l.kind === 'handover' ? '💵 Сдал наличные' : '💸 Выплата менеджеру'}${l.batch_id ? ' (за партию)' : ''} · ${esc(CITY_FULL[l.city] || l.city)}<span class="sm">${esc(String(l.date || '').split('-').reverse().join('.'))}${l.note ? ' · ' + esc(l.note) : ''} · ${esc(l.created_by || '')}</span></div><div>${eur(l.amount)}</div><div><button class="btn sm bad" data-ldel="${l.id}">✕</button></div></div>`).join('') + '</div>';
   $('statsBody').innerHTML = h;
 }
+$('statsBody').addEventListener('click', e => { const b = e.target.closest('#setSeg button'); if(!b) return; SMODE = b.dataset.m; loadSettle(); });
 $('statsBody').addEventListener('change', async e => {
+  const br = e.target.closest('input[data-brate]');
+  if(br){
+    const raw = String(br.value).trim(); const pct = raw === '' ? null : parseFloat(raw.replace(',', '.'));
+    if(pct !== null && !(pct >= 0 && pct <= 100)){ toast('Процент от 0 до 100', true); return; }
+    const j = await api('batch_rate', {}, {batch_id: Number(br.dataset.brate), pct}); toast(j.ok ? (pct === null ? 'Свой процент снят' : 'Процент партии сохранён') : (j.error || 'Ошибка'), !j.ok); if(j.ok) loadSettle(); return;
+  }
   const i = e.target.closest('input[data-rate]'); if(!i) return;
   const pct = parseFloat(String(i.value).replace(',', '.'));
   if(!(pct >= 0 && pct <= 100)){ toast('Процент от 0 до 100', true); return; }
@@ -847,16 +954,16 @@ $('statsBody').addEventListener('click', async e => {
   const d = e.target.closest('[data-ldel]');
   if(d){ if(!confirm('Удалить запись из журнала?')) return; const j = await api('ledger_delete', {}, {id: Number(d.dataset.ldel)}); toast(j.ok ? 'Удалено' : (j.error || 'Ошибка'), !j.ok); loadSettle(); return; }
   const b = e.target.closest('[data-led]'); if(!b) return;
-  MM = {kind: b.dataset.led, city: b.dataset.city};
-  $('mmTitle').textContent = (MM.kind === 'handover' ? 'Менеджер сдал наличные · ' : 'Выплата менеджеру · ') + (CITY_FULL[MM.city] || MM.city);
+  MM = {kind: b.dataset.led, city: b.dataset.city, batch: b.dataset.batch ? Number(b.dataset.batch) : 0};
+  $('mmTitle').textContent = (MM.kind === 'handover' ? 'Менеджер сдал наличные · ' : 'Выплата менеджеру · ') + (CITY_FULL[MM.city] || MM.city) + (MM.batch ? ' · партия ' + (b.dataset.bl || '') : '');
   $('mmInfo').textContent = MM.kind === 'handover' ? 'Сколько наличных менеджер передал админам — уменьшит сумму у него на руках.' : 'Сколько вы выплатили менеджеру — уменьшит «к выплате».';
-  $('mmAmt').value = ''; $('mmNote').value = ''; $('mmDate').value = new Date().toISOString().slice(0, 10); $('moneyModal').classList.add('on');
+  $('mmAmt').value = b.dataset.amt && Number(b.dataset.amt) > 0 ? b.dataset.amt : ''; $('mmNote').value = ''; $('mmDate').value = new Date().toISOString().slice(0, 10); $('moneyModal').classList.add('on');
 });
 $('mmCancel').onclick = () => $('moneyModal').classList.remove('on');
 $('mmSave').onclick = async () => {
   const amount = parseFloat(String($('mmAmt').value).replace(',', '.'));
   if(!(amount > 0)){ toast('Впиши сумму', true); return; }
-  $('mmSave').disabled = true; const j = await api('ledger_add', {}, {city: MM.city, kind: MM.kind, amount, note: $('mmNote').value, date: $('mmDate').value}); $('mmSave').disabled = false;
+  $('mmSave').disabled = true; const j = await api('ledger_add', {}, {city: MM.city, kind: MM.kind, amount, note: $('mmNote').value, date: $('mmDate').value, batch_id: MM.batch || undefined}); $('mmSave').disabled = false;
   if(j.ok){ $('moneyModal').classList.remove('on'); haptic('success'); toast('Записано'); loadSettle(); } else toast(j.error || 'Ошибка', true);
 };
 async function loadPartners(){
