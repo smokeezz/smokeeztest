@@ -297,6 +297,7 @@ h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
   <div class="lbl">Куда записываем</div>
   <div class="chips wrapchips" id="bmCity"></div>
   <div class="filters"><input class="inp" type="date" id="bmDate"><input class="inp" id="bmNote" placeholder="Заметка (необязательно)"></div>
+  <div id="bmParent"></div>
   <div id="bmPartners"></div>
   <div class="lbl">Открой группу товара и впиши количество у каждого вкуса. Цена за штуку подставляется по прайсу выбранного города.</div>
   <div id="bmGroups"></div>
@@ -415,9 +416,11 @@ const STAT = {delivered:['НОВЫЙ','s-new'], reserved:['НОВЫЙ','s-new'],
 function ago(ts){ const m = Math.max(0, Math.round((Date.now() + SKEW - ts) / 60000)); return m < 60 ? m + ' мин' : m < 1440 ? Math.floor(m / 60) + ' ч ' + (m % 60) + ' мин' : Math.floor(m / 1440) + ' дн'; }
 function chatBtn(o){ return o.tg_user ? `<button class="btn link" data-chat="u">💬 Написать @${esc(o.tg_user)}</button>` : (o.user_id ? '<button class="btn link" data-chat="b">💬 Чат с клиентом (ссылка в бот)</button>' : ''); }
 function adminName(city, id){ const l = (ME && ME.admins && ME.admins[REG_OF(city)]) || []; const a = l.find(x => String(x.id) === String(id)); return a ? a.name : 'id ' + id; }
+const effSeller = o => (o.paid_to && o.paid_to !== 'mgr') ? String(o.paid_to) : (o.seller ? String(o.seller) : '');
 function payLine(o){
   if(o.status === 'cancelled') return '';
-  const sl = isShared(o.city) ? `<div class="lbl" style="margin:6px 0 0;${o.seller ? '' : 'color:var(--warn)'}">👤 ${o.seller ? 'Продал: ' + esc(adminName(o.city, o.seller)) : 'не указано, кто из админов продал'}</div>` : '';
+  if(isShared(o.city)){ const sid = effSeller(o); return `<div class="lbl" style="margin:6px 0 0;${sid ? '' : 'color:var(--warn)'}">👤 ${sid ? 'Продал и принял оплату: ' + esc(adminName(o.city, sid)) : 'не указано, кто из админов продал и принял оплату'}</div>`; }
+  const sl = '';
   let t, warn = false;
   if(o.paid_to === 'mgr') t = '💵 наличные — у менеджера';
   else if(o.paid_to) t = '💳 деньги у админа: ' + esc(adminName(o.city, o.paid_to));
@@ -445,7 +448,7 @@ function orderHtml(o){
   else if(o.status === 'accepted') acts = `<button class="btn main" data-a="rdy">✅ Готов к выдаче</button><button class="btn bad" data-a="cx">Отменить</button>`;
   else if(o.status === 'ready') acts = `<button class="btn main" data-a="done">📦 Выдан</button><button class="btn bad" data-a="cx">Отменить</button>`;
   const editable = ['delivered', 'reserved', 'accepted', 'ready'].includes(o.status) || (o.status === 'done' && ME && ME.admin);
-  const extra = (o.status !== 'cancelled' ? '<button class="btn sm" data-a="pay">💳 Оплата</button>' + (isShared(o.city) ? '<button class="btn sm" data-a="seller">👤 Кто продал</button>' : '') : '') + (editable ? '<button class="btn sm" data-a="edit">✏️ Изменить состав</button>' : '') + (o.status !== 'cancelled' ? '<button class="btn sm" data-a="disc">🏷 Скидка</button>' : '') + (ME && ME.admin ? '<button class="btn sm bad" data-a="del">🗑 Удалить</button>' : '');
+  const extra = (o.status !== 'cancelled' ? (isShared(o.city) ? '<button class="btn sm" data-a="seller">👤 Кто продал</button>' : '<button class="btn sm" data-a="pay">💳 Оплата</button>') : '') + (editable ? '<button class="btn sm" data-a="edit">✏️ Изменить состав</button>' : '') + (o.status !== 'cancelled' ? '<button class="btn sm" data-a="disc">🏷 Скидка</button>' : '') + (ME && ME.admin ? '<button class="btn sm bad" data-a="del">🗑 Удалить</button>' : '');
   const self = (o.status !== 'cancelled') ? `<label class="self"><input type="checkbox" data-self ${o.for_self ? 'checked' : ''}> 🏷 Взял себе (не продажа — в учёте «взято собой»)</label>` : '';
   return `<div class="card ${isNew ? 'new' : ''} ${late ? 'late' : ''} ${open ? 'open' : ''}" data-no="${o.no}">
     <div class="h" data-toggle><span class="no">№${o.no}</span><span class="city">${esc(cityName(o.city))}</span><span class="st ${stC}">${stT}</span></div>
@@ -640,7 +643,8 @@ const fdate = d => String(d).split('-').reverse().join('.');
 function bCard(b, canEdit, general){
   const tot = b.received || 1, ps = b.sold / tot * 100, pf = b.self / tot * 100;
   const profit = b.cost ? b.revenue - b.soldCost : null;
-  const dist = general ? `<div class="sub" style="margin-top:6px"><span>роздано городам: <b style="color:#fff">${b.distributed}</b></span><span>не роздано: <b style="color:#fff">${b.undistributed}</b></span></div>` : '';
+  const par = !general && b.parent_id ? findBatch(b.parent_id) : null;
+  const dist = general ? `<div class="sub" style="margin-top:6px"><span>роздано городам: <b style="color:#fff">${b.distributed}</b></span><span>не роздано: <b style="color:#fff">${b.undistributed}</b></span></div>${b.linkedBatches ? `<div class="sub"><span>привязано партий: <b style="color:#fff">${b.linkedBatches}</b></span><span>продано из них: <b style="color:#fff">${b.linkedSold}</b></span></div>` : ''}` : (par ? `<div class="sub" style="margin-top:6px"><span>📦 из поставки <b style="color:#fff">${esc(fdate(par.date))}</b>${par.note ? ' · ' + esc(par.note) : ''}</span></div>` : '');
   const head = `<div class="h" data-tb><span class="no">${esc(fdate(b.date))}</span><span class="st ${b.left <= 0 ? 's-done' : 's-acc'}">${b.left <= 0 ? 'ПРОДАНА' : 'ОСТАЛОСЬ ' + b.left}</span></div>
       <div class="sub"><span>${esc(b.note || 'без заметки')}</span><span>всего ${b.received} шт</span></div>
       <div class="bar"><i style="width:${ps}%;background:linear-gradient(90deg,#e34fef,#8b5cf6)"></i><i style="width:${pf}%;background:var(--warn)"></i></div>
@@ -777,17 +781,24 @@ function bmPartners(){
   const cur = {}; if(EDIT && EDIT.partners && (EDIT.city || '') === BM.city) EDIT.partners.forEach(x => cur[x.id] = x.amount);
   box.innerHTML = `<div class="lbl">${BM.city ? 'Закупка этой партии, € — только если покупали отдельно. Если товар из общей поставки — оставь пустым: закупка возьмётся из неё.' : 'Закупка общей поставки, € — сколько вложил каждый админ. Из неё считается себестоимость партий городов и доли. Пусто — не участвует.'}</div><div class="filters">${list.map(a => `<label style="flex:1;min-width:120px;font-size:.72rem;color:var(--dim)">${esc(a.name)}<input class="inp" data-pi="${esc(a.id)}" inputmode="decimal" value="${cur[a.id] || ''}" placeholder="0" style="width:100%;margin-top:4px"></label>`).join('')}</div>`;
 }
+function bmParentPaint(){
+  const box = $('bmParent'); const R = BATCHES[REGION];
+  if(!BADMIN || !BM.city || !R || !R.general || !R.general.batches.length){ box.innerHTML = ''; return; }
+  const gs = [...R.general.batches].sort((a, b) => a.date < b.date ? 1 : -1);
+  box.innerHTML = `<div class="lbl">Из какой общей поставки эта партия — от неё считается закупка проданного</div><select class="inp" id="bmParentSel" style="width:100%;margin-bottom:8px"><option value="">Авто (по очереди — сначала старые поставки)</option>${gs.map(g => `<option value="${g.id}" ${String(BM.parent || '') === String(g.id) ? 'selected' : ''}>${esc(fdate(g.date))}${g.note ? ' · ' + esc(g.note) : ''} · не роздано ${g.undistributed}</option>`).join('')}</select>`;
+}
+document.addEventListener('change', e => { if(e.target && e.target.id === 'bmParentSel') BM.parent = e.target.value; });
 function openBatch(b, city){
   EDIT = b;
-  BM = {city: city === undefined ? null : city, qty: {}, extra: {}, open: {}, prices: {}};
+  BM = {city: city === undefined ? null : city, qty: {}, extra: {}, open: {}, prices: {}, parent: b && b.parent_id ? String(b.parent_id) : ''};
   XFL.forEach(x => { const g = CATALOG.find(c => c.name === x.product); if(!g || !g.flavors.includes(x.flavor)) (BM.extra[x.product] = BM.extra[x.product] || []).push(x.flavor); });
   if(b) b.items.forEach(i => { BM.qty[i.product + '|' + i.flavor] = i.qty; const g = CATALOG.find(x => x.name === i.product); if(!g || !g.flavors.includes(i.flavor)) (BM.extra[i.product] = BM.extra[i.product] || []).push(i.flavor); });
   $('bmTitle').textContent = bmTitleFor();
   $('bmDate').value = b ? b.date : new Date().toISOString().slice(0, 10);
   $('bmNote').value = b ? b.note : '';
-  renderBM(); bmPartners(); $('batchModal').classList.add('on'); bmPrices();
+  renderBM(); bmPartners(); bmParentPaint(); $('batchModal').classList.add('on'); bmPrices();
 }
-$('bmCity').addEventListener('click', e => { const c = e.target.closest('.chip'); if(!c || EDIT) return; BM.city = c.dataset.c; $('bmTitle').textContent = bmTitleFor(); bmPartners(); bmPrices(); });
+$('bmCity').addEventListener('click', e => { const c = e.target.closest('.chip'); if(!c || EDIT) return; BM.city = c.dataset.c; $('bmTitle').textContent = bmTitleFor(); bmPartners(); bmParentPaint(); bmPrices(); });
 $('bmGroups').addEventListener('click', e => {
   const gh = e.target.closest('[data-gh]');
   if(gh){ const g = gh.parentNode, nm = g.dataset.g; BM.open[nm] = !BM.open[nm]; g.classList.toggle('open', BM.open[nm]); return; }
@@ -813,6 +824,7 @@ $('bmSave').onclick = async () => {
   if(!items.length){ toast('Впиши количество хотя бы у одного вкуса', true); return; }
   $('bmSave').disabled = true;
   const body = {id: EDIT ? EDIT.id : 0, region: REGION, city: BM.city, date: $('bmDate').value, note: $('bmNote').value, items};
+  if(BM.city) body.parent_id = BM.parent ? Number(BM.parent) : 0;
   if(BADMIN && BM.city !== null) body.partners = [...$('bmPartners').querySelectorAll('input[data-pi]')].map(i => ({id: i.dataset.pi, amount: parseFloat(String(i.value).replace(',', '.')) || 0})).filter(x => x.amount > 0);
   const j = await api('batch_save', {}, body);
   $('bmSave').disabled = false;
@@ -860,6 +872,7 @@ async function loadProfile(id){
     h += '<h3>Расчёты</h3><div class="kpis">' + kpi('Процент', S.pct + ' %') + kpi('Заработано', eur(S.earned), 1) + (S.bonus ? kpi('Бонусы', '+' + eur(S.bonus)) : '') + (S.penalty ? kpi('Штрафы', '−' + eur(S.penalty)) : '') + kpi('Выплачено', eur(S.paid)) + kpi('К выплате', eur(S.toPay)) + kpi('Наличные на руках', eur(S.held)) + '</div>';
     h += `<div class="lbl" style="font-size:.82rem;color:#fff;margin:6px 0">Итог: ${netMsg(S.net)}</div><div class="lbl">За всё время. Заработано = твой % от прибыли города.</div>`;
   }
+  if(j.settle) h += '<div id="myPay"></div>';
   if(j.supply && j.supply.length){
     h += '<h3>Поставки</h3><div class="tbl"><div class="r hd" style="grid-template-columns:1.2fr .8fr .8fr .8fr"><div>Регион</div><div>Пришло</div><div>Продано</div><div>Остаток</div></div>' + j.supply.map(s => `<div class="r" style="grid-template-columns:1.2fr .8fr .8fr .8fr"><div>${s.region === 'sk' ? '🇸🇰 Словакия' : '🇩🇪 Германия'}<span class="sm">${s.batches} пост.${s.last ? ' · посл. ' + esc(s.last.split('-').reverse().join('.')) : ''}</span></div><div>${s.received}</div><div>${s.sold + s.self}</div><div>${s.left}</div></div>`).join('') + '</div>';
   }
@@ -868,6 +881,7 @@ async function loadProfile(id){
     h += '<h3>Команда</h3>' + (j.team.length ? '<div class="tbl"><div class="r hd"><div>Менеджер</div><div>Шт</div><div>Выручка</div><div>Скидки</div></div>' + j.team.map(m => `<div class="r tap" data-m="${esc(m.id)}"><div>${esc(m.name)}<span class="sm">${esc(m.cities.map(c => CITY_FULL[c] || c).join(', '))} · ${m.orders} зак.${m.admin ? ' · админ' : ''}</span></div><div>${m.units}</div><div>${eur(m.revenue)}</div><div>${eur(m.discount)}</div></div>`).join('') + '</div><div class="lbl">Нажми на менеджера, чтобы открыть его профиль.</div>' : '<div class="empty">Других менеджеров пока нет</div>');
   }
   $('profBody').innerHTML = h;
+  if(j.settle) loadMyPay();
 }
 $('profBody').addEventListener('click', e => { if(e.target.closest('#profBack')) return loadProfile(''); const r = e.target.closest('[data-m]'); if(r){ window.scrollTo(0, 0); loadProfile(r.dataset.m); } });
 
@@ -882,9 +896,9 @@ function openPay(o){
   $('payModal').classList.add('on');
 }
 function openSeller(o){
-  PO = o; PMODE = 'seller'; $('payTitle').textContent = 'Кто из админов продал';
-  $('payInfo').textContent = 'Заказ №' + o.no + ' · ' + eur(o.total) + '. Общий аккаунт города — отметь, кто из вас продал.';
-  const list = ((ME.admins || {})[REG_OF(o.city)] || []); const cur = o.seller || '';
+  PO = o; PMODE = 'seller'; $('payTitle').textContent = 'Кто продал и принял оплату';
+  $('payInfo').textContent = 'Заказ №' + o.no + ' · ' + eur(o.total) + '. Общий аккаунт города: продал тот, кто получил деньги.';
+  const list = ((ME.admins || {})[REG_OF(o.city)] || []); const cur = effSeller(o);
   $('payOpts').innerHTML = list.map(a => `<button class="btn ${cur === String(a.id) ? 'main' : ''}" data-to="${esc(a.id)}">👤 ${esc(a.name)}</button>`).join('') + (cur ? '<button class="btn" data-to="">↺ Сбросить</button>' : '');
   $('payModal').classList.add('on');
 }
@@ -895,18 +909,67 @@ const isShared = c => !!(ME && (ME.shared || []).includes(c));
 function asPartners(){ const r = {}; ((ME && ME.admins && ME.admins[REG_OF((ME.shared || [])[0] || 'bb')]) || []).forEach(a => r[a.id] = a); return Object.values(r); }
 function paintAs(){
   const bar = $('asBar');
-  if(!ME || !(ME.shared || []).length){ bar.style.display = 'none'; return; }
+  if(!ME || !(ME.shared || []).length || !cityList().some(isShared)){ bar.style.display = 'none'; return; }
   const ps = asPartners();
   if(!AS || !ps.some(a => String(a.id) === AS)){ AS = ps.some(a => String(a.id) === String(ME.id)) ? String(ME.id) : ''; }
   bar.style.display = '';
-  bar.innerHTML = '<div class="lbl" style="margin:0 0 4px">Общий аккаунт · я продаю как:</div><div style="display:flex;gap:8px;flex-wrap:wrap">' + ps.map(a => `<span class="chip ${AS === String(a.id) ? 'on' : ''}" data-as="${esc(a.id)}">${esc(a.name)}</span>`).join('') + '</div>' + (AS ? '' : '<div class="lbl" style="color:var(--warn);margin-top:4px">Выбери себя — иначе не получится принять или выдать заказ</div>');
+  bar.innerHTML = '<div class="lbl" style="margin:0 0 4px">Общий аккаунт Banská Bystrica · продаю и принимаю оплату как:</div><div style="display:flex;gap:8px;flex-wrap:wrap">' + ps.map(a => `<span class="chip ${AS === String(a.id) ? 'on' : ''}" data-as="${esc(a.id)}">${esc(a.name)}</span>`).join('') + '</div>' + (AS ? '' : '<div class="lbl" style="color:var(--warn);margin-top:4px">Выбери себя — иначе не получится принять или выдать заказ</div>');
 }
 $('asBar').addEventListener('click', e => { const c = e.target.closest('[data-as]'); if(!c) return; AS = c.dataset.as; try { localStorage.setItem('asId', AS); } catch(x) {} paintAs(); });
 $('payOpts').addEventListener('click', async e => {
   const b = e.target.closest('button[data-to]'); if(!b || !PO) return;
-  const j = await api(PMODE === 'seller' ? 'seller' : 'paid', {}, {no: PO.no, to: b.dataset.to});
-  if(j.ok){ $('payModal').classList.remove('on'); haptic('success'); toast('Записано'); loadOrders(); } else toast(j.error || 'Ошибка', true);
+  const j = await api('paid', {}, {no: PO.no, to: b.dataset.to});
+  if(j.ok){ $('payModal').classList.remove('on'); haptic('success'); toast('Записано'); if(TAB === 'orders') loadOrders(); else loadStats(); } else toast(j.error || 'Ошибка', true);
 });
+
+
+// ---------- кто продал: список заказов в Расчётах (общий аккаунт) ----------
+let SORD = {}, SOF = '';
+function paintSO(){
+  const box = $('soBox'); if(!box) return;
+  const c = box.dataset.city, all = SORD[c] || [];
+  const ids = [...new Set(all.map(x => x.seller).filter(Boolean))];
+  const chip = (v, l, n) => `<span class="chip ${SOF === v ? 'on' : ''}" data-sof="${esc(v)}">${esc(l)} · ${n}</span>`;
+  let h = '<h3 style="margin-top:14px">Заказы: кто продал</h3><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">' + chip('', 'Все', all.length) + ids.map(id => chip(id, adminName(c, id), all.filter(x => x.seller === id).length)).join('') + (all.some(x => !x.seller) ? chip('unset', 'Не указано', all.filter(x => !x.seller).length) : '') + '</div>';
+  const list = all.filter(x => !SOF ? true : SOF === 'unset' ? !x.seller : x.seller === SOF).slice(0, 150);
+  h += list.length ? '<div class="tbl">' + list.map(x => `<div class="r tap" data-so="${x.no}" style="grid-template-columns:.6fr 1.2fr 1.4fr .9fr"><div>№${x.no}</div><div>${new Date(x.ts).toLocaleDateString('ru-RU')}</div><div${x.seller ? '' : ' style="color:var(--warn)"'}>${x.seller ? esc(x.name) : 'не указано'}</div><div>${eur(x.total)}</div></div>`).join('') + '</div><div class="lbl">Нажми на заказ, чтобы сменить: продал тот, кто принял оплату.</div>' : '<div class="empty">Нет заказов</div>';
+  box.innerHTML = h;
+}
+document.addEventListener('click', e => {
+  const c = e.target.closest('#soBox [data-sof]'); if(c){ SOF = c.dataset.sof; return paintSO(); }
+  const r = e.target.closest('#soBox [data-so]'); if(r){ const city = $('soBox').dataset.city; const x = (SORD[city] || []).find(y => String(y.no) === r.dataset.so); if(x) openSeller({no: x.no, total: x.total, city, paid_to: x.seller, seller: x.seller}); }
+});
+
+// ---------- мои выплаты (профиль) ----------
+let MPV = 'batch';
+let MPD = null;
+async function loadMyPay(){
+  const box = $('myPay'); if(!box) return;
+  const [f, t] = PPERIOD === 'all' ? [1, Date.now() + 86400000] : periodRange(PPERIOD);
+  const p = {from: f, to: t}; if(PROF_ID && ME && PROF_ID !== String(ME.id)) p.manager = PROF_ID;
+  const j = await api('my_pay', p);
+  if(!j.ok || !$('myPay')){ return; }
+  MPD = j; paintMyPay();
+}
+function paintMyPay(){
+  const box = $('myPay'); if(!box || !MPD) return; const j = MPD;
+  const ds = d => d ? String(d).split('-').reverse().join('.') : '';
+  const KT = {payout: '💸 Выплата', bonus: '🎁 Бонус', penalty: '⚠️ Штраф'};
+  let h = '<h3>Мои выплаты</h3><div class="seg" id="mpSeg" style="margin-bottom:8px"><button data-v="batch" class="' + (MPV === 'batch' ? 'on' : '') + '">По поставкам</button><button data-v="period" class="' + (MPV === 'period' ? 'on' : '') + '">За период</button></div>';
+  if(MPV === 'period'){
+    h += '<div class="kpis"><div class="kpi hot"><div class="k">Выплачено</div><div class="v">' + eur(j.period.paid) + '</div></div>' + (j.period.bonus ? '<div class="kpi"><div class="k">Бонусы</div><div class="v">+' + eur(j.period.bonus) + '</div></div>' : '') + (j.period.penalty ? '<div class="kpi"><div class="k">Штрафы</div><div class="v">−' + eur(j.period.penalty) + '</div></div>' : '') + '</div>';
+    h += j.ledger.length ? '<div class="tbl">' + j.ledger.map(x => `<div class="r" style="grid-template-columns:1.3fr .9fr 1fr"><div>${KT[x.kind] || x.kind}<span class="sm">${esc(CITY_FULL[x.city] || x.city)}${x.batch_date ? ' · пост. ' + esc(ds(x.batch_date)) : ''}${x.note ? ' · ' + esc(x.note) : ''}</span></div><div>${esc(ds(x.date))}</div><div>${x.kind === 'penalty' ? '−' : x.kind === 'bonus' ? '+' : ''}${eur(x.amount)}</div></div>`).join('') + '</div>' : '<div class="empty">За этот период выплат нет</div>';
+  } else {
+    const bl = []; j.rows.forEach(r => r.batches.forEach(b => { if(b.commission || b.paid || b.bonus || b.penalty) bl.push({...b, city: r.city}); }));
+    h += bl.length ? '<div class="tbl"><div class="r hd" style="grid-template-columns:1.3fr .8fr .8fr .8fr"><div>Поставка</div><div>Заработано</div><div>Выплачено</div><div>Осталось</div></div>' + bl.map(b => `<div class="r" style="grid-template-columns:1.3fr .8fr .8fr .8fr"><div>${esc(ds(b.date))}${b.note ? ' · ' + esc(b.note) : ''}<span class="sm">${esc(CITY_FULL[b.city] || b.city)} · ${b.pct} %${b.bonus ? ' · бонус +' + eur(b.bonus) : ''}${b.penalty ? ' · штраф −' + eur(b.penalty) : ''}</span></div><div>${eur(b.commission)}</div><div>${eur(b.paid)}</div><div${b.remaining > 0.004 ? ' style="color:var(--magenta)"' : ''}>${eur(b.remaining)}</div></div>`).join('') + '</div>' : '<div class="empty">Пока нет начислений по поставкам</div>';
+    const un = j.rows.reduce((a, r) => a + (r.unlinked || 0), 0);
+    if(un) h += `<div class="lbl">Выплаты без привязки к поставке: ${eur(un)}</div>`;
+    const rem = j.rows.reduce((a, r) => a + (r.remaining || 0), 0);
+    h += `<div class="lbl" style="font-size:.82rem;color:#fff;margin:6px 0">Всего осталось к выплате: <b>${eur(rem)}</b></div>`;
+  }
+  box.innerHTML = h;
+}
+document.addEventListener('click', e => { const b = e.target.closest('#mpSeg button'); if(b){ MPV = b.dataset.v; paintMyPay(); } });
 
 // ---------- финансы (админы): расчёты с менеджерами и доли партнёров ----------
 let FSEG = 'sales', MM = null, SMODE = 'city';
@@ -949,7 +1012,7 @@ async function loadSettle(){
     const row = (k, v, b) => `<div class="r" style="grid-template-columns:1.6fr 1fr"><div>${k}</div><div>${b ? '<b>' + v + '</b>' : v}</div></div>`;
     const adm = Object.keys(r.byAdmin || {}).map(id => `${esc(adminName(r.city, id))}: ${eur(r.byAdmin[id])}`).join(' · ');
     if(r.adminMgr){
-      h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · аккаунт админов</h3><div class="tbl">${row('Прибыль города', eur(r.profit), 1)}${row('Оплата на аккаунт и реквизиты админов', eur(r.cashIn + r.toAdmins) + (adm ? '<span class="sm">' + adm + '</span>' : ''))}${r.unset > 0 ? row('Не указано, кто принял', '<span style="color:var(--warn)">' + eur(r.unset) + '</span>') : ''}</div><div class="lbl">Менеджер этого города — общий аккаунт админов: процент и выплаты не нужны, прибыль делится по вкладам (вкладка «Партнёры»).</div>${r.noCostRevenue > 0 ? `<div class="lbl" style="color:var(--warn)">⚠️ ${eur(r.noCostRevenue)} выручки в партиях без закупки — в прибыль не вошло.</div>` : ''}${r.sellers ? '<div class="lbl" style="margin-top:8px">Кто продал (за всё время):</div><div class="tbl">' + r.sellers.rows.map(x => `<div class="r" style="grid-template-columns:1.6fr .5fr 1fr"><div>${esc(x.name)}</div><div>${x.orders}</div><div>${eur(x.revenue)}</div></div>`).join('') + (r.sellers.unset.orders ? `<div class="r" style="grid-template-columns:1.6fr .5fr 1fr"><div style="color:var(--warn)">Не указано</div><div>${r.sellers.unset.orders}</div><div>${eur(r.sellers.unset.revenue)}</div></div>` : '') + '</div>' : ''}`;
+      h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · аккаунт админов</h3><div class="tbl">${row('Прибыль города', eur(r.profit), 1)}${row('Оплата на аккаунт и реквизиты админов', eur(r.cashIn + r.toAdmins) + (adm ? '<span class="sm">' + adm + '</span>' : ''))}${r.unset > 0 ? row('Не указано, кто принял', '<span style="color:var(--warn)">' + eur(r.unset) + '</span>') : ''}</div><div class="lbl">Менеджер этого города — общий аккаунт админов: процент и выплаты не нужны, прибыль делится по вкладам (вкладка «Партнёры»).</div>${r.noCostRevenue > 0 ? `<div class="lbl" style="color:var(--warn)">⚠️ ${eur(r.noCostRevenue)} выручки в партиях без закупки — в прибыль не вошло.</div>` : ''}${r.sellers ? '<div class="lbl" style="margin-top:8px">Кто продал (за всё время):</div><div class="tbl">' + r.sellers.rows.map(x => `<div class="r" style="grid-template-columns:1.6fr .5fr 1fr"><div>${esc(x.name)}</div><div>${x.orders}</div><div>${eur(x.revenue)}</div></div>`).join('') + (r.sellers.unset.orders ? `<div class="r" style="grid-template-columns:1.6fr .5fr 1fr"><div style="color:var(--warn)">Не указано</div><div>${r.sellers.unset.orders}</div><div>${eur(r.sellers.unset.revenue)}</div></div>` : '') + '</div>' : ''}${r.sellerOrders ? `<div id="soBox" data-city="${esc(r.city)}"></div>` : ''}`;
       return;
     }
     h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · ${esc(r.manager || 'менеджер')}</h3><div class="tbl">
@@ -963,7 +1026,7 @@ async function loadSettle(){
     <div class="acts" style="margin-top:6px"><button class="btn sm" data-led="handover" data-city="${r.city}">💵 Менеджер сдал наличные</button><button class="btn sm" data-led="payout" data-city="${r.city}">💸 Выплата менеджеру</button><button class="btn sm" data-led="bonus" data-city="${r.city}">➕ Бонус</button><button class="btn sm bad" data-led="penalty" data-city="${r.city}">➖ Штраф</button></div>`;
   });
   if(j.ledger.length) h += '<h3>Журнал</h3><div class="tbl">' + j.ledger.map(l => `<div class="r" style="grid-template-columns:1.8fr .8fr .4fr"><div>${({handover: '💵 Сдал наличные', payout: '💸 Выплата менеджеру', bonus: '➕ Бонус', penalty: '➖ Штраф'})[l.kind] || l.kind}${l.batch_id ? ' (за партию)' : ''} · ${esc(CITY_FULL[l.city] || l.city)}<span class="sm">${esc(String(l.date || '').split('-').reverse().join('.'))}${l.note ? ' · ' + esc(l.note) : ''} · ${esc(l.created_by || '')}</span></div><div>${eur(l.amount)}</div><div><button class="btn sm bad" data-ldel="${l.id}">✕</button></div></div>`).join('') + '</div>';
-  $('statsBody').innerHTML = h;
+  $('statsBody').innerHTML = h; SORD = {}; j.rows.forEach(r => { if(r.sellerOrders) SORD[r.city] = r.sellerOrders; }); paintSO();
 }
 $('statsBody').addEventListener('click', e => { const b = e.target.closest('#setSeg button'); if(!b) return; SMODE = b.dataset.m; loadSettle(); });
 $('statsBody').addEventListener('change', async e => {
@@ -1047,7 +1110,7 @@ function paintCity(){
 }
 $('cityBtn').addEventListener('click', e => { e.stopPropagation(); $('cityMenu').classList.toggle('open'); });
 document.addEventListener('click', e => { if(!e.target.closest('#cityMenu')) $('cityMenu').classList.remove('open'); });
-$('cityMenu').addEventListener('click', e => { const b = e.target.closest('button[data-c]'); if(!b) return; CITY = b.dataset.c; $('cityMenu').classList.remove('open'); paintCity(); ORDERS = []; setTab(TAB); });
+$('cityMenu').addEventListener('click', e => { const b = e.target.closest('button[data-c]'); if(!b) return; CITY = b.dataset.c; $('cityMenu').classList.remove('open'); paintCity(); paintAs(); ORDERS = []; setTab(TAB); });
 async function boot(){
   const j = await api('me');
   if(!j.ok){ const d = document.createElement('div'); d.className = 'deny'; d.innerHTML = `<div><div style="font-size:2.2rem">🔒</div><h2>${esc(j.error || 'Нет доступа')}</h2><p>Открой приложение из менеджерского бота SMOKEEZ ERP. Если доступа всё равно нет — напиши администратору.</p></div>`; document.body.classList.add('denied'); document.body.appendChild(d); return; }
