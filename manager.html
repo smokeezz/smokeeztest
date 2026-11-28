@@ -328,6 +328,12 @@ h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
   <div class="acts"><button class="btn" id="payCancel">Отмена</button></div>
 </div></div>
 
+<div class="modal" id="sbModal"><div class="sheet">
+  <h2>Кто продал заказ</h2>
+  <div class="lbl" id="sbInfo"></div>
+  <div class="chips wrapchips" id="sbList"></div>
+  <div class="acts"><button class="btn" id="sbCancel">Отмена</button></div>
+</div></div>
 <div class="modal" id="mvModal"><div class="sheet">
   <h2>Передать заказ в другой город</h2>
   <div class="lbl" id="mvInfo"></div>
@@ -436,7 +442,8 @@ function adminName(city, id){ const l = (ME && ME.admins && ME.admins[REG_OF(cit
 const effSeller = o => (o.paid_to && o.paid_to !== 'mgr') ? String(o.paid_to) : (o.seller ? String(o.seller) : '');
 function payLine(o){
   if(o.status === 'cancelled') return '';
-  const mv = o.moved_from ? `<div class="lbl" style="margin:6px 0 0">↪ передан из ${esc(CITY_FULL[o.moved_from] || o.moved_from)}</div>` : '';
+  const sbn = o.sold_by ? `<div class="lbl" style="margin:6px 0 0">🧑‍💼 продал менеджер: <b style="color:#fff">${esc(((ME.managers || []).find(m => m.id === String(o.sold_by)) || {}).name || 'id ' + o.sold_by)}</b></div>` : '';
+  const mv = sbn + (o.moved_from ? `<div class="lbl" style="margin:6px 0 0">↪ передан из ${esc(CITY_FULL[o.moved_from] || o.moved_from)}</div>` : '');
   if(isShared(o.city)){ const sid = effSeller(o); return mv + `<div class="lbl" style="margin:6px 0 0;${sid ? '' : 'color:var(--warn)'}">👤 ${sid ? 'Продал и принял оплату: ' + esc(adminName(o.city, sid)) : 'не указано, кто из админов продал и принял оплату'}</div>`; }
   const sl = '';
   let t, warn = false;
@@ -466,7 +473,7 @@ function orderHtml(o){
   else if(o.status === 'accepted') acts = `<button class="btn main" data-a="rdy">✅ Готов к выдаче</button><button class="btn bad" data-a="cx">Отменить</button>`;
   else if(o.status === 'ready') acts = `<button class="btn main" data-a="done">📦 Выдан</button><button class="btn bad" data-a="cx">Отменить</button>`;
   const editable = ['delivered', 'reserved', 'accepted', 'ready'].includes(o.status) || (o.status === 'done' && ME && ME.admin);
-  const extra = (o.status !== 'cancelled' ? (isShared(o.city) ? '<button class="btn sm" data-a="seller">👤 Кто продал</button>' : '<button class="btn sm" data-a="pay">💳 Оплата</button>') : '') + (editable ? '<button class="btn sm" data-a="edit">✏️ Изменить состав</button>' : '') + (o.status !== 'cancelled' ? '<button class="btn sm" data-a="disc">🏷 Скидка</button>' : '') + (ME && ME.admin && o.status !== 'cancelled' && ME.cities.filter(c => c !== o.city && REG_OF(c) === REG_OF(o.city)).length ? '<button class="btn sm" data-a="move">↪ В другой город</button>' : '') + (ME && ME.admin ? '<button class="btn sm bad" data-a="del">🗑 Удалить</button>' : '');
+  const extra = (o.status !== 'cancelled' ? (isShared(o.city) ? '<button class="btn sm" data-a="seller">👤 Кто продал</button>' : '<button class="btn sm" data-a="pay">💳 Оплата</button>') : '') + (editable ? '<button class="btn sm" data-a="edit">✏️ Изменить состав</button>' : '') + (o.status !== 'cancelled' ? '<button class="btn sm" data-a="disc">🏷 Скидка</button>' : '') + (ME && ME.admin && o.status !== 'cancelled' && (ME.managers || []).length > 1 ? '<button class="btn sm" data-a="soldby">🧑‍💼 Продал другой менеджер</button>' : '') + (ME && ME.admin && o.status !== 'cancelled' && ME.cities.filter(c => c !== o.city && REG_OF(c) === REG_OF(o.city)).length ? '<button class="btn sm" data-a="move">↪ В другой город</button>' : '') + (ME && ME.admin ? '<button class="btn sm bad" data-a="del">🗑 Удалить</button>' : '');
   const self = (o.status !== 'cancelled') ? `<label class="self"><input type="checkbox" data-self ${o.for_self ? 'checked' : ''}> 🏷 Взял себе (не продажа — в учёте «взято собой»)</label>` : '';
   return `<div class="card ${isNew ? 'new' : ''} ${late ? 'late' : ''} ${open ? 'open' : ''}" data-no="${o.no}">
     <div class="h" data-toggle><span class="no">№${o.no}</span><span class="city">${esc(cityName(o.city))}</span><span class="st ${stC}">${stT}</span></div>
@@ -517,6 +524,7 @@ $('ordList').addEventListener('click', async e => {
     const act = a.dataset.a;
     if(act === 'edit') return openEdit(o);
     if(act === 'move') return openMove(o);
+    if(act === 'soldby') return openSoldBy(o);
     if(act === 'disc') return openDisc(o);
     if(act === 'pay') return openPay(o);
     if(act === 'seller') return openSeller(o);
@@ -996,7 +1004,7 @@ const netMsg = n => n > 0.004 ? `Админы должны менеджеру <b
 $('finSeg').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; FSEG = b.dataset.f; [...$('finSeg').children].forEach(x => x.classList.toggle('on', x === b)); loadStats(); });
 const setSegHtml = () => `<div class="seg" id="setSeg" style="margin-bottom:8px"><button data-m="city" class="${SMODE === 'city' ? 'on' : ''}">По городу</button><button data-m="batch" class="${SMODE === 'batch' ? 'on' : ''}">По поставкам</button></div>`;
 const dshort = ts => new Date(ts).toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit'});
-function segTag(r){ if(!r.seg) return ''; return r.seg.current ? ` <span class="sm" style="display:inline">с ${dshort(r.seg.from || 0)}${r.seg.from ? '' : ' (раньше)'}</span>` : ` <span class="sm" style="display:inline;color:var(--warn)">бывший · до ${dshort(r.seg.to)}</span>`; }
+function segTag(r){ if(!r.seg) return ''; if(r.seg.guest) return ' <span class="sm" style="display:inline;color:var(--warn)">продавал здесь вместо менеджера города</span>'; return r.seg.current ? ` <span class="sm" style="display:inline">с ${dshort(r.seg.from || 0)}${r.seg.from ? '' : ' (раньше)'}</span>` : ` <span class="sm" style="display:inline;color:var(--warn)">бывший · до ${dshort(r.seg.to)}</span>`; }
 const mgrBtnAttr = r => r.seg ? ` data-mgr="${esc(r.manager_id)}"` : '';
 async function loadSettleBatches(){
   $('statsBody').innerHTML = setSegHtml() + '<div class="empty">Считаю…</div>';
@@ -1112,6 +1120,16 @@ $('chgSave').onclick = async () => {
   $('chgSave').disabled = true; const j = await api('mgr_change', {}, {city: CHG, prev_id: prev, date: $('chgDate').value}); $('chgSave').disabled = false;
   if(j.ok){ $('chgModal').classList.remove('on'); haptic('success'); toast('Менеджер сменён'); loadSettle(); } else toast(j.error || 'Ошибка', true);
 };
+let SBO = null;
+function openSoldBy(o){
+  SBO = o;
+  $('sbInfo').innerHTML = `Заказ №${o.no} остаётся в ${esc(CITY_FULL[o.city] || o.city)} (склад и партии те же), а продажа, наличные и процент идут выбранному менеджеру.`;
+  const cur = String(o.sold_by || '');
+  $('sbList').innerHTML = (ME.managers || []).map(m => `<span class="chip ${cur === m.id ? 'on' : ''}" data-sb="${esc(m.id)}">${esc(m.name)}</span>`).join('') + (cur ? '<span class="chip" data-sb="">↺ Менеджер города</span>' : '');
+  $('sbModal').classList.add('on');
+}
+$('sbList').addEventListener('click', async e => { const c = e.target.closest('[data-sb]'); if(!c || !SBO) return; const j = await api('sold_by', {}, {no: SBO.no, mgr: c.dataset.sb}); if(j.ok){ $('sbModal').classList.remove('on'); haptic('success'); toast('Записано'); loadOrders(); } else toast(j.error || 'Ошибка', true); });
+$('sbCancel').onclick = () => $('sbModal').classList.remove('on');
 let MVO = null, MVTO = '';
 function openMove(o){
   MVO = o; MVTO = '';
