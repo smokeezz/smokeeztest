@@ -328,6 +328,16 @@ h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
   <div class="acts"><button class="btn" id="payCancel">Отмена</button></div>
 </div></div>
 
+<div class="modal" id="chgModal"><div class="sheet">
+  <h2 id="chgTitle">Смена менеджера</h2>
+  <div class="lbl" id="chgInfo"></div>
+  <div class="lbl">Кто был менеджером до этого</div>
+  <select class="inp" id="chgPrev" style="width:100%"></select>
+  <input class="inp" id="chgPrevId" inputmode="numeric" placeholder="или Telegram ID вручную" style="width:100%;margin-top:8px">
+  <div class="lbl" style="margin-top:8px">С какой даты работает новый</div>
+  <input class="inp" type="date" id="chgDate" style="width:100%">
+  <div class="acts"><button class="btn" id="chgCancel">Отмена</button><button class="btn main" id="chgSave">Сохранить</button></div>
+</div></div>
 <div class="modal" id="moneyModal"><div class="sheet">
   <h2 id="mmTitle">Операция</h2>
   <div class="lbl" id="mmInfo"></div>
@@ -864,7 +874,7 @@ async function loadProfile(id){
   const P = j.profile, T = j.total, kpi = (k, v, hot) => `<div class="kpi ${hot ? 'hot' : ''}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
   let h = '';
   if(!P.self) h += '<div class="back" id="profBack">← К моему профилю</div>';
-  h += `<div class="pf"><div class="avatar">${esc((P.name || '?').replace(/^[@\s]+/, '').charAt(0).toUpperCase() || '?')}</div><div style="min-width:0"><div class="nm">${esc(P.name)}</div><div class="rl"><span class="tag ${P.admin ? 'adm' : ''}">${P.admin ? 'АДМИН' : 'МЕНЕДЖЕР'}</span>${P.cities.map(c => `<span class="tag">${esc(CITY_FULL[c] || c)}</span>`).join('')}</div></div></div>`;
+  h += `<div class="pf"><div class="avatar">${esc((P.name || '?').replace(/^[@\s]+/, '').charAt(0).toUpperCase() || '?')}</div><div style="min-width:0"><div class="nm">${esc(P.name)}</div><div class="rl"><span class="tag ${P.admin ? 'adm' : ''}">${P.admin ? 'АДМИН' : j.former ? 'БЫВШИЙ МЕНЕДЖЕР' : 'МЕНЕДЖЕР'}</span>${P.cities.map(c => `<span class="tag">${esc(CITY_FULL[c] || c)}</span>`).join('')}</div></div></div>`;
   h += '<div class="kpis">' + kpi('Выручка', eur(T.revenue), 1) + kpi('Продано, шт', T.units + ' <small>· ' + T.orders + ' зак.</small>') + kpi('Скидки', eur(T.discount)) + kpi('Взято себе', (T.selfUnits || 0) + ' шт') + kpi('Клиентов обслужил', j.clients.mine) + kpi('Клиентов в городе', j.clients.city + ' <small>· за период ' + j.clients.period + '</small>') + '</div>';
   h += `<div class="legend" style="margin-bottom:4px"><span>Выдано заказов за всё время: <b>${j.handledAll}</b></span>${T.cancelled ? `<span>Отменено: <b>${T.cancelled}</b></span>` : ''}</div>`;
   if(j.settle){
@@ -976,6 +986,9 @@ let FSEG = 'sales', MM = null, SMODE = 'city';
 const netMsg = n => n > 0.004 ? `Админы должны менеджеру <b>${eur(n)}</b>` : n < -0.004 ? `Менеджер должен админам <b>${eur(-n)}</b>` : 'Расчёт закрыт';
 $('finSeg').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; FSEG = b.dataset.f; [...$('finSeg').children].forEach(x => x.classList.toggle('on', x === b)); loadStats(); });
 const setSegHtml = () => `<div class="seg" id="setSeg" style="margin-bottom:8px"><button data-m="city" class="${SMODE === 'city' ? 'on' : ''}">По городу</button><button data-m="batch" class="${SMODE === 'batch' ? 'on' : ''}">По поставкам</button></div>`;
+const dshort = ts => new Date(ts).toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit'});
+function segTag(r){ if(!r.seg) return ''; return r.seg.current ? ` <span class="sm" style="display:inline">с ${dshort(r.seg.from || 0)}${r.seg.from ? '' : ' (раньше)'}</span>` : ` <span class="sm" style="display:inline;color:var(--warn)">бывший · до ${dshort(r.seg.to)}</span>`; }
+const mgrBtnAttr = r => r.seg ? ` data-mgr="${esc(r.manager_id)}"` : '';
 async function loadSettleBatches(){
   $('statsBody').innerHTML = setSegHtml() + '<div class="empty">Считаю…</div>';
   const p = {}; if(CITY) p.city = CITY;
@@ -984,7 +997,7 @@ async function loadSettleBatches(){
   let h = setSegHtml() + '<div class="lbl">Зарплата менеджера за каждую партию города: его % × чистая прибыль партии (выручка − закупка проданного). Можно задать свой % для партии и выплатить за неё отдельно.</div>';
   if(!j.rows.length) h += '<div class="empty">Нет городов с менеджером</div>';
   j.rows.forEach(r => {
-    h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · ${esc(r.manager || 'менеджер')}</h3><div class="lbl">Стандартный процент: <b style="color:#fff">${r.pct} %</b> · заработал по партиям ${eur(r.commission)} · выплачено ${eur(r.paidLinked + r.unlinked)}${r.unlinked ? ` (из них ${eur(r.unlinked)} без привязки к партии)` : ''}${r.unBonus ? ` · общие бонусы +${eur(r.unBonus)}` : ''}${r.unPenalty ? ` · общие штрафы −${eur(r.unPenalty)}` : ''} · <b style="color:#fff">осталось ${eur(r.remaining)}</b></div>`;
+    h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · ${esc(r.manager || 'менеджер')}${segTag(r)}</h3><div class="lbl">Стандартный процент: <b style="color:#fff">${r.pct} %</b> · заработал по партиям ${eur(r.commission)} · выплачено ${eur(r.paidLinked + r.unlinked)}${r.unlinked ? ` (из них ${eur(r.unlinked)} без привязки к партии)` : ''}${r.unBonus ? ` · общие бонусы +${eur(r.unBonus)}` : ''}${r.unPenalty ? ` · общие штрафы −${eur(r.unPenalty)}` : ''} · <b style="color:#fff">осталось ${eur(r.remaining)}</b></div>`;
     if(!r.batches.length) h += '<div class="empty" style="padding:12px">Партий пока нет</div>';
     r.batches.forEach(b => {
       h += `<div class="bcard" style="margin-bottom:10px"><div class="tbl">
@@ -994,7 +1007,7 @@ async function loadSettleBatches(){
         <div class="r" style="grid-template-columns:1.5fr 1fr"><div>Процент менеджера${b.override ? ' <span class="sm">свой для партии</span>' : ''}</div><div><input class="inp" data-brate="${b.id}" value="${b.override ? b.pct : ''}" placeholder="${r.pct}" inputmode="decimal" style="width:70px;text-align:right"> %</div></div>
         <div class="r" style="grid-template-columns:1.5fr 1fr"><div>Заработал · выплачено</div><div>${eur(b.commission)} · ${eur(b.paid)}</div></div>${b.bonus ? `<div class="r" style="grid-template-columns:1.5fr 1fr"><div>Бонусы</div><div>+${eur(b.bonus)}</div></div>` : ''}${b.penalty ? `<div class="r" style="grid-template-columns:1.5fr 1fr"><div>Штрафы</div><div>−${eur(b.penalty)}</div></div>` : ''}
         <div class="r" style="grid-template-columns:1.5fr 1fr"><div>Осталось выплатить</div><div><b>${eur(b.remaining)}</b></div></div></div>
-        <div class="acts" style="margin-top:6px"><button class="btn sm" data-led="payout" data-city="${r.city}" data-batch="${b.id}" data-amt="${Math.max(0, b.remaining)}" data-bl="${esc(String(b.date).split('-').reverse().join('.'))}">💸 Выплатить за партию</button><button class="btn sm" data-led="bonus" data-city="${r.city}" data-batch="${b.id}" data-bl="${esc(String(b.date).split('-').reverse().join('.'))}">➕ Бонус</button><button class="btn sm bad" data-led="penalty" data-city="${r.city}" data-batch="${b.id}" data-bl="${esc(String(b.date).split('-').reverse().join('.'))}">➖ Штраф</button></div></div>`;
+        <div class="acts" style="margin-top:6px"><button class="btn sm" data-led="payout" data-city="${r.city}"${mgrBtnAttr(r)} data-batch="${b.id}" data-amt="${Math.max(0, b.remaining)}" data-bl="${esc(String(b.date).split('-').reverse().join('.'))}">💸 Выплатить за партию</button><button class="btn sm" data-led="bonus" data-city="${r.city}"${mgrBtnAttr(r)} data-batch="${b.id}" data-bl="${esc(String(b.date).split('-').reverse().join('.'))}">➕ Бонус</button><button class="btn sm bad" data-led="penalty" data-city="${r.city}"${mgrBtnAttr(r)} data-batch="${b.id}" data-bl="${esc(String(b.date).split('-').reverse().join('.'))}">➖ Штраф</button></div></div>`;
     });
   });
   $('statsBody').innerHTML = h;
@@ -1015,7 +1028,7 @@ async function loadSettle(){
       h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · аккаунт админов</h3><div class="tbl">${row('Прибыль города', eur(r.profit), 1)}${row('Оплата на аккаунт и реквизиты админов', eur(r.cashIn + r.toAdmins) + (adm ? '<span class="sm">' + adm + '</span>' : ''))}${r.unset > 0 ? row('Не указано, кто принял', '<span style="color:var(--warn)">' + eur(r.unset) + '</span>') : ''}</div><div class="lbl">Менеджер этого города — общий аккаунт админов: процент и выплаты не нужны, прибыль делится по вкладам (вкладка «Партнёры»).</div>${r.noCostRevenue > 0 ? `<div class="lbl" style="color:var(--warn)">⚠️ ${eur(r.noCostRevenue)} выручки в партиях без закупки — в прибыль не вошло.</div>` : ''}${r.sellers ? '<div class="lbl" style="margin-top:8px">Кто продал (за всё время):</div><div class="tbl">' + r.sellers.rows.map(x => `<div class="r" style="grid-template-columns:1.6fr .5fr 1fr"><div>${esc(x.name)}</div><div>${x.orders}</div><div>${eur(x.revenue)}</div></div>`).join('') + (r.sellers.unset.orders ? `<div class="r" style="grid-template-columns:1.6fr .5fr 1fr"><div style="color:var(--warn)">Не указано</div><div>${r.sellers.unset.orders}</div><div>${eur(r.sellers.unset.revenue)}</div></div>` : '') + '</div>' : ''}${r.sellerOrders ? `<div id="soBox" data-city="${esc(r.city)}"></div>` : ''}`;
       return;
     }
-    h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · ${esc(r.manager || 'менеджер')}</h3><div class="tbl">
+    h += `<h3>${esc(CITY_FULL[r.city] || r.city)} · ${esc(r.manager || 'менеджер')}${segTag(r)}</h3><div class="tbl">
       <div class="r" style="grid-template-columns:1.6fr 1fr"><div>Процент менеджера</div><div><input class="inp" data-rate="${esc(r.manager_id)}" value="${r.pct}" inputmode="decimal" style="width:70px;text-align:right"> %</div></div>
       ${row('Прибыль города', eur(r.profit))}${row('Заработал менеджер (по %)', eur(r.earned))}${r.bonus ? row('Бонусы', '+' + eur(r.bonus)) : ''}${r.penalty ? row('Штрафы', '−' + eur(r.penalty)) : ''}${row('Выплачено ему', eur(r.paid))}${row('К выплате менеджеру', eur(r.toPay), 1)}
       ${row('Наличные принял менеджер', eur(r.cashIn))}${row('Сдал админам', eur(r.handed))}${row('Сейчас на руках у менеджера', eur(r.held), 1)}
@@ -1023,9 +1036,10 @@ async function loadSettle(){
       ${r.unset > 0 ? row('Не указано, кто принял', '<span style="color:var(--warn)">' + eur(r.unset) + '</span>') : ''}
     </div><div class="lbl" style="font-size:.82rem;color:#fff;margin:6px 0">Итог: ${netMsg(r.net)}</div>
     ${r.noCostRevenue > 0 ? `<div class="lbl" style="color:var(--warn)">⚠️ ${eur(r.noCostRevenue)} выручки в партиях без закупки — в прибыль не вошло. Впиши закупку в общую поставку (или в партию города): Поставки → Изменить.</div>` : ''}
-    <div class="acts" style="margin-top:6px"><button class="btn sm" data-led="handover" data-city="${r.city}">💵 Менеджер сдал наличные</button><button class="btn sm" data-led="payout" data-city="${r.city}">💸 Выплата менеджеру</button><button class="btn sm" data-led="bonus" data-city="${r.city}">➕ Бонус</button><button class="btn sm bad" data-led="penalty" data-city="${r.city}">➖ Штраф</button></div>`;
+    <div class="acts" style="margin-top:6px"><button class="btn sm" data-led="handover" data-city="${r.city}"${mgrBtnAttr(r)}>💵 Менеджер сдал наличные</button><button class="btn sm" data-led="payout" data-city="${r.city}"${mgrBtnAttr(r)}>💸 Выплата менеджеру</button><button class="btn sm" data-led="bonus" data-city="${r.city}"${mgrBtnAttr(r)}>➕ Бонус</button><button class="btn sm bad" data-led="penalty" data-city="${r.city}"${mgrBtnAttr(r)}>➖ Штраф</button>${!r.seg || r.seg.current ? `<button class="btn sm" data-chg="${r.city}">🔄 Сменить менеджера</button>` : ''}</div>`;
   });
-  if(j.ledger.length) h += '<h3>Журнал</h3><div class="tbl">' + j.ledger.map(l => `<div class="r" style="grid-template-columns:1.8fr .8fr .4fr"><div>${({handover: '💵 Сдал наличные', payout: '💸 Выплата менеджеру', bonus: '➕ Бонус', penalty: '➖ Штраф'})[l.kind] || l.kind}${l.batch_id ? ' (за партию)' : ''} · ${esc(CITY_FULL[l.city] || l.city)}<span class="sm">${esc(String(l.date || '').split('-').reverse().join('.'))}${l.note ? ' · ' + esc(l.note) : ''} · ${esc(l.created_by || '')}</span></div><div>${eur(l.amount)}</div><div><button class="btn sm bad" data-ldel="${l.id}">✕</button></div></div>`).join('') + '</div>';
+  const mnm = {}; j.rows.forEach(r => { mnm[r.manager_id] = r.manager; });
+  if(j.ledger.length) h += '<h3>Журнал</h3><div class="tbl">' + j.ledger.map(l => `<div class="r" style="grid-template-columns:1.6fr .8fr .7fr"><div>${({handover: '💵 Сдал наличные', payout: '💸 Выплата менеджеру', bonus: '➕ Бонус', penalty: '➖ Штраф'})[l.kind] || l.kind}${l.batch_id ? ' (за партию)' : ''} · ${esc(CITY_FULL[l.city] || l.city)}<span class="sm">${esc(String(l.date || '').split('-').reverse().join('.'))}${l.note ? ' · ' + esc(l.note) : ''} · ${esc(l.created_by || '')}${l.manager_id && j.rows.filter(x => x.city === l.city).length > 1 ? ' · ' + esc(mnm[l.manager_id] || 'id ' + l.manager_id) : ''}</span></div><div>${eur(l.amount)}</div><div style="white-space:nowrap"><button class="btn sm" data-ledit="${l.id}" data-k="${l.kind}" data-amt="${l.amount}" data-d="${esc(l.date || '')}" data-n="${esc(l.note || '')}">✎</button> <button class="btn sm bad" data-ldel="${l.id}">✕</button></div></div>`).join('') + '</div>';
   $('statsBody').innerHTML = h; SORD = {}; j.rows.forEach(r => { if(r.sellerOrders) SORD[r.city] = r.sellerOrders; }); paintSO();
 }
 $('statsBody').addEventListener('click', e => { const b = e.target.closest('#setSeg button'); if(!b) return; SMODE = b.dataset.m; loadSettle(); });
@@ -1044,8 +1058,15 @@ $('statsBody').addEventListener('change', async e => {
 $('statsBody').addEventListener('click', async e => {
   const d = e.target.closest('[data-ldel]');
   if(d){ if(!confirm('Удалить запись из журнала?')) return; const j = await api('ledger_delete', {}, {id: Number(d.dataset.ldel)}); toast(j.ok ? 'Удалено' : (j.error || 'Ошибка'), !j.ok); loadSettle(); return; }
+  const ed = e.target.closest('[data-ledit]');
+  if(ed){
+    MM = {kind: ed.dataset.k, edit: Number(ed.dataset.ledit)};
+    $('mmTitle').textContent = 'Изменить запись'; $('mmInfo').textContent = 'Сумма, дата и заметка исправятся, расчёты пересчитаются.';
+    $('mmAmt').value = ed.dataset.amt; $('mmNote').value = ed.dataset.n; $('mmDate').value = ed.dataset.d || new Date().toISOString().slice(0, 10); $('moneyModal').classList.add('on'); return;
+  }
+  const cg = e.target.closest('[data-chg]'); if(cg) return openChange(cg.dataset.chg);
   const b = e.target.closest('[data-led]'); if(!b) return;
-  MM = {kind: b.dataset.led, city: b.dataset.city, batch: b.dataset.batch ? Number(b.dataset.batch) : 0};
+  MM = {kind: b.dataset.led, city: b.dataset.city, mgr: b.dataset.mgr || '', batch: b.dataset.batch ? Number(b.dataset.batch) : 0};
   const MMT = {handover: 'Менеджер сдал наличные', payout: 'Выплата менеджеру', bonus: 'Бонус менеджеру', penalty: 'Штраф менеджеру'};
   const MMI = {handover: 'Сколько наличных менеджер передал админам — уменьшит сумму у него на руках.', payout: 'Сколько вы выплатили менеджеру — уменьшит «к выплате».', bonus: 'Добавится к его зарплате. Впиши, за что (заметка).', penalty: 'Вычтется из его зарплаты. Впиши, за что (заметка).'};
   $('mmTitle').textContent = MMT[MM.kind] + ' · ' + (CITY_FULL[MM.city] || MM.city) + (MM.batch ? ' · партия ' + (b.dataset.bl || '') : '');
@@ -1056,9 +1077,31 @@ $('mmCancel').onclick = () => $('moneyModal').classList.remove('on');
 $('mmSave').onclick = async () => {
   const amount = parseFloat(String($('mmAmt').value).replace(',', '.'));
   if(!(amount > 0)){ toast('Впиши сумму', true); return; }
+  if(MM.edit){
+    $('mmSave').disabled = true; const j = await api('ledger_edit', {}, {id: MM.edit, amount, note: $('mmNote').value, date: $('mmDate').value}); $('mmSave').disabled = false;
+    if(j.ok){ $('moneyModal').classList.remove('on'); haptic('success'); toast('Изменено'); loadSettle(); } else toast(j.error || 'Ошибка', true);
+    return;
+  }
   if((MM.kind === 'bonus' || MM.kind === 'penalty') && !String($('mmNote').value).trim()){ toast('Впиши, за что (заметка)', true); return; }
-  $('mmSave').disabled = true; const j = await api('ledger_add', {}, {city: MM.city, kind: MM.kind, amount, note: $('mmNote').value, date: $('mmDate').value, batch_id: MM.batch || undefined}); $('mmSave').disabled = false;
+  $('mmSave').disabled = true; const j = await api('ledger_add', {}, {city: MM.city, kind: MM.kind, amount, note: $('mmNote').value, date: $('mmDate').value, batch_id: MM.batch || undefined, manager_id: MM.mgr || undefined}); $('mmSave').disabled = false;
   if(j.ok){ $('moneyModal').classList.remove('on'); haptic('success'); toast('Записано'); loadSettle(); } else toast(j.error || 'Ошибка', true);
+};
+let CHG = '';
+async function openChange(city){
+  CHG = city; $('chgTitle').textContent = 'Смена менеджера · ' + (CITY_FULL[city] || city);
+  $('chgInfo').textContent = 'Загружаю…'; $('chgModal').classList.add('on');
+  const j = await api('mgr_candidates', {city});
+  if(!j.ok){ $('chgInfo').textContent = j.error || 'Ошибка'; return; }
+  $('chgInfo').innerHTML = 'Сейчас в настройках менеджер: <b style="color:#fff">' + esc(j.currentName || j.current) + '</b>. Все продажи до выбранной даты останутся за прежним менеджером (его статистика, % и зарплата), новые пойдут новому.' + (j.history.length ? '' : ' Если новый менеджер ещё не прописан в настройках бота — сначала сделай это.');
+  $('chgPrev').innerHTML = '<option value="">— выбрать —</option>' + j.candidates.filter(c => c.id !== j.current).map(c => `<option value="${esc(c.id)}">${esc(c.name)} · ${c.orders} зак.</option>`).join('');
+  $('chgPrevId').value = ''; $('chgDate').value = new Date().toISOString().slice(0, 10);
+}
+$('chgCancel').onclick = () => $('chgModal').classList.remove('on');
+$('chgSave').onclick = async () => {
+  const prev = $('chgPrevId').value.trim() || $('chgPrev').value;
+  if(!prev){ toast('Выбери прежнего менеджера', true); return; }
+  $('chgSave').disabled = true; const j = await api('mgr_change', {}, {city: CHG, prev_id: prev, date: $('chgDate').value}); $('chgSave').disabled = false;
+  if(j.ok){ $('chgModal').classList.remove('on'); haptic('success'); toast('Менеджер сменён'); loadSettle(); } else toast(j.error || 'Ошибка', true);
 };
 async function loadPartners(){
   const [f, t] = periodRange(SPERIOD, 'sFrom', 'sTo');
