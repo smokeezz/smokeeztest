@@ -328,6 +328,13 @@ h3,h2{text-transform:uppercase;letter-spacing:.02em}.avatar{font-style:italic}
   <div class="acts"><button class="btn" id="payCancel">Отмена</button></div>
 </div></div>
 
+<div class="modal" id="mvModal"><div class="sheet">
+  <h2>Передать заказ в другой город</h2>
+  <div class="lbl" id="mvInfo"></div>
+  <div class="chips wrapchips" id="mvCities"></div>
+  <label style="display:flex;gap:8px;align-items:center;margin:10px 0;font-size:.82rem;color:var(--dim)"><input type="checkbox" id="mvNoStock"> Склад уже перенёс вручную — не трогать</label>
+  <div class="acts"><button class="btn" id="mvCancel">Отмена</button><button class="btn main" id="mvSave">Передать</button></div>
+</div></div>
 <div class="modal" id="chgModal"><div class="sheet">
   <h2 id="chgTitle">Смена менеджера</h2>
   <div class="lbl" id="chgInfo"></div>
@@ -429,14 +436,15 @@ function adminName(city, id){ const l = (ME && ME.admins && ME.admins[REG_OF(cit
 const effSeller = o => (o.paid_to && o.paid_to !== 'mgr') ? String(o.paid_to) : (o.seller ? String(o.seller) : '');
 function payLine(o){
   if(o.status === 'cancelled') return '';
-  if(isShared(o.city)){ const sid = effSeller(o); return `<div class="lbl" style="margin:6px 0 0;${sid ? '' : 'color:var(--warn)'}">👤 ${sid ? 'Продал и принял оплату: ' + esc(adminName(o.city, sid)) : 'не указано, кто из админов продал и принял оплату'}</div>`; }
+  const mv = o.moved_from ? `<div class="lbl" style="margin:6px 0 0">↪ передан из ${esc(CITY_FULL[o.moved_from] || o.moved_from)}</div>` : '';
+  if(isShared(o.city)){ const sid = effSeller(o); return mv + `<div class="lbl" style="margin:6px 0 0;${sid ? '' : 'color:var(--warn)'}">👤 ${sid ? 'Продал и принял оплату: ' + esc(adminName(o.city, sid)) : 'не указано, кто из админов продал и принял оплату'}</div>`; }
   const sl = '';
   let t, warn = false;
   if(o.paid_to === 'mgr') t = '💵 наличные — у менеджера';
   else if(o.paid_to) t = '💳 деньги у админа: ' + esc(adminName(o.city, o.paid_to));
   else if(o.pay_text){ t = (o.pay_cash ? '💵 ' : '💳 ') + esc(o.pay_text) + (o.pay_cash ? ' — у менеджера' : ' — не указано, кто принял'); warn = !o.pay_cash; }
   else { t = '💳 не указано, кто принял оплату'; warn = true; }
-  return sl + `<div class="lbl" style="margin:6px 0 0;${warn ? 'color:var(--warn)' : ''}">${t}</div>`;
+  return mv + sl + `<div class="lbl" style="margin:6px 0 0;${warn ? 'color:var(--warn)' : ''}">${t}</div>`;
 }
 function orderHtml(o){
   const isNew = o.status === 'delivered' || o.status === 'reserved';
@@ -458,7 +466,7 @@ function orderHtml(o){
   else if(o.status === 'accepted') acts = `<button class="btn main" data-a="rdy">✅ Готов к выдаче</button><button class="btn bad" data-a="cx">Отменить</button>`;
   else if(o.status === 'ready') acts = `<button class="btn main" data-a="done">📦 Выдан</button><button class="btn bad" data-a="cx">Отменить</button>`;
   const editable = ['delivered', 'reserved', 'accepted', 'ready'].includes(o.status) || (o.status === 'done' && ME && ME.admin);
-  const extra = (o.status !== 'cancelled' ? (isShared(o.city) ? '<button class="btn sm" data-a="seller">👤 Кто продал</button>' : '<button class="btn sm" data-a="pay">💳 Оплата</button>') : '') + (editable ? '<button class="btn sm" data-a="edit">✏️ Изменить состав</button>' : '') + (o.status !== 'cancelled' ? '<button class="btn sm" data-a="disc">🏷 Скидка</button>' : '') + (ME && ME.admin ? '<button class="btn sm bad" data-a="del">🗑 Удалить</button>' : '');
+  const extra = (o.status !== 'cancelled' ? (isShared(o.city) ? '<button class="btn sm" data-a="seller">👤 Кто продал</button>' : '<button class="btn sm" data-a="pay">💳 Оплата</button>') : '') + (editable ? '<button class="btn sm" data-a="edit">✏️ Изменить состав</button>' : '') + (o.status !== 'cancelled' ? '<button class="btn sm" data-a="disc">🏷 Скидка</button>' : '') + (ME && ME.admin && o.status !== 'cancelled' && ME.cities.filter(c => c !== o.city && REG_OF(c) === REG_OF(o.city)).length ? '<button class="btn sm" data-a="move">↪ В другой город</button>' : '') + (ME && ME.admin ? '<button class="btn sm bad" data-a="del">🗑 Удалить</button>' : '');
   const self = (o.status !== 'cancelled') ? `<label class="self"><input type="checkbox" data-self ${o.for_self ? 'checked' : ''}> 🏷 Взял себе (не продажа — в учёте «взято собой»)</label>` : '';
   return `<div class="card ${isNew ? 'new' : ''} ${late ? 'late' : ''} ${open ? 'open' : ''}" data-no="${o.no}">
     <div class="h" data-toggle><span class="no">№${o.no}</span><span class="city">${esc(cityName(o.city))}</span><span class="st ${stC}">${stT}</span></div>
@@ -508,6 +516,7 @@ $('ordList').addEventListener('click', async e => {
   if(a){
     const act = a.dataset.a;
     if(act === 'edit') return openEdit(o);
+    if(act === 'move') return openMove(o);
     if(act === 'disc') return openDisc(o);
     if(act === 'pay') return openPay(o);
     if(act === 'seller') return openSeller(o);
@@ -1102,6 +1111,21 @@ $('chgSave').onclick = async () => {
   if(!prev){ toast('Выбери прежнего менеджера', true); return; }
   $('chgSave').disabled = true; const j = await api('mgr_change', {}, {city: CHG, prev_id: prev, date: $('chgDate').value}); $('chgSave').disabled = false;
   if(j.ok){ $('chgModal').classList.remove('on'); haptic('success'); toast('Менеджер сменён'); loadSettle(); } else toast(j.error || 'Ошибка', true);
+};
+let MVO = null, MVTO = '';
+function openMove(o){
+  MVO = o; MVTO = '';
+  const opts = ME.cities.filter(c => c !== o.city && REG_OF(c) === REG_OF(o.city));
+  $('mvInfo').innerHTML = `Заказ №${o.no} · ${esc(CITY_FULL[o.city] || o.city)} · ${eur(o.total)}. Он перейдёт в статистику менеджера выбранного города (продажа, партии, наличные), а товар вернётся на склад ${esc(CITY_FULL[o.city] || o.city)} и спишется со склада нового города.`;
+  $('mvCities').innerHTML = opts.map(c => `<span class="chip" data-mc="${c}">${esc(CITY_FULL[c] || c)}</span>`).join('');
+  $('mvNoStock').checked = false; $('mvModal').classList.add('on');
+}
+$('mvCities').addEventListener('click', e => { const c = e.target.closest('[data-mc]'); if(!c) return; MVTO = c.dataset.mc; [...$('mvCities').children].forEach(x => x.classList.toggle('on', x === c)); });
+$('mvCancel').onclick = () => $('mvModal').classList.remove('on');
+$('mvSave').onclick = async () => {
+  if(!MVTO){ toast('Выбери город', true); return; }
+  $('mvSave').disabled = true; const j = await api('move', {}, {no: MVO.no, to: MVTO, stock: !$('mvNoStock').checked}); $('mvSave').disabled = false;
+  if(j.ok){ $('mvModal').classList.remove('on'); haptic('success'); toast('Передан в ' + (CITY_FULL[MVTO] || MVTO) + (j.notes && j.notes.length > 1 ? '. ' + j.notes.slice(0, -1).join('; ') : '')); loadOrders(); } else toast(j.error || 'Ошибка', true);
 };
 async function loadPartners(){
   const [f, t] = periodRange(SPERIOD, 'sFrom', 'sTo');
